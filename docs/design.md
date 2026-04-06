@@ -1,551 +1,385 @@
-# PITUTI — Design y arquitectura
+## Visión general
 
-## 1. Objetivo de la arquitectura
-La arquitectura de PITUTI está diseñada para soportar una aplicación fullstack enfocada en el cuidado compartido de mascotas, con una separación clara entre frontend, backend y capa de datos.
+PITUTI es una aplicación fullstack para la gestión colaborativa del cuidado de mascotas. Múltiples tutores pueden compartir el seguimiento de vacunas, medicamentos, síntomas, alimentación y documentos de un mismo animal. La arquitectura sigue una separación clara entre frontend (React), API REST (Express) y capa de datos.
 
-El objetivo principal es que varios tutores puedan consultar, crear y actualizar información sobre un mismo perro o gato desde una única fuente de verdad, manteniendo el historial de acciones, eventos de salud, alimentación, documentos y recordatorios.
+***
 
-La arquitectura busca ser:
-- Clara y fácil de mantener.
-- Escalable para nuevas funcionalidades.
-- Tipada de extremo a extremo.
-- Adecuada para trabajo por capas.
-- Preparada para consumo de API REST.
-- Reutilizable tanto en componentes como en lógica de negocio.
+## Estructura de componentes del frontend
 
-## 2. Arquitectura general
-PITUTI tendrá una arquitectura cliente-servidor:
+### Páginas (src/pages/)
 
-- **Frontend**: React + TypeScript + Tailwind CSS + React Router.
-- **Backend/API**: Node.js + Express.
-- **Comunicación**: API REST bajo `/api/v1`.
-- **Persistencia**: datos principales en el backend; estado temporal de interfaz en el frontend.
+Cada página corresponde a una ruta de React Router. Son responsables de cargar datos mediante hooks y componer la UI con componentes reutilizables.
 
-La aplicación seguirá una estructura de capas:
-- **Routes**: definen las rutas HTTP.
-- **Controllers**: reciben la petición y construyen la respuesta.
-- **Services**: contienen la lógica de negocio.
-- **Config**: centraliza configuración y utilidades de entorno.
+| Página | Ruta | Descripción |
+|---|---|---|
+| `LoginPage` | `/login` | Formulario de inicio de sesión |
+| `RegisterPage` | `/register` | Formulario de registro de nuevo usuario |
+| `DashboardPage` | `/dashboard` | Vista general con resumen de todas las mascotas |
+| `PetListPage` | `/pets` | Listado de mascotas del tutor |
+| `PetFormPage` | `/pets/new` y `/pets/:petId/edit` | Crear o editar mascota |
+| `PetDetailPage` | `/pets/:petId` | Perfil completo de una mascota |
+| `PetHealthPage` | `/pets/:petId/health` | Vacunas, medicamentos e historial veterinario |
+| `PetFeedingsPage` | `/pets/:petId/feedings` | Registro de alimentación |
+| `PetSymptomsPage` | `/pets/:petId/symptoms` | Registro de síntomas |
+| `PetDocumentsPage` | `/pets/:petId/documents` | Documentos subidos |
+| `PetCaregiversPage` | `/pets/:petId/caregivers` | Tutores vinculados a la mascota |
+| `NotFoundPage` | `*` | Página 404 |
 
-## 3. Estructura de carpetas
+### Componentes reutilizables (src/components/)
 
-### Frontend
-```text
-src/
-├── api/
-├── components/
-├── context/
-├── hooks/
-├── pages/
-├── types/
-├── utils/
-├── App.tsx
-└── main.tsx
-```
+Los componentes reutilizables son independientes del dominio y pueden usarse en varias páginas.
 
-### Backend
-```text
-server/
-└── src/
-    ├── routes/
-    ├── controllers/
-    ├── services/
-    ├── config/
-    ├── middlewares/
-    ├── types/
-    └── app.ts
-```
+**UI base:**
+- `Button` — botón con variantes (primary, secondary, ghost, danger)
+- `Input` — campo de texto con label, placeholder y estado de error
+- `Modal` — overlay genérico con título y acción de cierre
+- `Badge` — etiqueta de estado (activo, vencido, próximo)
+- `Avatar` — imagen circular de perfil con fallback de iniciales
+- `Card` — contenedor con sombra y borde sutil
+- `EmptyState` — mensaje + icono + CTA cuando no hay datos
+- `LoadingSpinner` — indicador de carga circular
+- `SkeletonLoader` — esqueleto animado que espeja el layout real
+- `Divider` — separador visual horizontal
 
-## 4. Componentes principales del frontend
+**Dominio pets:**
+- `PetCard` — tarjeta resumida de una mascota (nombre, especie, foto)
+- `PetProfileHeader` — cabecera del perfil con foto, nombre y especie
+- `PetAvatarUploader` — componente de subida de foto de mascota
+- `OverviewCard` — card de resumen de una categoría (vacunas, medicamentos, etc.)
 
-### Layout y navegación
-- `AppLayout`
-- `Sidebar` o `TopNav`
-- `LanguageSwitcher`
-- `ThemeToggle`
-- `PageHeader`
+**Dominio salud:**
+- `VaccineList` — lista de vacunas con estado por dosis
+- `VaccineForm` — formulario de nueva vacuna
+- `MedicationList` — lista de medicamentos activos
+- `MedicationForm` — formulario de nuevo medicamento
+- `SymptomList` — lista de síntomas registrados
+- `SymptomForm` — formulario de nuevo síntoma
 
-### Dashboard
-- `OverviewCard`
-- `UpcomingRemindersCard`
-- `RecentActivityCard`
-- `PetSummaryCard`
-- `AlertBanner`
+**Dominio rutina:**
+- `FeedingList` — historial de alimentación
+- `FeedingForm` — formulario de nuevo registro de alimentación
+- `NoteList` — lista de anotaciones diarias
+- `NoteForm` — formulario de nueva nota
 
-### Gestión de mascotas
-- `PetCard`
-- `PetProfileHeader`
-- `PetDetailsSection`
-- `PetForm`
-- `PetAvatarUploader`
+**Dominio documentos y actividad:**
+- `DocumentList` — lista de documentos subidos
+- `DocumentUploader` — componente de subida de archivos
+- `ActivityFeed` — historial de acciones de todos los tutores
 
-### Salud y seguimiento
-- `VaccineList`
-- `MedicationList`
-- `SymptomLogList`
-- `SymptomForm`
-- `FeedingLogList`
-- `DailyNotesPanel`
-- `VetHistoryTimeline`
+**Navegación:**
+- `AppLayout` — layout principal con sidebar/header y outlet de rutas
+- `Navbar` — barra de navegación superior
+- `Sidebar` — navegación lateral (desktop)
+- `BottomNav` — navegación inferior (mobile)
 
-### Colaboración compartida
-- `CaregiverList`
-- `InviteCaregiverModal`
-- `ShareCodeCard`
-- `ActivityLogList`
+***
 
-### Documentos y recursos
-- `DocumentUploader`
-- `DocumentList`
-- `ClinicMap`
-- `EmergencyClinicCard`
+## Componentes que serán reutilizables
 
-### UI reutilizable
-- `Button`
-- `Input`
-- `Select`
-- `Textarea`
-- `Modal`
-- `Card`
-- `Badge`
-- `EmptyState`
-- `Loader`
-- `ConfirmDialog`
-- `Toast`
+La regla es: un componente es reutilizable si puede funcionar con datos diferentes sin cambiar su código interno. La lista priorizada:
 
-## 5. Componentes reutilizables
-Los componentes reutilizables serán aquellos que puedan usarse en varias pantallas con distintas props y sin depender de un contexto específico.
+1. `Button`, `Input`, `Modal`, `Badge`, `Card`, `EmptyState`, `SkeletonLoader` — reutilizables en toda la app
+2. `PetCard` — reutilizable en listados y dashboard
+3. `OverviewCard` — reutilizable para vacunas, medicamentos y síntomas
+4. `ActivityFeed` — reutilizable en detalle de mascota y dashboard
+5. Todos los formularios (`VaccineForm`, `MedicationForm`, etc.) — reutilizables para crear y editar mediante prop `initialData`
 
-### Componentes reutilizables previstos
-- `Button`
-- `Card`
-- `Input`
-- `Select`
-- `Textarea`
-- `Modal`
-- `Badge`
-- `Loader`
-- `EmptyState`
-- `PageHeader`
-- `SectionTitle`
-- `StatusPill`
-- `InfoRow`
+***
 
-### Criterios para considerarlos reutilizables
-Un componente se considerará reutilizable si:
-- Tiene una responsabilidad visual o funcional concreta.
-- Recibe datos mediante props tipadas.
-- No contiene lógica de negocio acoplada a una única página.
-- Puede utilizarse en más de un flujo de la app.
+## Gestión del estado
 
-## 6. Gestión de estado
-La gestión del estado seguirá un enfoque mixto:
+La aplicación usa tres niveles de estado, cada uno con una responsabilidad clara:
 
-### Estado local
-Se usará `useState` para:
-- Inputs de formularios.
-- Modales abiertos/cerrados.
-- Filtros temporales.
-- Estados visuales locales.
+| Nivel | Herramienta | Qué gestiona |
+|---|---|---|
+| **Estado local** | `useState` | UI: modales abiertos, valores de formularios, pestañas activas |
+| **Estado global** | Context API (`AuthContext`, `PetContext`) | Usuario autenticado, mascota seleccionada actualmente |
+| **Estado del servidor** | Custom hooks (`usePets`, `useVaccines`, etc.) | Datos cargados desde la API, con loading, data y error |
 
-### Estado de efectos y carga
-Se usará `useEffect` para:
-- Cargar datos al entrar en una página.
-- Sincronizar parámetros o filtros.
-- Ejecutar llamadas a la API cuando sea necesario.
+### AuthContext
+Guarda el usuario autenticado y expone `login`, `logout` y `useAuth`. El token de sesión se almacena en memoria (variable de módulo) durante la sesión activa para evitar exposición en LocalStorage en entornos no seguros.
 
-### Estado derivado y optimización
-Se usará:
-- `useMemo` para cálculos derivados costosos, como filtrado de registros, agrupaciones o métricas del dashboard.
-- `useCallback` para estabilizar funciones pasadas a componentes hijos y evitar renders innecesarios.
+### PetContext
+Guarda la mascota actualmente seleccionada y la lista resumida de mascotas del usuario. Permite que el sidebar y el dashboard accedan a esta información sin prop drilling.
 
-### Estado global
-Se usará Context API para compartir:
-- Usuario autenticado.
-- Idioma actual.
-- Mascota seleccionada.
-- Lista resumida de pets del usuario.
-- Datos globales de recordatorios o notificaciones visuales.
+### Custom hooks
+Cada recurso tiene su propio hook. Ejemplo: `usePets` encapsula `fetch`, `loading`, `error` y funciones de mutación (`createPet`, `updatePet`, `deletePet`). Esta separación permite reusar lógica entre páginas sin duplicar código.
 
-## 7. Custom hooks
-Se crearán hooks reutilizables para encapsular lógica repetida.
+***
 
-### Hooks previstos
-- `useAuth()` → gestión del usuario autenticado.
-- `usePets()` → carga y acciones sobre mascotas.
-- `useReminders()` → recordatorios de vacunas, medicación o tareas.
-- `useDebounce()` → para búsquedas o filtros.
-- `useTranslations()` → acceso al idioma activo y textos traducidos.
+## Diseño de la API REST
 
-El objetivo es separar lógica de estado y efectos de los componentes visuales.
+### Convenciones
 
-## 8. Context API
-Se implementará al menos un contexto global principal:
+- Base URL: `/api/v1`
+- Formato: JSON
+- Autenticación: Bearer token en header `Authorization`
+- Respuestas de error: `{ error: string, message: string }`
+- Respuestas de éxito: el recurso directamente o un array del recurso
 
-### Contextos propuestos
-- `AuthContext`
-- `PetContext`
-- `I18nContext`
+### Recursos y endpoints
 
-### Ejemplo de responsabilidades
-- `AuthContext`: usuario, login, logout, loading de sesión.
-- `PetContext`: mascota activa, lista de pets, refresco de datos compartidos.
-- `I18nContext`: idioma actual, cambio de idioma, textos visibles.
+#### Auth
 
-El uso de Context API es útil cuando varios componentes alejados en el árbol necesitan acceder al mismo estado sin pasar props manualmente en muchos niveles.
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `POST` | `/auth/register` | Registrar usuario | `{ name, email, password }` | `{ user, token }` |
+| `POST` | `/auth/login` | Iniciar sesión | `{ email, password }` | `{ user, token }` |
+| `GET` | `/auth/me` | Usuario autenticado | — | `User` |
 
-## 9. Diseño del backend/API
-La API seguirá una estructura REST con versión en la URL.
+#### Pets
 
-### Base URL
-```text
-/api/v1
-```
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets` | Listar mascotas del tutor | — | `Pet[]` |
+| `POST` | `/pets` | Crear mascota | `PetInput` | `Pet` |
+| `GET` | `/pets/:petId` | Detalle de mascota | — | `Pet` |
+| `PUT` | `/pets/:petId` | Actualizar mascota | `PetInput` | `Pet` |
+| `DELETE` | `/pets/:petId` | Eliminar mascota | — | `{ success: true }` |
 
-### Recursos principales
-- `/auth`
-- `/users`
-- `/pets`
-- `/pets/:petId/caregivers`
-- `/pets/:petId/vaccines`
-- `/pets/:petId/medications`
-- `/pets/:petId/feedings`
-- `/pets/:petId/symptoms`
-- `/pets/:petId/notes`
-- `/pets/:petId/documents`
-- `/pets/:petId/vet-records`
-- `/pets/:petId/activity-logs`
-- `/clinics`
+#### Caregivers
 
-## 10. Endpoints principales
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/caregivers` | Listar tutores | — | `Caregiver[]` |
+| `POST` | `/pets/:petId/caregivers/invite` | Invitar tutor | `{ email }` | `{ code }` |
+| `POST` | `/pets/:petId/caregivers/join` | Aceptar invitación | `{ code }` | `Caregiver` |
+| `DELETE` | `/pets/:petId/caregivers/:caregiverId` | Eliminar tutor | — | `{ success: true }` |
 
-### Auth
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/register`
-- `GET /api/v1/auth/me`
+#### Vacunas
 
-### Pets
-- `GET /api/v1/pets`
-- `POST /api/v1/pets`
-- `GET /api/v1/pets/:petId`
-- `PUT /api/v1/pets/:petId`
-- `DELETE /api/v1/pets/:petId`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/vaccines` | Listar vacunas | — | `Vaccine[]` |
+| `POST` | `/pets/:petId/vaccines` | Registrar vacuna | `VaccineInput` | `Vaccine` |
+| `PUT` | `/pets/:petId/vaccines/:vaccineId` | Actualizar vacuna | `VaccineInput` | `Vaccine` |
+| `DELETE` | `/pets/:petId/vaccines/:vaccineId` | Eliminar vacuna | — | `{ success: true }` |
 
-### Caregivers
-- `GET /api/v1/pets/:petId/caregivers`
-- `POST /api/v1/pets/:petId/caregivers/invite`
-- `POST /api/v1/pets/:petId/caregivers/join`
-- `DELETE /api/v1/pets/:petId/caregivers/:caregiverId`
+#### Medicamentos
 
-### Vaccines
-- `GET /api/v1/pets/:petId/vaccines`
-- `POST /api/v1/pets/:petId/vaccines`
-- `PUT /api/v1/pets/:petId/vaccines/:vaccineId`
-- `DELETE /api/v1/pets/:petId/vaccines/:vaccineId`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/medications` | Listar medicamentos | — | `Medication[]` |
+| `POST` | `/pets/:petId/medications` | Registrar medicamento | `MedicationInput` | `Medication` |
+| `PUT` | `/pets/:petId/medications/:medicationId` | Actualizar | `MedicationInput` | `Medication` |
+| `DELETE` | `/pets/:petId/medications/:medicationId` | Eliminar | — | `{ success: true }` |
 
-### Medications
-- `GET /api/v1/pets/:petId/medications`
-- `POST /api/v1/pets/:petId/medications`
-- `PUT /api/v1/pets/:petId/medications/:medicationId`
-- `DELETE /api/v1/pets/:petId/medications/:medicationId`
+#### Síntomas
 
-### Feedings
-- `GET /api/v1/pets/:petId/feedings`
-- `POST /api/v1/pets/:petId/feedings`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/symptoms` | Listar síntomas | — | `Symptom[]` |
+| `POST` | `/pets/:petId/symptoms` | Registrar síntoma | `SymptomInput` | `Symptom` |
+| `DELETE` | `/pets/:petId/symptoms/:symptomId` | Eliminar síntoma | — | `{ success: true }` |
 
-### Symptoms
-- `GET /api/v1/pets/:petId/symptoms`
-- `POST /api/v1/pets/:petId/symptoms`
-- `PUT /api/v1/pets/:petId/symptoms/:symptomId`
-- `DELETE /api/v1/pets/:petId/symptoms/:symptomId`
+#### Alimentación
 
-### Notes
-- `GET /api/v1/pets/:petId/notes`
-- `POST /api/v1/pets/:petId/notes`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/feedings` | Listar registros | — | `FeedingLog[]` |
+| `POST` | `/pets/:petId/feedings` | Registrar alimentación | `FeedingInput` | `FeedingLog` |
+| `DELETE` | `/pets/:petId/feedings/:feedingId` | Eliminar registro | — | `{ success: true }` |
 
-### Documents
-- `GET /api/v1/pets/:petId/documents`
-- `POST /api/v1/pets/:petId/documents`
-- `DELETE /api/v1/pets/:petId/documents/:documentId`
+#### Notas
 
-### Vet records
-- `GET /api/v1/pets/:petId/vet-records`
-- `POST /api/v1/pets/:petId/vet-records`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/notes` | Listar notas | — | `Note[]` |
+| `POST` | `/pets/:petId/notes` | Crear nota | `{ content }` | `Note` |
+| `DELETE` | `/pets/:petId/notes/:noteId` | Eliminar nota | — | `{ success: true }` |
 
-### Activity logs
-- `GET /api/v1/pets/:petId/activity-logs`
+#### Documentos
 
-### Clinics
-- `GET /api/v1/clinics`
-- `GET /api/v1/clinics?city=Madrid`
-- `GET /api/v1/clinics?emergency=true`
+| Método | Endpoint | Descripción | Body | Respuesta |
+|---|---|---|---|---|
+| `GET` | `/pets/:petId/documents` | Listar documentos | — | `DocumentFile[]` |
+| `POST` | `/pets/:petId/documents` | Subir documento | `multipart/form-data` | `DocumentFile` |
+| `DELETE` | `/pets/:petId/documents/:documentId` | Eliminar documento | — | `{ success: true }` |
 
-## 11. Contratos de datos
+#### Actividad
 
-### User
-```ts
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  preferredLanguage: 'pt' | 'es' | 'en';
-  createdAt: string;
+| Método | Endpoint | Descripción | Respuesta |
+|---|---|---|---|
+| `GET` | `/pets/:petId/activity` | Historial de acciones | `ActivityLog[]` |
+
+***
+
+## Contratos de datos (TypeScript)
+
+```typescript
+interface User {
+  id: string
+  name: string
+  email: string
+  createdAt: string
+}
+
+interface Pet {
+  id: string
+  name: string
+  species: string
+  breed?: string
+  birthDate?: string
+  photoUrl?: string
+  ownerId: string
+  createdAt: string
+}
+
+interface Caregiver {
+  id: string
+  petId: string
+  userId: string
+  name: string
+  email: string
+  role: 'owner' | 'caregiver'
+  invitedBy: string
+  joinedAt: string
+}
+
+interface Vaccine {
+  id: string
+  petId: string
+  name: string
+  date: string
+  nextDoseDate?: string
+  veterinarian?: string
+  notes?: string
+  createdBy: string
+  createdAt: string
+}
+
+interface Medication {
+  id: string
+  petId: string
+  name: string
+  dose: string
+  frequency: string
+  startDate: string
+  endDate?: string
+  notes?: string
+  createdBy: string
+  createdAt: string
+}
+
+interface Symptom {
+  id: string
+  petId: string
+  category: string
+  severity: 'low' | 'medium' | 'high'
+  description: string
+  photoUrl?: string
+  createdBy: string
+  createdAt: string
+}
+
+interface FeedingLog {
+  id: string
+  petId: string
+  foodType: string
+  quantity: string
+  appetiteLevel: 'none' | 'low' | 'normal' | 'high'
+  notes?: string
+  createdBy: string
+  createdAt: string
+}
+
+interface Note {
+  id: string
+  petId: string
+  content: string
+  createdBy: string
+  createdAt: string
+}
+
+interface DocumentFile {
+  id: string
+  petId: string
+  name: string
+  fileUrl: string
+  fileType: string
+  createdBy: string
+  createdAt: string
+}
+
+interface ActivityLog {
+  id: string
+  petId: string
+  userId: string
+  userName: string
+  action: string
+  resource: string
+  createdAt: string
 }
 ```
 
-### Pet
-```ts
-export interface Pet {
-  id: string;
-  name: string;
-  species: 'dog' | 'cat';
-  breed?: string;
-  birthDate?: string;
-  weightKg?: number;
-  color?: string;
-  microchip?: string;
-  heightCm?: number;
-  passportNumber?: string;
-  photoUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+***
+
+## Persistencia de datos
+
+| Dato | Dónde se persiste | Motivo |
+|---|---|---|
+| Usuarios | Servidor | Necesario para autenticación y compartir entre dispositivos |
+| Mascotas | Servidor | Compartidas entre múltiples tutores |
+| Vacunas, medicamentos, síntomas | Servidor | Historial médico compartido entre tutores |
+| Alimentación, notas | Servidor | Registro colaborativo |
+| Documentos (archivos) | Servidor (almacenamiento de archivos) | Acceso desde cualquier dispositivo |
+| Historial de actividad | Servidor | Auditoría de acciones de tutores |
+| Token de sesión | Memoria del cliente (variable de módulo) | Sesión activa, no persiste entre recargas intencionalmente |
+| Mascota seleccionada | Memoria del cliente (PetContext) | Estado de UI temporal |
+| Preferencias de tema (dark/light) | LocalStorage | Preferencia de UI del usuario |
+
+***
+
+## Flujo de datos
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   FRONTEND (React)                   │
+│                                                      │
+│  Page                                                │
+│   └── custom hook (usePets, useVaccines...)          │
+│         └── src/api/client.ts  (fetch tipado)        │
+│               └── HTTP Request (Bearer token)        │
+└──────────────────────┬──────────────────────────────┘
+                       │ HTTPS /api/v1/...
+┌──────────────────────▼──────────────────────────────┐
+│                  BACKEND (Express)                   │
+│                                                      │
+│  routes/        → define los endpoints               │
+│   └── controllers/ → recibe req, llama al service   │
+│         └── services/  → lógica de negocio           │
+│               └── [Data Store]                       │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Caregiver
-```ts
-export interface Caregiver {
-  id: string;
-  userId: string;
-  petId: string;
-  role: 'owner' | 'caregiver';
-  invitedBy: string;
-  joinedAt: string;
-}
-```
+**Flujo de una solicitud típica:**
 
-### Vaccine
-```ts
-export interface Vaccine {
-  id: string;
-  petId: string;
-  name: string;
-  applicationDate: string;
-  nextDoseDate?: string;
-  notes?: string;
-}
-```
+1. El usuario abre la página de detalle de una mascota
+2. `PetDetailPage` llama al hook `usePet(petId)`
+3. El hook llama a `api/pets.ts` → `getPet(petId)`
+4. `client.ts` hace `GET /api/v1/pets/:petId` con el token en el header
+5. Express recibe la petición en `routes/pets.ts`
+6. El router llama a `controllers/petsController.ts`
+7. El controller llama a `services/petsService.ts`
+8. El service consulta los datos y devuelve el objeto `Pet`
+9. El controller responde con JSON `{ ...pet }`
+10. El hook actualiza su estado `data` y el componente re-renderiza
 
-### Medication
-```ts
-export interface Medication {
-  id: string;
-  petId: string;
-  name: string;
-  dosage: string;
-  frequency: string;
-  startDate: string;
-  endDate?: string;
-  notes?: string;
-}
-```
+***
 
-### Symptom
-```ts
-export interface Symptom {
-  id: string;
-  petId: string;
-  category: 'digestivo' | 'respiratorio' | 'piel' | 'comportamiento';
-  severity: 'leve' | 'moderado' | 'grave' | 'emergencia';
-  description: string;
-  photoUrls?: string[];
-  createdAt: string;
-  createdBy: string;
-}
-```
+## Decisiones de arquitectura
 
-### FeedingLog
-```ts
-export interface FeedingLog {
-  id: string;
-  petId: string;
-  foodType: string;
-  quantity: string;
-  appetite: 'bajo' | 'normal' | 'alto';
-  createdAt: string;
-  createdBy: string;
-}
-```
+### Por qué arquitectura por capas en el backend
+La separación en `routes → controllers → services` permite cambiar la fuente de datos (en memoria, base de datos SQL, MongoDB) sin tocar la lógica de negocio ni las rutas. Los controllers solo orquestan; los services contienen las reglas.
 
-### Note
-```ts
-export interface Note {
-  id: string;
-  petId: string;
-  content: string;
-  createdAt: string;
-  createdBy: string;
-}
-```
+### Por qué Context API en lugar de Redux
+La aplicación tiene dos estados globales simples: usuario autenticado y mascota seleccionada. Redux añadiría boilerplate innecesario para este nivel de complejidad. Context API con hooks customizados es suficiente y más fácil de mantener.
 
-### Document
-```ts
-export interface DocumentFile {
-  id: string;
-  petId: string;
-  title: string;
-  fileUrl: string;
-  fileType: string;
-  uploadedAt: string;
-  uploadedBy: string;
-}
-```
+### Por qué custom hooks para el estado del servidor
+Encapsular `fetch + loading + error` en hooks reutilizables (`usePets`, `useVaccines`) permite que varias páginas compartan la misma lógica de carga sin duplicación. Si en el futuro se migra a React Query o SWR, el cambio se hace solo dentro del hook.
 
-### ActivityLog
-```ts
-export interface ActivityLog {
-  id: string;
-  petId: string;
-  userId: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  createdAt: string;
-}
-```
+### Por qué el token en memoria y no en LocalStorage
+LocalStorage es vulnerable a ataques XSS. Guardar el token en una variable de módulo (memoria JS) reduce la superficie de ataque. La contrapartida es que el usuario pierde la sesión al recargar la página, lo que se puede resolver en el futuro con cookies HttpOnly.
 
-## 12. Persistencia: servidor vs cliente
-
-### Datos persistidos en el servidor
-Se guardarán en el backend todos los datos que formen parte del dominio principal del producto:
-- Usuarios.
-- Mascotas.
-- Tutores compartidos.
-- Vacunas.
-- Medicamentos.
-- Alimentación.
-- Síntomas.
-- Notas.
-- Documentos.
-- Historial veterinario.
-- Activity logs.
-- Clínicas cargadas desde fuente propia o mockeada.
-
-### Datos solo en cliente
-Se mantendrán solo en el frontend los estados temporales de interfaz:
-- Filtros activos.
-- Orden visual de listas.
-- Modal abierto o cerrado.
-- Texto en formularios antes de enviar.
-- Tabs seleccionadas.
-- Estado local de loading visual puntual.
-
-## 13. Flujo de datos
-El flujo general de datos será el siguiente:
-
-```mermaid
-flowchart LR
-  A[Usuario en React] --> B[Componentes / Pages]
-  B --> C[Hooks y Context]
-  C --> D[API Client tipado]
-  D --> E[Express Routes]
-  E --> F[Controllers]
-  F --> G[Services]
-  G --> H[(Persistencia / Data)]
-  H --> G
-  G --> F
-  F --> D
-  D --> C
-  C --> B
-```
-
-### Explicación del flujo
-1. El usuario interactúa con la interfaz.
-2. La página o componente dispara una acción.
-3. Un hook o un contexto coordina el estado.
-4. El cliente de API hace la petición HTTP.
-5. Express recibe la petición por la ruta correspondiente.
-6. El controller valida la entrada y llama al service.
-7. El service aplica la lógica de negocio.
-8. Se leen o escriben datos.
-9. La respuesta vuelve al frontend.
-10. La UI actualiza loading, error o success.
-
-## 14. Cliente de API tipado
-En el frontend existirá una capa de red centralizada.
-
-### Archivos previstos
-```text
-src/api/
-├── client.ts
-├── auth.ts
-├── pets.ts
-├── vaccines.ts
-├── medications.ts
-├── symptoms.ts
-├── notes.ts
-├── documents.ts
-└── clinics.ts
-```
-
-### Responsabilidades del cliente de API
-- Centralizar `fetch`.
-- Gestionar base URL.
-- Añadir headers comunes.
-- Tipar request y response.
-- Normalizar errores.
-- Evitar lógica de red duplicada en componentes.
-
-## 15. Estrategia de páginas y rutas
-
-### Rutas principales
-- `/login`
-- `/register`
-- `/dashboard`
-- `/pets`
-- `/pets/new`
-- `/pets/:petId`
-- `/pets/:petId/health`
-- `/pets/:petId/feedings`
-- `/pets/:petId/symptoms`
-- `/pets/:petId/documents`
-- `/pets/:petId/caregivers`
-- `/clinics`
-- `*` → página 404
-
-## 16. Decisiones de diseño técnico
-Las decisiones principales de arquitectura son:
-
-- Usar React con TypeScript para mantener componentes y contratos de datos tipados.
-- Usar Tailwind CSS para acelerar el desarrollo visual sin perder consistencia.
-- Usar React Router para separar pantallas y navegación.
-- Usar Context API solo para estado realmente global.
-- Mantener el estado de dominio en la API como fuente de verdad.
-- Separar backend por capas para evitar mezclar HTTP con lógica de negocio.
-- Diseñar endpoints REST por recursos y no por acciones.
-- Dejar la internacionalización preparada desde la base del proyecto.
-
-## 17. Decisiones visuales
-PITUTI seguirá una línea visual clean y moderna:
-- Cards con sombras suaves.
-- Bordes redondeados.
-- Mucho espacio en blanco.
-- Colores suaves y estados bien diferenciados.
-- Microinteracciones y transiciones fluidas.
-- Diseño responsive mobile-first.
-
-La intención es transmitir cuidado, confianza, claridad y coordinación compartida.
-
-## 18. Riesgos y simplificaciones
-Para mantener el proyecto viable, algunas funcionalidades se tratarán inicialmente de forma simplificada:
-
-- Login simple sin sistema avanzado de permisos.
-- Subida de documentos con almacenamiento básico o mock.
-- Clínicas de Madrid con datos mockeados o fuente fija.
-- Historial de localización como funcionalidad futura o demo limitada.
-- Soporte multilenguaje inicialmente con diccionarios locales.
-- Notificaciones en primera fase como alertas visuales dentro de la app.
-
-## 19. Resumen arquitectónico
-PITUTI se construirá como una aplicación fullstack con frontend tipado, backend por capas y API REST versionada. El foco principal de la arquitectura es soportar el cuidado compartido de mascotas de forma clara, mantenible y escalable, asegurando que todos los tutores consulten y actualicen una única fuente de verdad.
+### Por qué no base de datos en la primera fase
+El ejercicio permite LocalStorage o API externa como fuente de datos. El backend se diseña con contratos claros para que, cuando se añada una base de datos real, solo cambie la capa `services/` sin impactar rutas ni frontend.
