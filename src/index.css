@@ -1,1 +1,49 @@
 @import "tailwindcss";
+
+/* Tipografia base */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-900;
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    line-height: 1.15;
+  }
+
+  p, li {
+    text-wrap: pretty;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-teal-600 ring-offset-2;
+  }
+}
+
+/* Animação skeleton */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-stone-200) 25%,
+    var(--color-stone-100) 50%,
+    var(--color-stone-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
