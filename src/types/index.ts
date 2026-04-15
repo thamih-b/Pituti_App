@@ -2,10 +2,12 @@
 // Tipos de dominio — PITUTI
 // ─────────────────────────────────────────────
 
-export type Species = 'dog' | 'cat' | 'bird' | 'rabbit' | 'reptile' | 'other'
+export type Species = 'dog' | 'cat' | 'bird' | 'rabbit' | 'reptile' | 'fish' | 'other'
 export type BadgeStatus = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 export type ButtonSize = 'sm' | 'md' | 'lg'
+export type HabitatType = 'indoor' | 'outdoor' | 'litter_box' | 'cage' | 'aquarium' | 'terrarium'
+export type CarePeriod = 'day' | 'week' | 'month'
 
 // Usuario
 export interface User {
@@ -26,6 +28,17 @@ export interface Pet {
   photoUrl?: string
   ownerId: string
   createdAt: string
+}
+
+// Cuidador compartido
+export interface Caregiver {
+  id: string
+  petId: string
+  userId: string
+  name: string
+  email: string
+  role: 'owner' | 'caregiver' | 'readonly'
+  joinedAt: string
 }
 
 // Vacuna
@@ -76,6 +89,7 @@ export interface Note {
   id: string
   petId: string
   content: string
+  veterinary?: string
   createdAt: string
 }
 
@@ -96,4 +110,34 @@ export interface ActivityLog {
   action: string
   description: string
   timestamp: string
+}
+
+// Cuidado diario
+export interface CareItem {
+  id: string
+  petId: string
+  name: string
+  emoji: string
+  habitatType: HabitatType
+  timesPerPeriod: number
+  period: CarePeriod
+  quantity?: string
+  notifyPush: boolean
+  notifyEmail: boolean
+  notifyCaregivers: boolean
+}
+
+// Registro de cuidado diario (check-in)
+export interface CareLog {
+  id: string
+  careItemId: string
+  petId: string
+  doneAt: string
+  doneBy: string
+}
+
+// Alerta para el dashboard
+export interface PetAlert {
+  type: 'warn' | 'err' | 'info'
+  text: string
 }
