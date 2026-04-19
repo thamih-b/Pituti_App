@@ -10,6 +10,7 @@ import SymptomsPage   from './pages/SymptomsPage'
 import NotesPage      from './pages/NotesPage'
 import CaresPage      from './pages/CaresPage'
 import SettingsPage   from './pages/SettingsPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="cares"       element={<CaresPage />} />
             <Route path="settings"    element={<SettingsPage />} />
           </Route>
+            <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </PitutiProvider>
