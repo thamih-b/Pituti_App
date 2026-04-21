@@ -5,21 +5,37 @@ import Button from './Button'
 type ModalSize = 'sm' | 'md' | 'lg'
 
 interface ModalProps {
-  isOpen: boolean
-  onClose: () => void
-  title: string
-  children: ReactNode
-  footer?: ReactNode
-  size?: ModalSize
+  isOpen:    boolean
+  onClose:   () => void
+  title:     string
+  children:  ReactNode
+  footer?:   ReactNode
+  size?:     ModalSize
+  /** Ícone exibido no header. Default: '✦' */
+  icon?:     string
+  /** Cor de fundo do ícone. Default: var(--primary-hl) */
+  accentBg?: string
+  /** Cor do ícone. Default: var(--primary) */
+  accentFg?: string
 }
 
-const sizeClasses: Record<ModalSize, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
+const maxWidths: Record<ModalSize, string> = {
+  sm: '400px',
+  md: '520px',
+  lg: '680px',
 }
 
-export default function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+export default function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size     = 'md',
+  icon     = '✦',
+  accentBg = 'var(--primary-hl)',
+  accentFg = 'var(--primary)',
+}: ModalProps) {
   useEffect(() => {
     if (!isOpen) return
     document.body.style.overflow = 'hidden'
@@ -38,23 +54,53 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="pm-overlay"
     >
+      {/* Backdrop clicável */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className={['relative w-full rounded-2xl bg-white shadow-xl', sizeClasses[size]].join(' ')}>
-        <header className="flex items-center justify-between border-b border-stone-200 px-6 py-4">
-          <h2 id="modal-title" className="text-base font-semibold text-stone-900">{title}</h2>
-          <Button variant="ghost" size="sm" onClick={onClose} ariaLabel="Cerrar modal">✕</Button>
-        </header>
-        <div className="px-6 py-5">{children}</div>
+
+      {/* Sheet */}
+      <div
+        className="pm-sheet"
+        style={{ maxWidth: maxWidths[size] }}
+      >
+        {/* ── Header ── */}
+        <div className="pm-header">
+          <div
+            className="pm-header-icon"
+            style={{ background: accentBg, color: accentFg }}
+          >
+            {icon}
+          </div>
+          <div className="pm-header-text">
+            <h2 id="modal-title" className="pm-header-title">{title}</h2>
+          </div>
+          <button
+            className="pm-close"
+            onClick={onClose}
+            aria-label="Cerrar modal"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* ── Body scrollável ── */}
+        <div className="pm-body">
+          {children}
+        </div>
+
+        {/* ── Footer ── */}
         {footer && (
-          <footer className="flex justify-end gap-2 border-t border-stone-200 px-6 py-4">
+          <div className="pm-footer">
             {footer}
-          </footer>
+          </div>
         )}
       </div>
     </div>,

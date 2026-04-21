@@ -116,18 +116,18 @@ export default function AddPetModal({ isOpen, onClose, onAdd }: AddPetModalProps
     setErrors(errs)
     if (Object.keys(errs).length > 0) return
 
-    onAdd({
-      id:          `pet-${Date.now()}`,
-      name:        form.name.trim(),
-      species:     form.species,
-      breed:       form.breed.trim() || undefined,
-      birthDate:   form.birthDate   || undefined,
-      photoUrl:    '',
-      ownerId:     'user-1',
-      createdAt:   new Date().toISOString(),
-      healthScore: 100,
-      alerts:      [],
-    })
+    // onAdd({
+    //   id:          `pet-${Date.now()}`,
+    //   name:        form.name.trim(),
+    //   species:     form.species,
+    //   breed:       form.breed.trim() || undefined,
+    //   birthDate:   form.birthDate   || undefined,
+    //   photoUrl:    '',
+    //   ownerId:     'user-1',
+    //   createdAt:   new Date().toISOString(),
+    //   healthScore: 100,
+    //   alerts:      [],
+    // })
 
     setSuccess(true)
     setTimeout(() => {
