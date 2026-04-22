@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import Modal from './Modal'
-import Button from './Button'
 import { showToast } from './AppLayout'
 import { MOCK_PETS } from '../hooks/usePets'
 import FormDateField from './FormDateField'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 export interface SymptomData {
   petId:       string
@@ -74,12 +74,10 @@ export default function RegisterSymptomModal({ isOpen, onClose, onAdd, defaultPe
       size="md"
       footer={!success ? (
         <>
-          <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} style={{ background: selSeverity.fg }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Registrar síntoma
-          </Button>
+        
+<PfFooter>
+  <PfBtn variant="save" onClick={handleSubmit}>Registrar</PfBtn>
+</PfFooter>
         </>
       ) : <></>}
     >

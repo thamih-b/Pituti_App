@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 
 interface FormDateFieldProps {
-  label:    string
+  label:    ReactNode
   value:    string
   onChange: (val: string) => void
   min?:     string

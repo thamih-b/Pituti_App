@@ -72,6 +72,15 @@ const icons = {
       <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
     </svg>
   ),
+  
+  calendar: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+
   settings: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />
@@ -516,18 +525,19 @@ export default function AppLayout() {
         <NavItem to="/medications" icon={icons.medications} label="Medicamentos"  collapsed={collapsed} />
         <NavItem to="/symptoms"    icon={icons.symptoms}    label="Síntomas"      collapsed={collapsed} />
         <NavItem to="/notes"       icon={icons.notes}       label="Notas"         collapsed={collapsed} />
+        <NavItem to="/calendar" icon={icons.calendar} label="Calendario" collapsed={collapsed} />
         <div className="sidebar-divider" />
         <div className="sidebar-section-label">Cuenta</div>
         <NavItem to="/settings"    icon={icons.settings}    label="Ajustes"       collapsed={collapsed} />
 
         <div className="sidebar-toggle">
           <button className="nav-item" style={{ width: '100%' }}
-            onClick={() => setCollapsed((c: boolean) => !c)} title="Colapsar menú">
+            onClick={() => setCollapsed((c: boolean) => !c)} title="Ocultar menú">
             <span style={{ transform: collapsed ? 'rotate(180deg)' : undefined,
               transition: 'transform 200ms', display: 'flex' }}>
               {icons.chevron}
             </span>
-            <span className="nav-label">Colapsar</span>
+            <span className="nav-label">Ocultar</span>
           </button>
         </div>
       </nav>

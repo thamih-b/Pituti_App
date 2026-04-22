@@ -82,8 +82,8 @@ export default function EditMedModal({ isOpen, onClose, med, onSave, onDelete }:
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar medicamento"
-      icon={icon}
+      title=""
+      icon=""
       accentBg="var(--warn-hl)"
       accentFg="var(--warn)"
       size="md"
@@ -99,13 +99,19 @@ export default function EditMedModal({ isOpen, onClose, med, onSave, onDelete }:
         </div>
       }
     >
-      <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--warn-hl),var(--surface))' }}>
-        <div className="modal-hero-icon" style={{ background:'var(--warn)', fontSize:'1.5rem' }}>{icon}</div>
-        <div>
-          <div className="modal-hero-title">Editar medicamento</div>
-          <div className="modal-hero-sub">{med.title}</div>
-        </div>
-      </div>
+   <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--warn-hl),var(--surface))' }}>
+    <div className="modal-hero-icon" style={{ background:'var(--warn)', fontSize:'1.5rem' }}>{icon}</div>
+    <div style={{ flex: 1 }}>
+      <div className="modal-hero-title">Editar medicamento</div>
+      <div className="modal-hero-sub">{med.title}</div>
+    </div>
+    <button className="pm-close" onClick={onClose} aria-label="Cerrar modal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
 
       {/* Icon */}
       <div className="modal-section">Tipo</div>

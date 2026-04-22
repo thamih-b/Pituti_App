@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Species } from '../types'
 import type { PetWithAlerts } from '../hooks/usePets'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface FormFields {
@@ -266,17 +267,13 @@ export default function AddPetModal({ isOpen, onClose, onAdd }: AddPetModalProps
 
         {/* ── Footer ─────────────────────────────────────────────────── */}
         <div className="apm-footer">
-          <button className="btn btn-ghost" onClick={handleClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Guardar mascota
-          </button>
+          <PfFooter>
+  <PfBtn variant="save" onClick={handleSubmit}>Guardar mascota</PfBtn>
+</PfFooter>
         </div>
 
       </div>
     </div>
   )
 }
+

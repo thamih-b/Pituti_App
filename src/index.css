@@ -162,12 +162,16 @@ input, select, textarea { font: inherit; color: inherit }
 
 /* ── Sidebar ────────────────────────────────────────────── */
 .sidebar {
+  position: sticky;
   background: var(--nav-bg);
   padding: .875rem .625rem;
   display: flex; flex-direction: column; gap: .2rem;
   overflow: hidden;
   box-shadow: 4px 0 20px rgba(0,0,0,.12);
+  top: 0;
+  height: 100vh;
 }
+
 .sidebar-section-label {
   font-size: .625rem; font-weight: 800; letter-spacing: .12em;
   text-transform: uppercase; color: var(--nav-label);
@@ -1033,7 +1037,7 @@ tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: middle }
 
 
 /* ═══════════════════════════════════════════════════════════
-   MODAL PROFISSIONAL — pm-*
+   MODAL — pm-*
    Overlay + sheet com header rico, body scrollável, footer fixo
    ═══════════════════════════════════════════════════════════ */
 
@@ -1081,64 +1085,72 @@ tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: middle }
   to   { opacity: 1; transform: scale(1)   translateY(0);    }
 }
 
-/* ── Header ── */
-.pm-header {
+/* ════════════════════════════════════════════════════════════
+   MODAL HERO HEADER — single header, no duplication
+   ════════════════════════════════════════════════════════════ */
+
+/* Remove the old pm-header */
+.pm-header { display: none !important; }
+
+/* New hero header — replaces pm-header */
+.pm-hero-header {
   display: flex;
   align-items: center;
   gap: .875rem;
   padding: 1.25rem 1.5rem 1.125rem;
   border-bottom: 1.5px solid var(--divider);
   flex-shrink: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
 
-.pm-header-icon {
-  width: 40px;
-  height: 40px;
+.pm-hero-icon {
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
-  box-shadow: var(--sh-sm);
+  box-shadow: 0 3px 10px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.15);
 }
 
-.pm-header-text {
+.pm-hero-text {
   flex: 1;
   min-width: 0;
 }
 
-.pm-header-title {
+.pm-hero-title {
   font-size: 1rem;
   font-weight: 800;
   color: var(--text);
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.2;
+  font-family: var(--font-display);
+  margin: 0;
 }
 
-.pm-header-sub {
-  font-size: .75rem;
+.pm-hero-subtitle {
+  font-size: .8125rem;
   color: var(--text-muted);
-  margin-top: .15rem;
+  margin: .2rem 0 0;
 }
 
+/* Close button — same style as before */
 .pm-close {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--r-md);
-  background: var(--surface-offset);
-  border: 1.5px solid var(--border);
+  background: rgba(0,0,0,.07);
+  border: 1.5px solid rgba(0,0,0,.08);
   color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background var(--trans), color var(--trans), transform var(--trans);
+  transition: background var(--trans), color var(--trans), border-color var(--trans), transform var(--trans);
 }
-.pm-close:hover { background: var(--err-hl); color: var(--err); }
+.pm-close:hover { background: var(--err-hl); color: var(--err); border-color: rgba(200,64,106,.25); }
 .pm-close:active { transform: scale(.92); }
 
 /* ── Body (scrollável) ── */
@@ -1159,7 +1171,7 @@ tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: middle }
   display: flex;
   justify-content: flex-end;
   gap: .625rem;
-  padding: 1rem 1.5rem 1.25rem;
+  padding: 0.625rem 0.875rem 0.75rem;
   border-top: 1.5px solid var(--divider);
   background: var(--surface-2);
   flex-shrink: 0;
@@ -2188,3 +2200,935 @@ tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: middle }
 .note-add-card:hover .note-add-card-icon { background: var(--primary); color: #fff; }
 .note-add-card-label { font-size: .875rem; font-weight: 800; color: var(--text-muted); }
 .note-add-card-sub   { font-size: .75rem; color: var(--text-faint); }
+
+/* ════════════════════════════════════════════════════════════
+   MODAL FOOTER — always flush right
+   ════════════════════════════════════════════════════════════ */
+
+.pm-footer {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .875rem 1.5rem 1.125rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+/* Default: right-align everything */
+.pm-footer--right {
+  justify-content: flex-end;
+}
+
+/* When there's a left destructive action */
+.pm-footer--spread {
+  justify-content: space-between;
+}
+
+/* PfBtn inside pm-footer also get right-align */
+.pm-footer .pf-btn,
+.pm-footer .btn {
+  flex-shrink: 0;
+}
+
+/* The cancel/ghost button is always visually first (leftmost of right group) */
+.pm-footer > .pf-btn--cancel,
+.pm-footer > .pf-btn--close,
+.pm-footer > .btn-ghost {
+  order: -1;
+}
+
+/* All footer buttons get minimum width for visual balance */
+.apm-footer .btn {
+  min-width: 110px;
+  justify-content: center;
+  font-size: .875rem;
+  font-weight: 700;
+  padding: .55rem 1.25rem;
+  border-radius: var(--r-lg);
+  transition: all 180ms cubic-bezier(.16,1,.3,1);
+}
+
+/* Cancel/Close - always subtle but clearly tappable */
+.pm-footer .btn-ghost,
+.apm-footer .btn-ghost {
+  min-width: 90px;
+  background: var(--surface-offset);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+}
+.pm-footer .btn-ghost:hover,
+.apm-footer .btn-ghost:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+/* Primary CTA - bold gradient */
+.pm-footer .btn-primary,
+.apm-footer .btn-primary {
+  background: linear-gradient(150deg, var(--primary) 0%, #3d4f82 100%);
+  box-shadow: 0 3px 12px rgba(91,108,158,.35), inset 0 1px 0 rgba(255,255,255,.12);
+  border: none;
+  color: #fff;
+  letter-spacing: .01em;
+}
+.pm-footer .btn-primary:hover,
+.apm-footer .btn-primary:hover {
+  background: linear-gradient(150deg, #4a5a8f 0%, var(--primary-h) 100%);
+  box-shadow: 0 6px 20px rgba(91,108,158,.45);
+  transform: translateY(-1px);
+}
+
+/* Danger in footer */
+.pm-footer .btn-danger,
+.apm-footer .btn-danger {
+  background: var(--err-hl);
+  color: var(--err);
+  border: 1.5px solid rgba(200,64,106,.3);
+  min-width: 90px;
+}
+.pm-footer .btn-danger:hover {
+  background: var(--err);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(200,64,106,.35);
+}
+
+/* Success state in footer */
+.pm-footer .btn-success {
+  background: linear-gradient(150deg, var(--success) 0%, #3d7a4a 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 3px 12px rgba(85,128,96,.35);
+}
+.pm-footer .btn-success:hover {
+  box-shadow: 0 6px 20px rgba(85,128,96,.45);
+  transform: translateY(-1px);
+}
+
+/* Footer left area for destructive actions */
+.pm-footer-left {
+  margin-right: auto;
+  display: flex;
+  gap: .5rem;
+}
+
+/* ── Detail Overlay (vaccine, med, symptom, note) ──────────── */
+.detail-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(16,12,36,.6);
+  backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: pm-fade-in 160ms ease both;
+}
+.detail-sheet {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow:
+    0 4px 16px rgba(44,52,98,.10),
+    0 12px 40px rgba(44,52,98,.20),
+    0 40px 80px rgba(44,52,98,.20);
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100dvh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pm-rise 220ms cubic-bezier(.16,1,.3,1) both;
+}
+.detail-header {
+  display: flex; align-items: center; gap: .875rem;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1.5px solid var(--divider);
+  flex-shrink: 0;
+}
+.detail-icon {
+  width: 48px; height: 48px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.375rem; flex-shrink: 0; box-shadow: var(--sh-sm);
+}
+.detail-close {
+  margin-left: auto;
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  transition: all var(--trans);
+}
+.detail-close:hover { background: var(--err-hl); color: var(--err); }
+
+.detail-body {
+  padding: 1.125rem 1.5rem;
+  overflow-y: auto; flex: 1;
+}
+.detail-body::-webkit-scrollbar { width: 4px; }
+.detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ════════════════════════════════════════════════════════════
+   DETAIL OVERLAY FOOTER — same right-align fix
+   ════════════════════════════════════════════════════════════ */
+
+.detail-footer {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .875rem 1.5rem 1.125rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface-2);
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.detail-footer .btn {
+  flex: 1;
+  justify-content: center;
+  font-size: .875rem;
+  font-weight: 700;
+  padding: .6rem 1rem;
+  border-radius: var(--r-lg);
+  transition: all 180ms cubic-bezier(.16,1,.3,1);
+}
+.detail-footer .btn-primary {
+  background: linear-gradient(150deg, var(--primary) 0%, #3d4f82 100%);
+  box-shadow: 0 3px 10px rgba(91,108,158,.3);
+  color: #fff; border: none;
+}
+.detail-footer .btn-primary:hover { box-shadow: 0 5px 16px rgba(91,108,158,.45); transform: translateY(-1px); }
+.detail-footer .btn-secondary {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+}
+.detail-footer .btn-secondary:hover { background: var(--surface-offset); color: var(--text); }
+.detail-footer .btn-success {
+  background: linear-gradient(150deg, var(--success) 0%, #3d7a4a 100%);
+  color: #fff; border: none;
+  box-shadow: 0 3px 10px rgba(85,128,96,.3);
+}
+.detail-footer .btn-success:hover { box-shadow: 0 5px 16px rgba(85,128,96,.4); transform: translateY(-1px); }
+.detail-footer .btn-warn {
+  background: var(--warn-hl);
+  color: var(--warn);
+  border: 1.5px solid rgba(184,96,18,.25);
+}
+.detail-footer .btn-warn:hover { background: var(--warn); color: #fff; }
+
+/* ── Detail Info Rows ────────────────────────────────────────── */
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .625rem;
+  margin-bottom: 1rem;
+}
+.detail-info-chip {
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: .625rem .875rem;
+}
+.detail-info-label {
+  font-size: .65rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-faint); margin-bottom: .25rem;
+}
+.detail-info-value {
+  font-size: .875rem; font-weight: 700; color: var(--text);
+}
+
+/* ── Status Pill ─────────────────────────────────────────────── */
+.status-pill {
+  display: inline-flex; align-items: center; gap: .375rem;
+  padding: .3rem .875rem;
+  border-radius: var(--r-full);
+  font-size: .75rem; font-weight: 800;
+}
+.status-pill.ok      { background: var(--success-hl); color: var(--success); border: 1.5px solid var(--success); }
+.status-pill.soon    { background: var(--gold-hl);    color: var(--gold);    border: 1.5px solid var(--gold); }
+.status-pill.late    { background: var(--err-hl);     color: var(--err);     border: 1.5px solid var(--err); }
+.status-pill.active  { background: var(--err-hl);     color: var(--err);     border: 1.5px solid var(--err); }
+.status-pill.resolved{ background: var(--success-hl); color: var(--success); border: 1.5px solid var(--success); }
+.status-pill.archived{ background: var(--surface-offset); color: var(--text-faint); border: 1.5px solid var(--border); }
+
+/* ── Vaccine/Med row clickable ───────────────────────────────── */
+.vaccine-row { cursor: pointer; transition: background var(--trans), box-shadow var(--trans); border-radius: var(--r-lg); }
+.vaccine-row:hover { background: var(--surface-offset); }
+
+/* ── Modern Edit Icon ─────────────────────────────────────────── */
+.icon-edit-pen {
+  display: inline-flex;
+}
+
+/* ── Symptoms edit/detail ─────────────────────────────────────── */
+.symptom-row-clickable {
+  cursor: pointer;
+  border-radius: var(--r-lg);
+  transition: background var(--trans);
+}
+.symptom-row-clickable:hover { background: var(--surface-offset); }
+
+/* ── Notes archived section ───────────────────────────────────── */
+.notes-archived-section {
+  margin-top: 2rem;
+}
+.notes-archived-title {
+  display: flex; align-items: center; gap: .625rem;
+  font-size: .75rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .09em;
+  color: var(--text-faint);
+  margin-bottom: 1rem;
+}
+.notes-archived-title::after {
+  content: ''; flex: 1; height: 1.5px; background: var(--divider);
+}
+.note-card-archived {
+  opacity: .6;
+  border-style: dashed;
+  filter: grayscale(.3);
+}
+.note-card-archived:hover { opacity: .85; }
+
+/* ── Settings Datos Personales ────────────────────────────────── */
+.settings-field-group {
+  display: flex; flex-direction: column; gap: .625rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: .875rem;
+}
+.settings-field-row {
+  display: flex; align-items: center; gap: .75rem;
+}
+.settings-field-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: var(--primary-hl);
+  color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; flex-shrink: 0;
+}
+.settings-input-modern {
+  flex: 1;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: .55rem .875rem;
+  font-size: .9rem; color: var(--text);
+  outline: none; font-family: inherit;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.settings-input-modern:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-hl);
+}
+.settings-input-modern::placeholder { color: var(--text-faint); }
+
+/* ── Date input in detail overlay ───────────────────────────── */
+.detail-date-row {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .625rem .875rem;
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: .875rem;
+}
+.detail-date-row label {
+  font-size: .75rem; font-weight: 700; color: var(--text-muted);
+  white-space: nowrap; flex-shrink: 0;
+}
+.detail-date-row input[type="date"] {
+  flex: 1;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  padding: .35rem .625rem;
+  font-size: .8125rem; color: var(--text);
+  outline: none; font-family: inherit;
+  transition: border-color var(--trans);
+}
+.detail-date-row input[type="date"]:focus {
+  border-color: var(--primary);
+}
+
+/* Container for footer button groups */
+.pf-footer {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.pf-footer--spread { justify-content: space-between; }
+.pf-footer--end    { justify-content: flex-end; }
+.pf-footer__left   { display: flex; gap: .5rem; margin-right: auto; }
+.pf-footer__right  { display: flex; gap: .5rem; margin-left: auto; }
+
+/* Base button */
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .6rem 1.25rem;
+  border-radius: var(--r-lg);
+  font-family: inherit;
+  font-size: .875rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  min-width: 100px;
+  transition:
+    background 160ms cubic-bezier(.16,1,.3,1),
+    box-shadow 160ms cubic-bezier(.16,1,.3,1),
+    transform  100ms cubic-bezier(.16,1,.3,1),
+    color      160ms;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pf-btn:active { transform: scale(.96); }
+.pf-btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.pf-btn svg { flex-shrink: 0; }
+
+/* ── Variants ── */
+
+/* Close / Cancel */
+.pf-btn--close,
+.pf-btn--cancel {
+  background: var(--surface-offset);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  min-width: 90px;
+}
+.pf-btn--close:hover,
+.pf-btn--cancel:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+/* Save / Primary action */
+.pf-btn--save,
+.pf-btn--primary {
+  background: linear-gradient(150deg, var(--primary) 0%, #3a4c80 100%);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(91,108,158,.32), inset 0 1px 0 rgba(255,255,255,.14);
+  border: none;
+}
+.pf-btn--save:hover,
+.pf-btn--primary:hover {
+  background: linear-gradient(150deg, #4a5a90 0%, var(--primary-h) 100%);
+  box-shadow: 0 6px 20px rgba(91,108,158,.44);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Register / Add */
+.pf-btn--register,
+.pf-btn--add {
+  background: linear-gradient(150deg, var(--success) 0%, #3d7a4a 100%);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(85,128,96,.32);
+  border: none;
+}
+.pf-btn--register:hover,
+.pf-btn--add:hover {
+  box-shadow: 0 6px 20px rgba(85,128,96,.44);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Mark done / Applied */
+.pf-btn--done {
+  background: linear-gradient(150deg, #2d9e62 0%, #1e7a4a 100%);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(45,158,98,.3);
+  border: none;
+}
+.pf-btn--done:hover {
+  box-shadow: 0 6px 20px rgba(45,158,98,.42);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Edit */
+.pf-btn--edit {
+  background: var(--primary-hl);
+  color: var(--primary);
+  border: 1.5px solid rgba(91,108,158,.25);
+  min-width: 90px;
+}
+.pf-btn--edit:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(91,108,158,.35);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Archive */
+.pf-btn--archive {
+  background: var(--surface-offset);
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  min-width: 90px;
+}
+.pf-btn--archive:hover {
+  background: var(--gold-hl);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/* Resolve */
+.pf-btn--resolve {
+  background: var(--success-hl);
+  color: var(--success);
+  border: 1.5px solid rgba(85,128,96,.3);
+}
+.pf-btn--resolve:hover {
+  background: var(--success);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(85,128,96,.35);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Delete / Danger */
+.pf-btn--delete,
+.pf-btn--danger {
+  background: var(--err-hl);
+  color: var(--err);
+  border: 1.5px solid rgba(200,64,106,.25);
+  min-width: 90px;
+}
+.pf-btn--delete:hover,
+.pf-btn--danger:hover {
+  background: var(--err);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(200,64,106,.38);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Warn / Reopen */
+.pf-btn--warn {
+  background: var(--warn-hl);
+  color: var(--warn);
+  border: 1.5px solid rgba(184,96,18,.25);
+}
+.pf-btn--warn:hover {
+  background: var(--warn);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(184,96,18,.35);
+  transform: translateY(-1px) scale(1);
+}
+
+/* Size variants */
+.pf-btn--sm {
+  padding: .4rem .875rem;
+  font-size: .8125rem;
+  min-width: 70px;
+  border-radius: var(--r-md);
+}
+.pf-btn--lg {
+  padding: .75rem 1.75rem;
+  font-size: .9375rem;
+  min-width: 140px;
+  border-radius: var(--r-xl);
+}
+
+/* Full width */
+.pf-btn--full { width: 100%; }
+
+/* Icon only */
+.pf-btn--icon {
+  width: 36px; height: 36px;
+  min-width: unset;
+  padding: 0;
+  border-radius: var(--r-md);
+}
+
+/* ── Back Button ─────────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .35rem .75rem;
+  border-radius: var(--r-full);
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  font-size: .8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--trans);
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+.back-btn:hover {
+  background: var(--surface);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* ── Calendar Page ───────────────────────────────────────── */
+.cal-page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--sh-sm);
+}
+.cal-date-jump {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: .4rem .875rem;
+  flex: 1;
+  max-width: 260px;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.cal-date-jump:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-hl);
+}
+.cal-date-jump input[type="month"],
+.cal-date-jump input[type="date"] {
+  background: none; border: none; outline: none;
+  font: inherit; color: var(--text); font-size: .875rem;
+  flex: 1;
+}
+.cal-filter-pills {
+  display: flex;
+  gap: .375rem;
+  flex-wrap: wrap;
+}
+.cal-filter-pill {
+  display: flex; align-items: center; gap: .3rem;
+  padding: .3rem .7rem;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--border);
+  background: var(--surface-offset);
+  font-size: .78rem; font-weight: 700; color: var(--text-muted);
+  cursor: pointer; transition: all var(--trans);
+}
+.cal-filter-pill:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-hl); }
+.cal-filter-pill.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+.cal-dot-filter { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Vacc Ring in PetCard ────────────────────────────────── */
+.pet-card-vacc-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+}
+.pet-card-vacc-ring-label {
+  font-size: .6rem;
+  font-weight: 800;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+/* ── Overdued Events Banner in Calendar ─────────────────── */
+.cal-overdue-banner {
+  background: var(--err-hl);
+  border: 1.5px solid rgba(200,64,106,.25);
+  border-radius: var(--r-xl);
+  padding: .875rem 1.125rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  cursor: pointer;
+  transition: background var(--trans);
+}
+.cal-overdue-banner:hover { background: rgba(200,64,106,.12); }
+
+/* ── Pet Detail Expandable Chip ─────────────────────────── */
+.stat-chip.clickable {
+  cursor: pointer;
+  transition: all var(--trans);
+  position: relative;
+}
+.stat-chip.clickable:hover {
+  border-color: var(--primary);
+  background: var(--primary-hl);
+  box-shadow: 0 0 0 2px var(--primary-hl);
+}
+.stat-chip.clickable:hover .stat-chip-label { color: var(--primary); }
+.stat-chip-edit-hint {
+  position: absolute;
+  top: .375rem; right: .5rem;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--trans);
+  font-size: .6rem;
+}
+.stat-chip.clickable:hover .stat-chip-edit-hint { opacity: 1; }
+
+/* ── Settings Datos Personales v2 ───────────────────────── */
+.settings-form-section {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.settings-form-section-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  background: var(--surface-offset);
+  border-bottom: 1.5px solid var(--border);
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.settings-form-field {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  transition: background var(--trans);
+}
+.settings-form-field:last-child { border-bottom: none; }
+.settings-form-field:focus-within { background: var(--primary-hl); }
+.settings-form-field-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: var(--primary-hl);
+  color: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; flex-shrink: 0;
+  transition: background var(--trans);
+}
+.settings-form-field:focus-within .settings-form-field-icon {
+  background: var(--primary);
+  color: #fff;
+}
+.settings-form-field-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+}
+.settings-form-field-label {
+  font-size: .7rem;
+  font-weight: 800;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.settings-form-field-input {
+  background: none;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: .9rem;
+  color: var(--text);
+  padding: 0;
+  width: 100%;
+}
+.settings-form-field-input::placeholder { color: var(--text-faint); }
+
+/* ════════════════════════════════════════════════════════════
+   PET DETAIL CHIP EDIT OVERLAY
+   ════════════════════════════════════════════════════════════ */
+
+.chip-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(16,12,36,.62);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: pm-fade-in 160ms ease both;
+}
+
+.chip-edit-sheet {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 32px rgba(44,52,98,.25), 0 32px 80px rgba(44,52,98,.2);
+  width: 100%;
+  max-width: 360px;
+  overflow: hidden;
+  animation: pm-rise 200ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.chip-edit-header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: 1rem 1.25rem .875rem;
+  border-bottom: 1.5px solid var(--divider);
+  background: var(--primary-hl);
+}
+
+.chip-edit-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  flex-shrink: 0;
+}
+
+.chip-edit-title {
+  font-size: .9375rem;
+  font-weight: 800;
+  color: var(--text);
+  flex: 1;
+}
+
+.chip-edit-body {
+  padding: 1.125rem 1.25rem;
+}
+
+.chip-edit-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  padding: .875rem 1.25rem 1rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface-2);
+}
+
+/* ════════════════════════════════════════════════════════════
+   INVITATION SENT OVERLAY
+   ════════════════════════════════════════════════════════════ */
+
+.invite-sent-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(16,12,36,.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: pm-fade-in 180ms ease both;
+}
+
+.invite-sent-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-lg);
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  padding: 2rem 1.75rem 1.5rem;
+  animation: pm-rise 220ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.invite-sent-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--success-hl);
+  border: 3px solid var(--success);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 1.25rem;
+  animation: apm-pop .4s cubic-bezier(.16,1,.3,1);
+}
+
+/* ════════════════════════════════════════════════════════════
+   DELETE ACCOUNT MODAL (danger style)
+   ════════════════════════════════════════════════════════════ */
+
+.delete-account-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(16,12,36,.72);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: pm-fade-in 180ms ease both;
+}
+
+.delete-account-sheet {
+  background: var(--surface);
+  border: 2px solid rgba(200,64,106,.35);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 40px rgba(200,64,106,.25), var(--sh-lg);
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+  animation: pm-rise 220ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.delete-account-header {
+  padding: 1.5rem 1.5rem 1.25rem;
+  text-align: center;
+  background: linear-gradient(135deg, var(--err-hl) 0%, var(--surface) 100%);
+  border-bottom: 1.5px solid rgba(200,64,106,.2);
+}
+
+.delete-account-warning-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--err);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin: 0 auto .875rem;
+  animation: apm-pop .35s cubic-bezier(.16,1,.3,1);
+}
+
+/* ════════════════════════════════════════════════════════════
+   GLOBAL spin animation (for loading buttons)
+   ════════════════════════════════════════════════════════════ */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   NOTE DELETE CONFIRMATION inside note detail
+   ════════════════════════════════════════════════════════════ */
+.note-delete-confirm {
+  background: var(--err-hl);
+  border: 1.5px solid rgba(200,64,106,.3);
+  border-radius: var(--r-lg);
+  padding: .875rem 1rem;
+  margin-top: .875rem;
+}

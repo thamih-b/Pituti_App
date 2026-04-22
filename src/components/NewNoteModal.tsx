@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import Modal from './Modal'
-import Button from './Button'
 import { showToast } from './AppLayout'
 import { MOCK_PETS } from '../hooks/usePets'
 import FormDateField from './FormDateField'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 export interface NoteData {
   petId: string; content: string; vet: string; date: string; type: string
@@ -49,35 +49,38 @@ export default function NewNoteModal({ isOpen, onClose, onAdd, defaultPetId }: P
   const selType = NOTE_TYPES.find(n => n.val === type)!
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Nueva nota"
-      icon="📋"
-      accentBg="var(--primary-hl)"
-      accentFg="var(--primary)"
-      size="md"
+<Modal
+  isOpen={isOpen}
+  onClose={handleClose}
+  title=""
+  icon=""
+  accentBg="var(--primary-hl)"
+  accentFg="var(--primary)"
+  size="md"
       footer={!success ? (
         <>
-          <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Guardar nota
-          </Button>
+<PfFooter>
+  <PfBtn variant="save" onClick={handleSubmit}>Guardar nota</PfBtn>
+</PfFooter>
         </>
       ) : <></>}
     >
-      {/* Hero */}
-      <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--primary-hl),var(--surface))' }}>
-        <div className="modal-hero-icon" style={{ background:'var(--primary)', fontSize:'1.5rem' }}>
-          {selType.icon}
-        </div>
-        <div>
-          <div className="modal-hero-title">Nueva nota</div>
-          <div className="modal-hero-sub">Registro de {selType.label} · <strong>{pet?.name ?? '—'}</strong></div>
-        </div>
-      </div>
+        {/* Hero */}
+  <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--primary-hl),var(--surface))' }}>
+    <div className="modal-hero-icon" style={{ background:'var(--primary)', fontSize:'1.5rem' }}>
+      {selType.icon}
+    </div>
+    <div style={{ flex: 1 }}>
+      <div className="modal-hero-title">Nueva nota</div>
+      <div className="modal-hero-sub">Registro de {selType.label} · <strong>{pet?.name ?? '—'}</strong></div>
+    </div>
+    <button className="pm-close" onClick={handleClose}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+
+    </button>
+  </div>
 
       {success ? (
         <div className="modal-success">

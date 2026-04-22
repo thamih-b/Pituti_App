@@ -4,6 +4,7 @@ import Button from './Button'
 import { showToast } from './AppLayout'
 import { MOCK_PETS } from '../hooks/usePets'
 import FormDateField from './FormDateField'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 // ── Types ───────────────────────────────────────────────
 export interface AddMedData {
@@ -78,30 +79,34 @@ export default function AddMedicationModal({ isOpen, onClose, onAdd, defaultPetI
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Añadir medicamento"
-      icon="💊"
+      title=""
+      icon=""
       accentBg="var(--warn-hl)"
       accentFg="var(--warn)"
       size="md"
       footer={!success ? (
         <>
-          <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-            Guardar medicamento
-          </Button>
+        <PfFooter>
+  <PfBtn variant="save" onClick={handleSubmit}>Guardar medicamento</PfBtn>
+</PfFooter>
+
         </>
       ) : <></>}
     >
-      {/* Hero */}
-      <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--warn-hl),var(--surface))' }}>
-        <div className="modal-hero-icon" style={{ background:'var(--warn)', fontSize:'1.5rem' }}>{medIcon}</div>
-        <div>
-          <div className="modal-hero-title">Nuevo medicamento</div>
-          <div className="modal-hero-sub">Tratamiento para <strong>{pet?.name ?? '—'}</strong></div>
-        </div>
-      </div>
+{/* Hero */}
+<div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--warn-hl),var(--surface))' }}>
+  <div className="modal-hero-icon" style={{ background:'var(--warn)', fontSize:'1.5rem' }}>{medIcon}</div>
+  <div style={{ flex: 1 }}>
+    <div className="modal-hero-title">Nuevo medicamento</div>
+    <div className="modal-hero-sub">Tratamiento para <strong>{pet?.name ?? '—'}</strong></div>
+  </div>
+  <button className="pm-close" onClick={handleClose} aria-label="Cerrar modal">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+  </button>
+</div>
 
       {success ? (
         <div className="modal-success">

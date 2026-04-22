@@ -6,6 +6,8 @@ import CareDetailModal from '../components/CareDetailModal'
 import type { AddCareData } from '../components/AddCareModal'
 import type { CareEditData } from '../components/EditCareModal'
 import type { CareDetailItem } from '../components/CareDetailModal'
+import BackButton from '../components/BackButton'
+
 
 interface CareItemData {
   id: string; petId: string; emoji: string; title: string; sub: string
@@ -124,6 +126,8 @@ export default function CaresPage() {
 
   return (
     <div>
+      <BackButton label="Volver"/>
+
       <div className="page-header">
         <div>
           <div className="page-title">Cuidados diarios</div>

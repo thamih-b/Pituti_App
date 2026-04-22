@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Modal from './Modal'
 import Button from './Button'
 import { showToast } from './AppLayout'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 export interface CareEditData {
   id:       string
@@ -80,22 +81,22 @@ export default function EditCareModal({ isOpen, onClose, care, onSave, onDelete 
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar cuidado"
-      icon={emoji || '✏️'}
+      title=""
+      icon=""
       accentBg="var(--primary-hl)"
       accentFg="var(--primary)"
       footer={
-        <div style={{ display:'flex', justifyContent:'space-between', width:'100%', gap:'.5rem' }}>
-          {onDelete && (
-            <Button variant="danger" onClick={handleDelete} style={{ minWidth: 0 }}>
-              {confirmDelete ? '¿Confirmar?' : '🗑 Eliminar'}
-            </Button>
-          )}
-          <div style={{ display:'flex', gap:'.5rem', marginLeft:'auto' }}>
-            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar cambios</Button>
-          </div>
-        </div>
+        // <div style={{ display:'flex', justifyContent:'space-between', width:'100%', gap:'.5rem' }}>
+
+<PfFooter>
+  <PfBtn variant="danger" onClick={handleDelete} style={{ minWidth: 0, marginRight:0}}>
+    {confirmDelete ? '¿Confirmar?' : '🗑 Eliminar'}
+  </PfBtn>
+  <PfBtn variant="save" onClick={handleSave}style={{ minWidth: 0, marginLeft:150}}
+  >Guardar cambios</PfBtn>
+</PfFooter>
+          // </div>
+
       }
     >
       {/* Hero */}

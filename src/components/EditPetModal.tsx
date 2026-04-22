@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import Modal from './Modal'
-import Button from './Button'
 import { showToast } from './AppLayout'
 import type { PetWithAlerts } from '../hooks/usePets'
 import type { Species } from '../types'
 import FormDateField from './FormDateField'
+import { PfBtn, PfFooter } from '../components/FooterButtons'
 
 interface Props { isOpen: boolean; onClose: () => void; onSave: (pet: PetWithAlerts) => void; pet: PetWithAlerts }
 
@@ -60,11 +60,12 @@ export default function EditPetModal({ isOpen, onClose, onSave, pet }: Props) {
       accentFg="var(--nav-bg)"
       size="md"
       footer={!success ? (
-        <>
-          <Button variant="ghost" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSave}>Guardar cambios</Button>
-        </>
-      ) : <></>}
+        
+  <PfFooter
+    left={<PfBtn variant="cancel" onClick={onClose}>Cancelar</PfBtn>}
+    right={<PfBtn variant="save" onClick={handleSave}>Guardar cambios</PfBtn>}
+  />
+) : <></>}
     >
       {/* Hero */}
       <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--pal-lilac),var(--surface))' }}>
@@ -122,16 +123,18 @@ export default function EditPetModal({ isOpen, onClose, onSave, pet }: Props) {
             </div>
           </div>
 
-          {/* Physical */}
-          <div className="modal-section">Datos físicos</div>
           <div className="mf-row">
-            <FormDateField
-              label="Fecha de nacimiento"
-              value={birthDate}
-              onChange={setBirthDate}
-              max={new Date().toISOString().split('T')[0]}
-              hint="opcional"
-            />
+<FormDateField
+  label={
+    <>
+      Fecha de nacimiento{' '}
+      <span className="mf-optional">opcional</span>
+    </>
+  }
+  value={birthDate}
+  onChange={setBirthDate}
+  max={new Date().toISOString().split('T')[0]}
+/>
             <div className="form-group" style={{ marginBottom:0 }}>
               <label className="form-label">Peso <span className="mf-optional">opcional</span></label>
               <div className="mf-input-wrap">

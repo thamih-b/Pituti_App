@@ -1,21 +1,25 @@
+
+
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import Button from './Button'
 
 type ModalSize = 'sm' | 'md' | 'lg'
 
 interface ModalProps {
   isOpen:    boolean
   onClose:   () => void
+  /** Main label shown in the hero header */
   title:     string
+  /** Subtitle / context line below the title */
+  subtitle?: string
   children:  ReactNode
   footer?:   ReactNode
   size?:     ModalSize
-  /** Ícone exibido no header. Default: '✦' */
+  /** Emoji or text icon shown in the colored circle */
   icon?:     string
-  /** Cor de fundo do ícone. Default: var(--primary-hl) */
+  /** Background colour of the icon circle — also used as header gradient start */
   accentBg?: string
-  /** Cor do ícone. Default: var(--primary) */
+  /** Icon foreground colour */
   accentFg?: string
 }
 
@@ -29,6 +33,7 @@ export default function Modal({
   isOpen,
   onClose,
   title,
+  subtitle,
   children,
   footer,
   size     = 'md',
@@ -56,49 +61,42 @@ export default function Modal({
       aria-labelledby="modal-title"
       className="pm-overlay"
     >
-      {/* Backdrop clicável */}
-      <div
-        className="absolute inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {/* Backdrop */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
       {/* Sheet */}
-      <div
-        className="pm-sheet"
-        style={{ maxWidth: maxWidths[size] }}
-      >
-        {/* ── Header ── */}
-        <div className="pm-header">
-          <div
-            className="pm-header-icon"
-            style={{ background: accentBg, color: accentFg }}
-          >
-            {icon}
-          </div>
-          <div className="pm-header-text">
-            <h2 id="modal-title" className="pm-header-title">{title}</h2>
-          </div>
-          <button
-            className="pm-close"
-            onClick={onClose}
-            aria-label="Cerrar modal"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
+      <div className="pm-sheet" style={{ maxWidth: maxWidths[size] }}>
 
-        {/* ── Body scrollável ── */}
+        {/* ── Single hero header — no duplication ── */}
+{title && (
+  <div
+    className="pm-hero-header"
+    style={{ background: `linear-gradient(135deg, ${accentBg} 0%, var(--surface) 100%)` }}
+  >
+    <div className="pm-hero-icon" style={{ background: accentFg, color: '#fff' }}>
+      {icon}
+    </div>
+    <div className="pm-hero-text">
+      <h2 id="modal-title" className="pm-hero-title">{title}</h2>
+      {subtitle && <p className="pm-hero-subtitle">{subtitle}</p>}
+    </div>
+    <button className="pm-close" onClick={onClose} aria-label="Cerrar modal">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+)}
+
+        {/* ── Scrollable body ── */}
         <div className="pm-body">
           {children}
         </div>
 
         {/* ── Footer ── */}
         {footer && (
-          <div className="pm-footer">
+          <div className="pm-footer pm-footer--right">
             {footer}
           </div>
         )}
