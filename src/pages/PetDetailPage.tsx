@@ -111,7 +111,7 @@ function ShareModal({ petName, isOpen, onClose }: { petName:string; isOpen:boole
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="Compartir cuidados" subtitle={`Invita a cuidadores de ${petName}`}
         icon="👥" accentBg="var(--blue-hl)" accentFg="var(--blue)" size="md"
-        footer={<PfFooter><PfBtn variant="cancel" onClick={onClose}>Cerrar</PfBtn><PfBtn variant="add" onClick={handleInvite}>Enviar invitación</PfBtn></PfFooter>}>
+        footer={<PfFooter><PfBtn variant="add" onClick={handleInvite}>Enviar invitación</PfBtn></PfFooter>}>
         <div className="modal-section">Cuidadores activos <span className="badge badge-gray">{caregivers.length}</span></div>
         <div style={{ display:'flex',flexDirection:'column',gap:'.5rem',marginBottom:'.5rem' }}>
           {caregivers.map(u=>(
