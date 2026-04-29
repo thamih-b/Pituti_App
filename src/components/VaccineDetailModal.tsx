@@ -114,7 +114,6 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
             </>
           ) : (
             <>
-              <button className="btn btn-secondary" onClick={() => setMarkMode(false)}>Cancelar</button>
               <button className="btn btn-success" onClick={handleApply}>✓ Confirmar aplicación</button>
             </>
           )}

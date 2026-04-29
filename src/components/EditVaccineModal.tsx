@@ -59,13 +59,19 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
         : <></>
       }
     >
-      <div className="modal-hero" style={{ background: 'linear-gradient(135deg,var(--blue-hl),var(--surface))' }}>
-        <div className="modal-hero-icon" style={{ background: 'var(--blue)', fontSize: '1.5rem' }}>💉</div>
-        <div>
-          <div className="modal-hero-title">Editar vacuna</div>
-          <div className="modal-hero-sub">{vaccine.name}</div>
-        </div>
-      </div>
+<div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--blue-hl),var(--surface))' }}>
+  <div className="modal-hero-icon" style={{ background:'var(--blue)', fontSize:'1.5rem' }}>💉</div>
+  <div style={{ flex:1 }}>
+    <div className="modal-hero-title">Editar vacuna</div>
+    <div className="modal-hero-sub">{vaccine.name}</div>
+  </div>
+  <button className="pm-close" onClick={onClose} aria-label="Cerrar modal">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+  </button>
+</div>
 
       {success ? (
         <div className="modal-success">

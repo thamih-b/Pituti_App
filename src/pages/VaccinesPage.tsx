@@ -39,7 +39,7 @@ const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ago
 interface CalEvent {
   type:    'vaccine'|'medication'
   petName: string; petEmoji: string; label: string
-  status:  'ok'|'soon'|'late'; color: string; bgColor: string
+  status:  'ok'|'soon'|'late'; color: string; bgColor: string;   careId?: string 
 }
 
 type VaccineWithMeta = VaccineRecord & { cls:'ok'|'soon'|'late'; petName:string; petEmoji:string; petId:string }

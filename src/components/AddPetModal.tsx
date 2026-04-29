@@ -1,279 +1,294 @@
-import { useState, useRef, useEffect } from 'react'
-import type { Species } from '../types'
+import { useState } from 'react'
+import Modal from './Modal'
+import { showToast } from './AppLayout'
 import type { PetWithAlerts } from '../hooks/usePets'
-import { PfBtn, PfFooter } from '../components/FooterButtons'
+import type { Species } from '../types'
+import { PfBtn, PfFooter } from './FooterButtons'
 
-// ── Tipos ──────────────────────────────────────────────────────────────────────
-interface FormFields {
-  name:      string
-  species:   Species
-  breed:     string
-  birthDate: string
-  weight:    string
-}
-interface FormErrors { name?: string; birthDate?: string; weight?: string }
 
-interface AddPetModalProps {
+/* ─── Types ─────────────────────────────────────────────────── */
+interface Props {
   isOpen:  boolean
   onClose: () => void
   onAdd:   (pet: PetWithAlerts) => void
 }
 
-// ── Constantes ─────────────────────────────────────────────────────────────────
-const SPECIES_OPTIONS: { value: Species; label: string; emoji: string }[] = [
-  { value: 'cat',     label: 'Gato',    emoji: '🐱' },
-  { value: 'dog',     label: 'Perro',   emoji: '🐶' },
-  { value: 'bird',    label: 'Ave',     emoji: '🐦' },
-  { value: 'rabbit',  label: 'Conejo',  emoji: '🐰' },
-  { value: 'reptile', label: 'Reptil',  emoji: '🦎' },
-  { value: 'fish',    label: 'Pez',     emoji: '🐠' },
-  { value: 'other',   label: 'Otro',    emoji: '🐾' },
+const SPECIES_OPTIONS = [
+  { value: 'cat'     as Species, emoji: '🐱', label: 'Gato',   color: 'var(--pal-lilac)' },
+  { value: 'dog'     as Species, emoji: '🐶', label: 'Perro',  color: 'var(--pal-sky)'   },
+  { value: 'bird'    as Species, emoji: '🦜', label: 'Ave',    color: 'var(--pal-candy)' },
+  { value: 'rabbit'  as Species, emoji: '🐰', label: 'Conejo', color: 'var(--pal-mauve)' },
+  { value: 'reptile' as Species, emoji: '🦎', label: 'Reptil', color: 'var(--success-hl)'},
+  { value: 'fish'    as Species, emoji: '🐟', label: 'Pez',    color: 'var(--blue-hl)'   },
+  { value: 'other'   as Species, emoji: '🐾', label: 'Otro',   color: 'var(--surface-offset)'},
 ]
 
-const EMPTY: FormFields = { name: '', species: 'cat', breed: '', birthDate: '', weight: '' }
 
-// ── Validação pura ─────────────────────────────────────────────────────────────
-function validate(f: FormFields): FormErrors {
-  const e: FormErrors = {}
+/* ─── Component ─────────────────────────────────────────────── */
+export default function AddPetModal({ isOpen, onClose, onAdd }: Props) {
+  /* Existing fields */
+  const [name,      setName]      = useState('')
+  const [species,   setSpecies]   = useState<Species>('cat')
+  const [breed,     setBreed]     = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [weight,    setWeight]    = useState('')
+  const [nameErr,   setNameErr]   = useState('')
+  const [success,   setSuccess]   = useState(false)
 
-  // nome
-  if (!f.name.trim())
-    e.name = 'El nombre es obligatorio.'
-  else if (f.name.trim().length < 2)
-    e.name = 'Mínimo 2 caracteres.'
+  /* New optional fields */
+  const [color,       setColor]       = useState('')
+  const [height,      setHeight]      = useState('')
+  const [petLength,   setPetLength]   = useState('')
+  const [petWidth,    setPetWidth]    = useState('')
+  const [microchip,   setMicrochip]   = useState('')
+  const [chipCountry, setChipCountry] = useState('')
+  const [passport,    setPassport]    = useState('')
 
-  // data de nascimento
-  if (f.birthDate) {
-    const d = new Date(f.birthDate + 'T00:00:00')   // evita UTC offset
-    if (isNaN(d.getTime()))
-      e.birthDate = 'Fecha inválida.'
-    else if (d > new Date())
-      e.birthDate = 'No puede ser una fecha futura.'
+  const selected = SPECIES_OPTIONS.find(o => o.value === species)!
+
+  const reset = () => {
+    setName(''); setSpecies('cat'); setBreed(''); setBirthDate(''); setWeight('')
+    setColor(''); setHeight(''); setPetLength(''); setPetWidth('')
+    setMicrochip(''); setChipCountry(''); setPassport('')
+    setNameErr('')
   }
 
-  // peso
-  if (f.weight.trim() !== '') {
-    const w = parseFloat(f.weight)
-    if (isNaN(w) || w <= 0)
-      e.weight = 'El peso debe ser mayor que 0.'
-    else if (w > 200)
-      e.weight = 'El peso parece inválido (máx. 200 kg).'
-  }
-
-  return e
-}
-
-// ── Componente ─────────────────────────────────────────────────────────────────
-export default function AddPetModal({ isOpen, onClose, onAdd }: AddPetModalProps) {
-  const [form,    setForm]    = useState<FormFields>(EMPTY)
-  const [errors,  setErrors]  = useState<FormErrors>({})
-  const [touched, setTouched] = useState<Set<keyof FormFields>>(new Set())
-  const [success, setSuccess] = useState(false)
-  const nameRef = useRef<HTMLInputElement>(null)
-
-  // foco automático ao abrir
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => nameRef.current?.focus(), 60)
-    }
-  }, [isOpen])
-
-  // fechar com Escape
-  useEffect(() => {
-    if (!isOpen) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [isOpen])
-
-  if (!isOpen) return null
-
-  // ── helpers ──
-  const touch = (key: keyof FormFields) =>
-    setTouched(prev => new Set(prev).add(key))
-
-  const setField = (key: keyof FormFields, value: string) => {
-    const next = { ...form, [key]: value }
-    setForm(next)
-    if (touched.has(key)) setErrors(validate(next))
-  }
-
-  const handleBlur = (key: keyof FormFields) => {
-    touch(key)
-    setErrors(validate(form))
-  }
-
-  const hasError = (key: keyof FormErrors) =>
-    touched.has(key) && !!errors[key]
-
-  const inputClass = (key: keyof FormErrors) =>
-    ['apm-input', hasError(key) ? 'apm-input--error' : ''].join(' ').trim()
+  const handleClose = () => { reset(); setSuccess(false); onClose() }
 
   const handleSubmit = () => {
-    // marcar todos os campos como tocados
-    const allKeys: (keyof FormFields)[] = ['name', 'species', 'birthDate', 'weight']
-    setTouched(new Set(allKeys))
-    const errs = validate(form)
-    setErrors(errs)
-    if (Object.keys(errs).length > 0) return
-
-    // onAdd({
-    //   id:          `pet-${Date.now()}`,
-    //   name:        form.name.trim(),
-    //   species:     form.species,
-    //   breed:       form.breed.trim() || undefined,
-    //   birthDate:   form.birthDate   || undefined,
-    //   photoUrl:    '',
-    //   ownerId:     'user-1',
-    //   createdAt:   new Date().toISOString(),
-    //   healthScore: 100,
-    //   alerts:      [],
-    // })
-
+    if (!name.trim()) { setNameErr('El nombre es obligatorio'); return }
+    const petName = name.trim()
     setSuccess(true)
     setTimeout(() => {
+      onAdd({
+        id: `pet-${Date.now()}`,
+        name: petName,
+        species,
+        breed:     breed.trim()  || undefined,
+        birthDate: birthDate     || undefined,
+        photoUrl:  undefined,
+        ownerId:   'user-1',
+        createdAt: new Date().toISOString(),
+        healthScore: 100,
+        alerts: [],
+        vaccCoverage: 100,
+        /* extra fields */
+        ...(weight      ? { weight }      : {}),
+        ...(color       ? { color }       : {}),
+        ...(height      ? { height }      : {}),
+        ...(petLength   ? { petLength }   : {}),
+        ...(petWidth    ? { petWidth }    : {}),
+        ...(microchip   ? { microchip }   : {}),
+        ...(chipCountry ? { chipCountry } : {}),
+        ...(passport    ? { passport }    : {}),
+      } as PetWithAlerts)
+      showToast(`${petName} añadida correctamente`)
+      reset()
       setSuccess(false)
-      setForm(EMPTY)
-      setErrors({})
-      setTouched(new Set())
       onClose()
-    }, 1600)
+    }, 1000)
   }
 
-  const handleClose = () => {
-    setForm(EMPTY)
-    setErrors({})
-    setTouched(new Set())
-    setSuccess(false)
-    onClose()
-  }
 
-  const selectedSpecies = SPECIES_OPTIONS.find(o => o.value === form.species)!
-
-  // ── render ──
   return (
-    <div className="apm-backdrop" onClick={handleClose} role="dialog" aria-modal="true">
-      <div className="apm-modal" onClick={e => e.stopPropagation()}>
-
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="apm-header">
-          <div className="apm-header-icon">🐾</div>
-          <div>
-            <h2 className="apm-title">Nueva mascota</h2>
-            <p className="apm-subtitle">Completa los datos para registrarla</p>
-          </div>
-          <button className="apm-close" onClick={handleClose} aria-label="Cerrar">✕</button>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Nueva mascota"
+      icon={selected.emoji}
+      accentBg="var(--pal-lilac)"
+      accentFg="var(--nav-bg)"
+      footer={!success ? (
+        <PfFooter>
+          <PfBtn variant="add" onClick={handleSubmit}>Guardar mascota</PfBtn>
+        </PfFooter>
+      ) : <></>}
+    >
+      {/* Hero — dynamic */}
+      <div className="modal-hero" style={{ background: `linear-gradient(135deg,${selected.color},var(--surface))` }}>
+        <div className="modal-hero-icon" style={{ background: 'var(--pal-denim)', color: '#fff', fontSize: '1.5rem' }}>
+          {selected.emoji}
         </div>
-
-        {/* ── Banner de sucesso ───────────────────────────────────────── */}
-        {success && (
-          <div className="apm-success-banner">
-            <span className="apm-success-icon">✓</span>
-            <span><strong>{form.name}</strong> añadida con éxito</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="modal-hero-title" style={{ fontSize: '1rem' }}>
+            {name.trim() || 'Nueva mascota'}
           </div>
-        )}
-
-        {/* ── Body ───────────────────────────────────────────────────── */}
-        <div className="apm-body">
-
-          {/* Selector de espécie — visual */}
-          <div className="apm-field">
-            <label className="apm-label">Especie</label>
-            <div className="apm-species-grid">
-              {SPECIES_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={['apm-species-btn', form.species === opt.value ? 'apm-species-btn--active' : ''].join(' ')}
-                  onClick={() => setField('species', opt.value)}
-                >
-                  <span className="apm-species-emoji">{opt.emoji}</span>
-                  <span className="apm-species-label">{opt.label}</span>
-                </button>
-              ))}
-            </div>
+          <div className="modal-hero-sub">
+            {selected.label}{breed ? ` · ${breed}` : ''}{color ? ` · ${color}` : ''}
           </div>
-
-          {/* Nome */}
-          <div className="apm-field">
-            <label className="apm-label">
-              Nombre <span className="apm-required">*</span>
-            </label>
-            <div className="apm-input-wrap">
-              <span className="apm-input-prefix">{selectedSpecies.emoji}</span>
-              <input
-                ref={nameRef}
-                className={inputClass('name')}
-                name="name"
-                value={form.name}
-                placeholder={`Nombre de tu ${selectedSpecies.label.toLowerCase()}`}
-                onChange={e => setField('name', e.target.value)}
-                onBlur={() => handleBlur('name')}
-                autoComplete="off"
-              />
-            </div>
-            {hasError('name') && <span className="apm-error">{errors.name}</span>}
-          </div>
-
-          {/* Raça + Data */}
-          <div className="apm-row">
-            <div className="apm-field">
-              <label className="apm-label">Raza</label>
-              <input
-                className="apm-input"
-                name="breed"
-                value={form.breed}
-                placeholder="Ej.: Europeo común"
-                onChange={e => setField('breed', e.target.value)}
-              />
-            </div>
-
-            <div className="apm-field">
-              <label className="apm-label">Fecha de nacimiento</label>
-              <input
-                className={inputClass('birthDate')}
-                name="birthDate"
-                type="date"
-                value={form.birthDate}
-                max={new Date().toISOString().split('T')[0]}
-                onChange={e => setField('birthDate', e.target.value)}
-                onBlur={() => handleBlur('birthDate')}
-              />
-              {hasError('birthDate') && <span className="apm-error">{errors.birthDate}</span>}
-            </div>
-          </div>
-
-          {/* Peso */}
-          <div className="apm-field apm-field--half">
-            <label className="apm-label">Peso (kg)</label>
-            <div className="apm-input-wrap">
-              <input
-                className={inputClass('weight')}
-                name="weight"
-                type="number"
-                step="0.1"
-                min="0"
-                value={form.weight}
-                placeholder="Ej.: 4.2"
-                onChange={e => setField('weight', e.target.value)}
-                onBlur={() => handleBlur('weight')}
-              />
-              <span className="apm-input-suffix">kg</span>
-            </div>
-            {hasError('weight') && <span className="apm-error">{errors.weight}</span>}
-          </div>
-
-        </div>{/* /apm-body */}
-
-        {/* ── Footer ─────────────────────────────────────────────────── */}
-        <div className="apm-footer">
-          <PfFooter>
-  <PfBtn variant="save" onClick={handleSubmit}>Guardar mascota</PfBtn>
-</PfFooter>
         </div>
-
       </div>
-    </div>
+
+
+      {success ? (
+        <div className="modal-success">
+          <div className="modal-success-icon">✓</div>
+          <div className="modal-success-title">¡Mascota añadida!</div>
+          <div className="modal-success-sub">{name} ya está en tu lista de mascotas</div>
+        </div>
+      ) : (
+        <>
+          {/* ── IDENTIDAD ─────────────────────────────────────── */}
+          <div className="modal-section">Identidad</div>
+
+          {/* Species */}
+          <div className="mf-species-grid" style={{ marginBottom: '1rem' }}>
+            {SPECIES_OPTIONS.map(o => (
+              <button key={o.value} type="button"
+                className={['mf-species-card', species === o.value ? 'active' : ''].join(' ')}
+                style={species === o.value ? { background: o.color, borderColor: 'var(--primary)' } : {}}
+                onClick={() => setSpecies(o.value)}>
+                <span className="mf-species-emoji">{o.emoji}</span>
+                <span className="mf-species-label">{o.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Name */}
+          <div className="mf-field">
+            <label className="mf-label">Nombre</label>
+            <div className={['mf-input-wrap', nameErr ? 'mf-input-wrap--err' : ''].join(' ')}>
+              <span className="mf-prefix">{selected.emoji}</span>
+              <input className="mf-input"
+                placeholder={`Nombre de tu ${selected.label.toLowerCase()}`}
+                value={name}
+                onChange={e => { setName(e.target.value); setNameErr('') }}
+                autoFocus />
+            </div>
+            {nameErr && <span className="mf-err">{nameErr}</span>}
+          </div>
+
+          {/* Breed */}
+          <div className="mf-field">
+            <label className="mf-label">Raza <span className="mf-optional">(opcional)</span></label>
+            <div className="mf-input-wrap">
+              <span className="mf-prefix">🏷️</span>
+              <input className="mf-input" placeholder="Ej: Europeo común, Mestizo…"
+                value={breed} onChange={e => setBreed(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Color — NEW */}
+          <div className="mf-field">
+            <label className="mf-label">Color <span className="mf-optional">(opcional)</span></label>
+            <div className="mf-input-wrap">
+              <span className="mf-prefix">🎨</span>
+              <input className="mf-input" placeholder="Ej: Naranja, Blanco y negro, Tricolor…"
+                value={color} onChange={e => setColor(e.target.value)} />
+            </div>
+          </div>
+
+          {/* ── DATOS FÍSICOS ─────────────────────────────────── */}
+          <div className="modal-section">Datos físicos</div>
+
+          {/* Birth date + Weight */}
+          <div className="form-row" style={{ marginBottom: '1rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label">Fecha de nacimiento <span className="mf-optional">(opcional)</span></label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">🎂</span>
+                <input className="mf-input" type="date"
+                  value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label">Peso <span className="mf-optional">(opcional)</span></label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">⚖️</span>
+                <input className="mf-input" type="number" step="0.1" min="0"
+                  value={weight} onChange={e => setWeight(e.target.value)} placeholder="Ej: 4.2" />
+                <span className="mf-suffix">kg</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Medidas — NEW: altura + longitud + anchura */}
+          <label className="mf-label" style={{ display: 'block', marginBottom: '.5rem' }}>
+            Medidas <span className="mf-optional">(opcional)</span>
+          </label>
+          <div className="form-row" style={{ marginBottom: '1rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label" style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Altura</label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">↕</span>
+                <input className="mf-input" type="number" step="0.1" min="0"
+                  value={height} onChange={e => setHeight(e.target.value)} placeholder="0.0" />
+                <span className="mf-suffix">cm</span>
+              </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label" style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Longitud</label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">↔</span>
+                <input className="mf-input" type="number" step="0.1" min="0"
+                  value={petLength} onChange={e => setPetLength(e.target.value)} placeholder="0.0" />
+                <span className="mf-suffix">cm</span>
+              </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label" style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Anchura</label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">⟺</span>
+                <input className="mf-input" type="number" step="0.1" min="0"
+                  value={petWidth} onChange={e => setPetWidth(e.target.value)} placeholder="0.0" />
+                <span className="mf-suffix">cm</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── IDENTIFICACIÓN ────────────────────────────────── */}
+          <div className="modal-section">Identificación <span className="mf-optional">(opcional)</span></div>
+
+          {/* Microchip + Country */}
+          <div className="form-row" style={{ marginBottom: '1rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label">Nº de microchip</label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">📡</span>
+                <input className="mf-input" placeholder="15 dígitos ISO 11784"
+                  value={microchip} onChange={e => setMicrochip(e.target.value)} maxLength={20} />
+              </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="mf-label">País correspondiente</label>
+              <div className="mf-input-wrap">
+                <span className="mf-prefix">🌍</span>
+                <input className="mf-input" placeholder="Ej: España, Argentina…"
+                  value={chipCountry} onChange={e => setChipCountry(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Passport */}
+          <div className="mf-field">
+            <label className="mf-label">Pasaporte</label>
+            <div className="mf-input-wrap">
+              <span className="mf-prefix">📘</span>
+              <input className="mf-input" placeholder="Nº de pasaporte veterinario / documento"
+                value={passport} onChange={e => setPassport(e.target.value)} />
+            </div>
+          </div>
+
+          {/* ── PREVIEW ───────────────────────────────────────── */}
+          {name.trim() && (
+            <div className="mf-preview">
+              <span style={{ fontSize: '1.5rem' }}>{selected.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '.9375rem', color: 'var(--text)' }}>{name}</div>
+                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                  {selected.label}
+                  {breed       ? ` · ${breed}`               : ''}
+                  {color       ? ` · ${color}`               : ''}
+                  {weight      ? ` · ${weight} kg`           : ''}
+                  {microchip   ? ` · Chip: ${microchip}`    : ''}
+                  {passport    ? ` · Pasaporte: ${passport}` : ''}
+                </div>
+              </div>
+              <span className="badge badge-green" style={{ marginLeft: 'auto', flexShrink: 0 }}>Nueva</span>
+            </div>
+          )}
+        </>
+      )}
+    </Modal>
   )
 }
-
