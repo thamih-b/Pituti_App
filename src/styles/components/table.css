@@ -1,0 +1,8 @@
+/* ── Table ──────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--r-lg); border: 1.5px solid var(--border) }
+table { width: 100%; border-collapse: collapse; font-size: .875rem }
+thead th { background: var(--surface-offset); padding: .625rem 1rem; text-align: left; font-weight: 800; font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1.5px solid var(--border) }
+tbody tr { border-bottom: 1px solid var(--divider); transition: background var(--trans); cursor: pointer }
+tbody tr:last-child { border-bottom: none }
+tbody tr:hover { background: var(--surface-offset) }
+tbody td { padding: .75rem 1rem; color: var(--text); vertical-align: middle }

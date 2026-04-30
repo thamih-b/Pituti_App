@@ -1,0 +1,78 @@
+/* ── Medication Edit ────────────────────────────────────────── */
+.med-row-actions {
+  display: flex; gap: .375rem; align-items: center; flex-shrink: 0;
+}
+.med-edit-btn {
+  width: 30px; height: 30px; border-radius: var(--r-md);
+  background: var(--primary-hl); color: var(--primary);
+  border: 1.5px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; cursor: pointer;
+  transition: all var(--trans);
+}
+.med-edit-btn:hover { background: var(--primary); color: #fff; }
+.med-archive-btn {
+  width: 30px; height: 30px; border-radius: var(--r-md);
+  background: var(--surface-offset); color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; cursor: pointer;
+  transition: all var(--trans);
+}
+.med-archive-btn:hover { background: var(--warn-hl); color: var(--warn); border-color: var(--warn); }
+
+/* ── Vaccine/Med row clickable ───────────────────────────────── */
+.vaccine-row { cursor: pointer; transition: background var(--trans), box-shadow var(--trans); border-radius: var(--r-lg); }
+.vaccine-row:hover { background: var(--surface-offset); }
+
+
+/* ──────────────────────────────────────────────────────────────
+   Vaccine row — vaccine item in day-detail
+   ────────────────────────────────────────────────────────────── */
+
+.vacc-row {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .6rem .75rem;
+  border: 1.5px solid var(--divider);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  margin-bottom: .5rem;
+}
+
+.vacc-row__icon {
+  font-size: 1.2rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.vacc-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vacc-row__name {
+  font-weight: 700;
+  font-size: .875rem;
+  color: var(--text);
+}
+
+.vacc-row__pet {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+
+/* ── Vaccine Row ────────────────────────────────────────── */
+.vaccine-row { display: flex; align-items: center; gap: .875rem; padding: .75rem 0; border-bottom: 1.5px solid var(--divider) }
+.vaccine-row:last-child { border-bottom: none }
+.vaccine-icon { width: 38px; height: 38px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0 }
+.vaccine-name { font-size: .875rem; font-weight: 700; color: var(--text) }
+.vaccine-date { font-size: .75rem; color: var(--text-muted) }
+.vaccine-next { font-size: .75rem; font-weight: 700 }
+.vaccine-next.ok   { color: var(--success) }
+.vaccine-next.soon { color: var(--warn) }
+.vaccine-next.late { color: var(--err) }

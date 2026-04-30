@@ -1,0 +1,160 @@
+/* ── Buttons ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: .375rem;
+  padding: .5rem 1.125rem; border-radius: var(--r-lg);
+  font-size: .875rem; font-weight: 700; cursor: pointer; border: none;
+  transition: background var(--trans), color var(--trans), box-shadow var(--trans), transform var(--trans);
+}
+.btn:active { transform: scale(.97) }
+.btn-sm     { padding: .3rem .75rem; font-size: .8125rem }
+.btn-xs     { padding: .2rem .55rem; font-size: .75rem; border-radius: var(--r-md) }
+.btn-icon   { padding: .25rem .5rem; font-size: 1.25rem; line-height: 1; border-radius: var(--r-md); min-width: 32px; justify-content: center }
+
+.btn-primary {
+  background: linear-gradient(150deg, var(--primary) 0%, #3d4f82 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(91,108,158,.28), inset 0 1px 0 rgba(255,255,255,.12);
+  border: none;
+}
+.btn-primary:hover {
+  background: linear-gradient(150deg, #4a5a8f 0%, var(--primary-h) 100%);
+  box-shadow: 0 5px 18px rgba(91,108,158,.44), inset 0 1px 0 rgba(255,255,255,.15);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: scale(.97) translateY(0) }
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.btn-secondary:hover {
+  background: var(--surface-offset);
+  border-color: var(--text-faint);
+  box-shadow: 0 2px 8px rgba(0,0,0,.10);
+}
+
+/* Ghost — usado para Cancelar/Cerrar, com borda visível */
+.btn-ghost {
+  color: var(--text-muted);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  background: transparent;
+  transition: all var(--trans);
+}
+.btn-ghost:hover {
+  background: var(--surface-offset);
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.btn-danger {
+  background: var(--err-hl);
+  color: var(--err);
+  border: 1.5px solid rgba(200,64,106,.3);
+}
+.btn-danger:hover {
+  background: var(--err);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(200,64,106,.35);
+  border-color: transparent;
+}
+
+/* Success — marcar cuidado como feito, aplicar vacina */
+.btn-success { background: var(--success); color: #fff }
+.btn-success:hover {
+  background: color-mix(in oklab, var(--success) 85%, black);
+  box-shadow: var(--sh-md);
+}
+
+/* ── Modern Edit Icon ────────────────────────────────────── */
+.icon-edit-pen { display: inline-flex }
+
+/* ── Footer de modal — grupos de botões ─────────────────── */
+.pf-footer {
+  display: flex; align-items: center;
+  gap: .625rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.pf-footer--spread  { justify-content: space-between }
+.pf-footer--end     { justify-content: flex-end }
+.pf-footer__left    { display: flex; gap: .5rem; margin-right: auto }
+.pf-footer__right   { display: flex; gap: .5rem; margin-left: auto }
+
+/* ── pf-btn (botões de modal/overlay) ───────────────────── */
+.pf-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: .4rem; padding: .6rem 1.25rem; border-radius: var(--r-lg);
+  font-family: inherit; font-size: .875rem; font-weight: 700;
+  cursor: pointer; border: none; letter-spacing: .01em;
+  white-space: nowrap; min-width: 100px;
+  transition:
+    background 160ms cubic-bezier(.16,1,.3,1),
+    box-shadow  160ms cubic-bezier(.16,1,.3,1),
+    transform   100ms cubic-bezier(.16,1,.3,1),
+    color       160ms;
+  user-select: none; -webkit-user-select: none;
+}
+.pf-btn:active   { transform: scale(.96) }
+.pf-btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important }
+.pf-btn svg      { flex-shrink: 0 }
+
+/* Variantes */
+.pf-btn--close,
+.pf-btn--cancel   { background: var(--surface-offset); color: var(--text-muted); border: 1.5px solid var(--border); min-width: 90px }
+.pf-btn--close:hover,
+.pf-btn--cancel:hover { background: var(--surface); color: var(--text); border-color: var(--text-faint) }
+
+.pf-btn--save,
+.pf-btn--primary  { background: linear-gradient(150deg, var(--primary) 0%, #3a4c80 100%); color: #fff; box-shadow: 0 3px 10px rgba(91,108,158,.32), inset 0 1px 0 rgba(255,255,255,.14); border: none }
+.pf-btn--save:hover,
+.pf-btn--primary:hover { background: linear-gradient(150deg, #4a5a90 0%, var(--primary-h) 100%); box-shadow: 0 6px 20px rgba(91,108,158,.44); transform: translateY(-1px) }
+
+.pf-btn--register,
+.pf-btn--add      { background: linear-gradient(150deg, var(--success) 0%, #3d7a4a 100%); color: #fff; box-shadow: 0 3px 10px rgba(85,128,96,.32); border: none }
+.pf-btn--register:hover,
+.pf-btn--add:hover { box-shadow: 0 6px 20px rgba(85,128,96,.44); transform: translateY(-1px) }
+
+.pf-btn--done     { background: linear-gradient(150deg, #2d9e62 0%, #1e7a4a 100%); color: #fff; box-shadow: 0 3px 10px rgba(45,158,98,.3); border: none }
+.pf-btn--done:hover { box-shadow: 0 6px 20px rgba(45,158,98,.42); transform: translateY(-1px) }
+
+.pf-btn--edit     { background: var(--primary-hl); color: var(--primary); border: 1.5px solid rgba(91,108,158,.25); min-width: 90px }
+.pf-btn--edit:hover { background: var(--primary); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(91,108,158,.35); transform: translateY(-1px) }
+
+.pf-btn--archive  { background: var(--surface-offset); color: var(--text-muted); border: 1.5px solid var(--border); min-width: 90px }
+.pf-btn--archive:hover { background: var(--gold-hl); color: var(--gold); border-color: var(--gold) }
+
+.pf-btn--resolve  { background: var(--success-hl); color: var(--success); border: 1.5px solid rgba(85,128,96,.3) }
+.pf-btn--resolve:hover { background: var(--success); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(85,128,96,.35); transform: translateY(-1px) }
+
+.pf-btn--delete,
+.pf-btn--danger   { background: var(--err-hl); color: var(--err); border: 1.5px solid rgba(200,64,106,.25); min-width: 90px }
+.pf-btn--delete:hover,
+.pf-btn--danger:hover { background: var(--err); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(200,64,106,.38); transform: translateY(-1px) }
+
+.pf-btn--warn     { background: var(--warn-hl); color: var(--warn); border: 1.5px solid rgba(184,96,18,.25) }
+.pf-btn--warn:hover { background: var(--warn); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(184,96,18,.35); transform: translateY(-1px) }
+
+/* Tamanhos */
+.pf-btn--sm   { padding: .4rem .875rem; font-size: .8125rem; min-width: 70px;  border-radius: var(--r-md) }
+.pf-btn--lg   { padding: .75rem 1.75rem; font-size: .9375rem; min-width: 140px; border-radius: var(--r-xl) }
+.pf-btn--full { width: 100% }
+.pf-btn--icon { width: 36px; height: 36px; min-width: unset; padding: 0; border-radius: var(--r-md) }
+
+/* ── Back Button ─────────────────────────────────────────── */
+.back-btn {
+  display: inline-flex; align-items: center; gap: .375rem;
+  padding: .35rem .75rem; border-radius: var(--r-full);
+  background: var(--surface-offset); border: 1.5px solid var(--border);
+  color: var(--text-muted); font-size: .8125rem; font-weight: 700;
+  cursor: pointer; transition: all var(--trans);
+  margin-bottom: 1rem; flex-shrink: 0;
+}
+.back-btn:hover { background: var(--surface); color: var(--primary); border-color: var(--primary) }
+
+/* ── Focus visible ───────────────────────────────────────── */
+.btn:focus-visible,
+.pf-btn:focus-visible { outline-offset: 3px }  /* ← } adicionado */

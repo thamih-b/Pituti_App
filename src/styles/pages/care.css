@@ -1,0 +1,240 @@
+/* ── Care System ────────────────────────────────────────── */
+.care-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem }
+
+.care-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r-xl); padding: 1.125rem; box-shadow: var(--sh-sm); display: flex; flex-direction: column; gap: .75rem; transition: box-shadow var(--trans), border-color var(--trans) }
+.care-card:hover { box-shadow: var(--sh-md) }
+.care-card.done { border-color: var(--success); background: linear-gradient(135deg, var(--surface), var(--success-hl)) }
+.care-card.done .care-title { color: var(--success) }
+
+.care-header { display: flex; align-items: center; gap: .75rem }
+.care-emoji  { width: 48px; height: 48px; border-radius: var(--r-lg); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: var(--sh-sm) }
+.care-title { font-size: .9rem; font-weight: 800; color: var(--text) }
+.care-sub   { font-size: .75rem; color: var(--text-muted); margin-top: .1rem }
+
+.care-progress { display: flex; align-items: center; gap: .5rem; font-size: .75rem; font-weight: 700; color: var(--text-muted) }
+.care-dots { display: flex; gap: .3rem }
+.care-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--surface-offset); border: 1.5px solid var(--border); transition: background var(--trans), border-color var(--trans) }
+.care-dot.done { background: var(--success); border-color: var(--success) }
+
+.care-actions { display: flex; gap: .5rem; margin-top: .25rem }
+.care-btn-do { flex: 1; padding: .5rem; border-radius: var(--r-lg); background: var(--primary); color: #fff; font-size: .8125rem; font-weight: 800; cursor: pointer; border: none; transition: background var(--trans), transform var(--trans), box-shadow var(--trans); display: flex; align-items: center; justify-content: center; gap: .375rem }
+.care-btn-do:hover { background: var(--primary-h); box-shadow: var(--sh-sm) }
+.care-btn-do:active { transform: scale(.96) }
+.care-btn-do.done-btn { background: var(--success) }
+.care-btn-cfg { width: 36px; height: 36px; border-radius: var(--r-lg); background: var(--surface-offset); color: var(--text-muted); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .8rem; transition: background var(--trans) }
+.care-btn-cfg:hover { background: var(--primary-hl); color: var(--primary) }
+
+.dash-care-strip { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r-xl); padding: 1rem 1.25rem; box-shadow: var(--sh-sm); width: 100% }
+.care-strip-items { display: flex; gap: .625rem; flex-wrap: wrap; margin-top: .625rem }
+.care-strip-item { display: flex; align-items: center; gap: .375rem; background: var(--surface-offset); border: 1.5px solid var(--border); border-radius: var(--r-full); padding: .3rem .75rem; font-size: .8rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: background var(--trans), border-color var(--trans), color var(--trans) }
+.care-strip-item:hover { background: var(--primary-hl); border-color: var(--primary); color: var(--primary) }
+.care-strip-item.done { background: var(--success-hl); border-color: var(--success); color: var(--success) }
+.care-strip-item.urgent { background: var(--err-hl); border-color: var(--err); color: var(--err) }
+
+
+/* Cuidados — lista vertical */
+.dash-care-col {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.care-strip-item {
+  padding: .55rem .875rem;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: background 140ms, border-color 140ms, opacity 140ms;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  user-select: none;
+}
+.care-strip-item:hover      { background: var(--surface-offset); }
+.care-strip-item.urgent     { border-left: 3px solid var(--err); }
+.care-strip-item.urgent .care-label { color: var(--err); }
+.care-strip-item.done       { opacity: .52; }
+.care-strip-item.done .care-label { text-decoration: line-through; }
+.care-check { font-size: .8rem; color: var(--text-muted); min-width: 14px; }
+.care-strip-item.done .care-check { color: var(--success); font-weight: 700; }
+.care-emoji  { font-size: 1rem; }
+.care-label  { flex: 1; color: var(--text); font-size: .84rem; }
+.care-qty    {
+  font-size: .72rem; font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-offset);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: .1rem .45rem;
+  min-width: 28px;
+  text-align: center;
+}
+.care-strip-item.urgent .care-qty { color: var(--err); border-color: var(--err); background: var(--err-hl); }
+.care-strip-item.done .care-qty   { opacity: .5; }
+
+/* ── Care dots — círculos de ocorrência ── */
+.care-dots {
+  display: flex;
+  gap: .28rem;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.care-dot-btn {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: .65rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+  padding: 0;
+  line-height: 1;
+}
+.care-dot-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.care-dot-btn.filled {
+  background: var(--success-hl);
+  border-color: var(--success);
+  color: var(--success);
+  font-weight: 700;
+}
+.care-strip-item.urgent .care-dot-btn:not(.filled) {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+/* ── Care Detail Overlay ───────────────────────────────────── */
+.care-detail-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(20,16,44,.55);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+  animation: pm-fade-in 180ms ease both;
+}
+.care-detail-sheet {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-lg);
+  width: 100%; max-width: 380px;
+  overflow: hidden;
+  animation: pm-rise 200ms cubic-bezier(.16,1,.3,1) both;
+}
+.care-detail-hero {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.25rem 1.375rem 1rem;
+  border-bottom: 1.5px solid var(--divider);
+}
+.care-detail-emoji {
+  width: 56px; height: 56px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.75rem; flex-shrink: 0; box-shadow: var(--sh-sm);
+}
+.care-detail-body { padding: 1.125rem 1.375rem; }
+.care-detail-progress-row {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem;
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); padding: .75rem 1rem;
+}
+.care-detail-dots {
+  display: flex; gap: .375rem; flex-wrap: wrap; flex: 1;
+}
+.care-detail-dot-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; cursor: pointer;
+  transition: all 160ms;
+}
+.care-detail-dot-btn:hover  { border-color: var(--primary); color: var(--primary); }
+.care-detail-dot-btn.filled { background: var(--success-hl); border-color: var(--success); color: var(--success); font-weight: 700; }
+.care-detail-footer {
+  display: flex; gap: .5rem;
+  padding: .875rem 1.375rem 1.25rem;
+  border-top: 1.5px solid var(--divider);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Care row — expandable care item in day-detail
+   ────────────────────────────────────────────────────────────── */
+
+.care-row {
+  border: 1.5px solid var(--divider);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: .5rem;
+  background: var(--surface-2);
+}
+
+/* Clickable header that toggles expand */
+.care-row__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  padding: .6rem .75rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--trans);
+}
+.care-row__header:hover {
+  background: var(--surface-offset);
+}
+
+.care-row__emoji {
+  font-size: 1.25rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.care-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.care-row__title {
+  font-weight: 700;
+  font-size: .875rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.care-row__sub {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+
+/* Action buttons shown when care row is expanded */
+.care-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  padding: .5rem .75rem .65rem;
+  border-top: 1.5px solid var(--divider);
+  background: var(--surface);
+}
+
+/* ── Symptoms edit/detail ─────────────────────────────────────── */
+.symptom-row-clickable {
+  cursor: pointer;
+  border-radius: var(--r-lg);
+  transition: background var(--trans);
+}
+.symptom-row-clickable:hover { background: var(--surface-offset); }

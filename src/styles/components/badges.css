@@ -1,0 +1,26 @@
+/* ── Badge ──────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .2rem .65rem; border-radius: var(--r-full);
+  font-size: .6875rem; font-weight: 800;
+}
+.badge-green  { background: var(--success-hl); color: var(--success) }
+.badge-yellow { background: var(--gold-hl);    color: var(--gold) }
+.badge-red    { background: var(--err-hl);     color: var(--err) }
+.badge-blue   { background: var(--blue-hl);    color: var(--blue) }
+.badge-gray   { background: var(--surface-offset); color: var(--text-muted) }
+
+/* ── Status Pill ─────────────────────────────────────────────── */
+.status-pill {
+  display: inline-flex; align-items: center; gap: .375rem;
+  padding: .3rem .875rem;
+  border-radius: var(--r-full);
+  font-size: .75rem; font-weight: 800;
+}
+.status-pill.ok      { background: var(--success-hl); color: var(--success); border: 1.5px solid var(--success); }
+.status-pill.soon    { background: var(--gold-hl);    color: var(--gold);    border: 1.5px solid var(--gold); }
+.status-pill.late    { background: var(--err-hl);     color: var(--err);     border: 1.5px solid var(--err); }
+.status-pill.active  { background: var(--err-hl);     color: var(--err);     border: 1.5px solid var(--err); }
+.status-pill.resolved{ background: var(--success-hl); color: var(--success); border: 1.5px solid var(--success); }
+.status-pill.archived{ background: var(--surface-offset); color: var(--text-faint); border: 1.5px solid var(--border); }
+

@@ -1,0 +1,50 @@
+/* src/styles/index.css */
+@import "tailwindcss";
+
+
+/* 1. Fundação — sempre primeiro */
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+
+/* 2. Componentes reutilizáveis */
+@import './components/buttons.css';
+@import './components/badges.css';
+@import './components/cards.css';
+@import './components/tabs.css';
+@import './components/forms.css';
+@import './components/modals.css';
+@import './components/toast.css';
+@import './components/timeline.css';
+@import './components/progress.css';
+@import './components/table.css';
+@import './components/empty-state.css';
+
+/* 3. Páginas */
+@import './pages/dashboard.css';
+@import './pages/calendar.css';
+@import './pages/vet.css';
+@import './pages/pets.css';
+@import './pages/medications.css';
+@import './pages/care.css';
+@import './pages/settings.css';
+
+/* 4. Responsive — sempre por último */
+@import './responsive.css';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

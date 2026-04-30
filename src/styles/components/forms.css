@@ -1,0 +1,123 @@
+/* ── Form ───────────────────────────────────────────────── */
+.form-group { display: flex; flex-direction: column; gap: .375rem; margin-bottom: 1rem }
+.form-label { font-size: .8125rem; font-weight: 700; color: var(--text-muted) }
+.form-input {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r-md); padding: .5rem .875rem;
+  font-size: .875rem; color: var(--text); outline: none;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.form-input:focus       { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-hl) }
+.form-input::placeholder { color: var(--text-faint) }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem }
+
+/* ── Validação ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+.form-error {
+  display: block;
+  font-size: .75rem; font-weight: 600;
+  color: var(--err);
+  margin-top: .3rem;
+  animation: fadeIn .18s ease;
+}
+
+.form-input.input-error        { border-color: var(--err) !important; box-shadow: 0 0 0 3px rgba(200,64,106,.13) }
+.form-input.input-error:focus  { outline-color: var(--err) }
+
+/* ── Error hint (com ícone !) ────────────────────────────── */
+.form-hint-err {
+  display: flex; align-items: center; gap: .375rem;
+  font-size: .75rem; font-weight: 700;
+  color: var(--err);
+  margin-top: .25rem;
+}
+.form-hint-err::before {
+  content: '!';
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--err); color: #fff;
+  font-size: .6rem; font-weight: 900; flex-shrink: 0;
+}
+
+.form-input--err,
+.form-input.form-input--err { border-color: var(--err) !important; box-shadow: 0 0 0 3px var(--err-hl) !important }
+
+/* ── FormDateField ───────────────────────────────────────── */
+.fdf-wrap     { display: flex; flex-direction: column; gap: .375rem }
+.fdf-label    { font-size: .8125rem; font-weight: 700; color: var(--text-muted) }
+.fdf-required { color: var(--err); margin-left: .2rem }
+
+.fdf-row {
+  display: flex; align-items: center; gap: 0;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--r-md); cursor: pointer;
+  overflow: hidden; position: relative; min-height: 40px;
+  transition: border-color var(--trans), box-shadow var(--trans);
+}
+.fdf-row:hover        { border-color: var(--text-faint) }
+.fdf-row:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-hl) }
+.fdf-row--err         { border-color: var(--err) !important; box-shadow: 0 0 0 3px var(--err-hl) !important }
+
+.fdf-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; color: var(--primary); background: var(--primary-hl);
+  border-right: 1.5px solid var(--border);
+  align-self: stretch; flex-shrink: 0;
+}
+.fdf-display {
+  flex: 1; padding: .5rem .75rem;
+  font-size: .875rem; font-weight: 500; color: var(--text);
+  user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fdf-placeholder { color: var(--text-faint); font-weight: 400 }
+
+.fdf-clear {
+  width: 28px; height: 28px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-faint); flex-shrink: 0; margin-right: .25rem;
+  transition: background var(--trans), color var(--trans);
+}
+.fdf-clear:hover { background: var(--err-hl); color: var(--err) }
+
+.fdf-native { position: absolute; inset: 0; opacity: 0; cursor: pointer; pointer-events: none }
+
+.fdf-msg       { font-size: .75rem; font-weight: 600; margin-top: .2rem }
+.fdf-msg--err  { color: var(--err) }
+.fdf-msg--hint { color: var(--text-faint) }
+
+/* ── Campo com ícone prefixo ─────────────────────────────── */
+.field-icon-wrap { position: relative }
+.field-icon-wrap .field-icon {
+  position: absolute; left: .75rem; top: 50%;
+  transform: translateY(-50%);
+  font-size: .9rem; pointer-events: none; color: var(--text-faint);
+}
+.field-icon-wrap .form-input { padding-left: 2.25rem }
+
+/* ── Emoji Picker ────────────────────────────────────────── */
+.emoji-picker-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: .3rem; margin-bottom: .625rem }
+.emoji-pick-btn {
+  width: 36px; height: 36px; border-radius: var(--r-md);
+  border: 1.5px solid var(--border); background: var(--surface-offset);
+  font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--trans), border-color var(--trans), transform var(--trans);
+}
+.emoji-pick-btn:hover  { background: var(--primary-hl); border-color: var(--primary); transform: scale(1.12) }
+.emoji-pick-btn.active { background: var(--primary-hl); border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-hl); transform: scale(1.1) }
+
+/* ── Symptom category grid ───────────────────────────────── */
+.symptom-cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin-bottom: 1rem }
+.symptom-cat-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  padding: .625rem .375rem;
+  background: var(--surface-offset); border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); cursor: pointer; font-family: inherit;
+  transition: all var(--trans);
+}
+.symptom-cat-btn:hover  { background: var(--primary-hl); border-color: var(--primary) }
+.symptom-cat-btn.active { background: var(--primary-hl); border-color: var(--primary); box-shadow: 0 0 0 2.5px var(--primary-hl) }

@@ -1,0 +1,4 @@
+/* ── Toast ──────────────────────────────────────────────── */
+.toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r-xl); padding: .875rem 1.125rem; box-shadow: var(--sh-lg); display: flex; align-items: center; gap: .75rem; font-size: .875rem; z-index: 300; transform: translateY(8px); opacity: 0; transition: transform var(--trans), opacity var(--trans); max-width: 340px }
+.toast.show { transform: translateY(0); opacity: 1 }
+.toast-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0 }
