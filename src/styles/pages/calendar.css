@@ -973,58 +973,29 @@ CALENDAR
 }
 
 .cal-filters-groups {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: .75rem;
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: .85rem;
 }
 
 .cal-filter-group {
+  width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
-  gap: .75rem;
-  flex-wrap: wrap;
-  width: 100%;
+  gap: .45rem;
 }
 
-.cal-filter-group-label {
-  min-width: 118px;
-  padding-top: .45rem;
-  font-size: .78rem;
-  font-weight: 900;
-  letter-spacing: .03em;
-  color: var(--text);
+.cal-filter-group-label,
+.cal-filter-grouplabel {
+  min-width: 0;
+  padding-top: 0;
 }
 
 .cal-filter-group-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  flex: 1;
-  min-width: 0;
-}
-
-.cal-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  min-height: 36px;
-  padding: .45rem .78rem;
-  border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: .8rem;
-  font-weight: 700;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
-  transition:
-    transform var(--trans),
-    box-shadow var(--trans),
-    border-color var(--trans),
-    background var(--trans),
-    color var(--trans);
+  width: 100%;
 }
 
 .cal-filter-chip:hover {
