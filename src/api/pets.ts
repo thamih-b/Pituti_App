@@ -1,14 +1,10 @@
-import type { Pet } from "../types";
-import { apiFetch } from "./client";
+import { api } from './client';
+import type { ApiPet, CreatePetDto, UpdatePetDto } from './types';
 
-// src/api/pets.ts
 export const petsApi = {
-  getAll: (ownerId?: string) =>
-    apiFetch<{ data: Pet[] }>(`/pets${ownerId ? `?ownerId=${ownerId}` : ''}`),
-  create: (body: Omit<Pet, 'id' | 'createdAt'>) =>
-    apiFetch<{ data: Pet }>('/pets', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<Pet>) =>
-    apiFetch<{ data: Pet }>(`/pets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  delete: (id: string) =>
-    apiFetch<void>(`/pets/${id}`, { method: 'DELETE' }),
+  getAll:  (ownerId?: string) => api.get<ApiPet[]>(`/pets${ownerId ? `?ownerId=${ownerId}` : ''}`),
+  getById: (petId: string)    => api.get<ApiPet>(`/pets/${petId}`),
+  create:  (dto: CreatePetDto)             => api.post<ApiPet>('/pets', dto),
+  update:  (petId: string, dto: UpdatePetDto) => api.patch<ApiPet>(`/pets/${petId}`, dto),
+  delete:  (petId: string)                 => api.delete<void>(`/pets/${petId}`),
 };

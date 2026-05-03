@@ -1,18 +1,17 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { petsApi, symptomsApi } from '../api'
+import type { ApiSymptom } from '../api'
 
 export interface SymptomEntry {
-  id:          string
-  petId:       string
-  description: string
-  category:    string
-  severity:    string
-  date:        string
-  notes:       string
-  resolved:    boolean
+  id: string; petId: string; description: string; category: string
+  severity: string; date: string; notes: string; resolved: boolean
 }
 
 interface SymptomsContextValue {
   symptoms:    SymptomEntry[]
+  loading:     boolean
+  error:       string | null
+  refetch:     () => void
   addSymptom:  (s: Omit<SymptomEntry, 'id'>) => void
   saveSymptom: (s: SymptomEntry) => void
   resolve:     (id: string) => void
@@ -21,33 +20,64 @@ interface SymptomsContextValue {
 
 const SymptomsContext = createContext<SymptomsContextValue | null>(null)
 
-const INITIAL: SymptomEntry[] = [
-  { id:'s-1', petId:'pet-2', description:'Tos suave sin fiebre. Parece cansado desde hace 3 días.', category:'respiratorio', severity:'moderado', date:'2026-04-18', notes:'No tiene fiebre. Come normal.', resolved:false },
-  { id:'r-1', petId:'pet-1', description:'Inapetencia durante varios días sin causa aparente.',      category:'digestivo',    severity:'leve',     date:'2026-02-10', notes:'Se resolvió sola en 4 días.', resolved:true },
-  { id:'r-2', petId:'pet-2', description:'Cojera leve en la pata trasera derecha.',                 category:'movimiento',  severity:'leve',     date:'2026-01-15', notes:'Desapareció tras reposo.',    resolved:true },
-]
+const SEVERITY_MAP: Record<string, string> = { mild: 'leve', moderate: 'moderado', severe: 'grave' }
+
+function mapApiSymptom(s: ApiSymptom, petId: string): SymptomEntry {
+  return {
+    id:          s.id,
+    petId,
+    description: s.description,
+    category:    (s as any).category ?? 'general',
+    severity:    SEVERITY_MAP[s.severity] ?? s.severity,
+    date:        s.date ?? s.createdAt?.split('T')[0] ?? '',
+    notes:       s.notes ?? '',
+    resolved:    s.resolved ?? false,
+  }
+}
 
 export function SymptomsProvider({ children }: { children: ReactNode }) {
-  const [symptoms, setSymptoms] = useState<SymptomEntry[]>(INITIAL)
+  const [symptoms, setSymptoms] = useState<SymptomEntry[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState<string | null>(null)
+  const [tick,     setTick]     = useState(0)
 
-  const addSymptom = useCallback((s: Omit<SymptomEntry,'id'>) => {
-    setSymptoms(prev => [...prev, { ...s, id:`s-${Date.now()}` }])
-  }, [])
+  const refetch = useCallback(() => setTick(t => t + 1), [])
 
-  const saveSymptom = useCallback((updated: SymptomEntry) => {
-    setSymptoms(prev => prev.map(s => s.id === updated.id ? updated : s))
-  }, [])
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
 
-  const resolve = useCallback((id: string) => {
-    setSymptoms(prev => prev.map(s => s.id === id ? { ...s, resolved:true } : s))
-  }, [])
+    petsApi.getAll()
+      .then(async res => {
+        const pets = res.data
+        const results = await Promise.all(
+          pets.map(p =>
+            symptomsApi.getAll(p.id)
+              .then(r => r.data.map(s => mapApiSymptom(s, p.id)))
+              .catch(() => [] as SymptomEntry[])
+          )
+        )
+        if (cancelled) return
+        setSymptoms(results.flat())
+      })
+      .catch(err => { if (!cancelled) setError(err?.message ?? 'Error al cargar síntomas') })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
-  const unresolve = useCallback((id: string) => {
-    setSymptoms(prev => prev.map(s => s.id === id ? { ...s, resolved:false } : s))
-  }, [])
+    return () => { cancelled = true }
+  }, [tick])
+
+  const addSymptom  = useCallback((s: Omit<SymptomEntry, 'id'>) =>
+    setSymptoms(prev => [...prev, { ...s, id: `s-${Date.now()}` }]), [])
+  const saveSymptom = useCallback((updated: SymptomEntry) =>
+    setSymptoms(prev => prev.map(s => s.id === updated.id ? updated : s)), [])
+  const resolve     = useCallback((id: string) =>
+    setSymptoms(prev => prev.map(s => s.id === id ? { ...s, resolved: true  } : s)), [])
+  const unresolve   = useCallback((id: string) =>
+    setSymptoms(prev => prev.map(s => s.id === id ? { ...s, resolved: false } : s)), [])
 
   return (
-    <SymptomsContext.Provider value={{ symptoms, addSymptom, saveSymptom, resolve, unresolve }}>
+    <SymptomsContext.Provider value={{ symptoms, loading, error, refetch, addSymptom, saveSymptom, resolve, unresolve }}>
       {children}
     </SymptomsContext.Provider>
   )

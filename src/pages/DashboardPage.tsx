@@ -44,7 +44,7 @@ function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (i
     <div className="paw-layout">
       {buildSlots(pets).map((slot, i) => {
         const photo = slot.pet ? (photos[slot.pet.id] || null) : null
-        const highestAlert = slot.pet?.alerts.find(a=>a.type==='err') ?? slot.pet?.alerts[0]
+          const highestAlert = slot.pet?.alerts?.find(a=>a.type==='err') ?? slot.pet?.alerts?.[0]
         return (
           <div key={i} className={SLOT_CLASSES[i]} style={!slot.pet?{cursor:'default'}:undefined}
             onClick={slot.pet ? () => onPetClick(slot.pet!.id) : undefined}>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
   const { pets, loading } = { pets:state.pets, loading:state.petsLoading }
   const { setCaredone } = useCares()
   const { saludo, date } = useGreeting()
-  const allAlerts = pets.flatMap(p => p.alerts.map(a => ({ ...a, petName:p.name })))
+  const allAlerts = pets.flatMap(p => (p.alerts ?? []).map(a => ({ ...a, petName: p.name })))
 
   const [dashCares,    setDashCares]    = useState<DashCareItem[]>(INITIAL)
   const [detailItem,   setDetailItem]   = useState<CareDetailItem | null>(null)
