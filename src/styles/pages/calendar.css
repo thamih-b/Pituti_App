@@ -998,6 +998,7 @@ CALENDAR
   width: 100%;
 }
 
+
 .cal-filter-chip:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(44,52,98,.08);

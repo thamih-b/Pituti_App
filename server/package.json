@@ -1,0 +1,23 @@
+{
+  "name": "pituti-server",
+  "version": "1.0.0",
+  "description": "PITUTI Pet Care App — REST API Backend",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "uuid": "^14.0.0",
+    "zod": "^3.25.76"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
