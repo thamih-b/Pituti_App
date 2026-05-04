@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 repomix-output.xml
 repomix-output.md
+repomix
 contexto.md
 .env
 pituti-plan.md
