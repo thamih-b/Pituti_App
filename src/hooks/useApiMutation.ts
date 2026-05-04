@@ -1,54 +1,29 @@
-/**
- * Hook for write operations (POST / PATCH / DELETE).
- * Returns a `mutate` function plus loading/error state.
- *
- * Usage:
- *   const { mutate, loading, error } = useApiMutation(
- *     (dto) => vetsApi.create(dto),
- *     { onSuccess: () => refetch() }
- *   );
- */
+import { useState, useCallback } from 'react'
+import type { ApiResponse } from '../api/client'
 
-import { useState, useCallback } from 'react';
-import { ApiError } from '../api/client';
-
-interface UseMutationOptions<T> {
-  onSuccess?: (data: T) => void;
-  onError?:   (error: string) => void;
+interface MutationState<T> {
+  data:    T | null
+  loading: boolean
+  error:   string | null
 }
 
-interface UseMutationState<T> {
-  mutate:  (arg: unknown) => Promise<T | null>;
-  loading: boolean;
-  error:   string | null;
-}
+export function useApiMutation<TArgs extends unknown[], TResult>(
+  mutationFn: (...args: TArgs) => Promise<ApiResponse<TResult>>
+) {
+  const [state, setState] = useState<MutationState<TResult>>({ data: null, loading: false, error: null })
 
-export function useApiMutation<TArg, TResult>(
-  fn: (arg: TArg) => Promise<{ data: TResult }>,
-  options?: UseMutationOptions<TResult>,
-): UseMutationState<TResult> {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-
-  const mutate = useCallback(async (arg: TArg): Promise<TResult | null> => {
-    setLoading(true);
-    setError(null);
+  const mutate = useCallback(async (...args: TArgs) => {
+    setState({ data: null, loading: true, error: null })
     try {
-      const res = await fn(arg);
-      options?.onSuccess?.(res.data);
-      return res.data;
-    } catch (err) {
-      const msg = err instanceof ApiError
-        ? err.message
-        : 'Error inesperado. Inténtalo de nuevo.';
-      setError(msg);
-      options?.onError?.(msg);
-      return null;
-    } finally {
-      setLoading(false);
+      const res = await mutationFn(...args)
+      setState({ data: res.data, loading: false, error: null })
+      return res.data
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido'
+      setState({ data: null, loading: false, error: msg })
+      throw new Error(msg)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fn]);
+  }, [mutationFn])
 
-  return { mutate: mutate as UseMutationState<TResult>['mutate'], loading, error };
+  return { ...state, mutate }
 }

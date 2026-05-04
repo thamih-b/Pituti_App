@@ -1,52 +1,26 @@
-/**
- * Generic hook to manage the three network states: loading / data / error
- *
- * Usage:
- *   const { data, loading, error, refetch } = useApi(() => vetsApi.getAll());
- */
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ApiError } from '../api/client';
+import { useState, useEffect, useCallback } from 'react'
+import type { ApiResponse } from '../api/client'
 
 interface UseApiState<T> {
-  data:    T | null;
-  loading: boolean;
-  error:   string | null;
-  refetch: () => void;
+  data:    T | null
+  loading: boolean
+  error:   string | null
 }
 
-export function useApi<T>(
-  fetcher: () => Promise<{ data: T }>,
-  deps: unknown[] = [],
-): UseApiState<T> {
-  const [data,    setData]    = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
-  const [tick,    setTick]    = useState(0);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+export function useApi<T>(fetcher: () => Promise<ApiResponse<T>>) {
+  const [state, setState] = useState<UseApiState<T>>({ data: null, loading: true, error: null })
 
-  const refetch = useCallback(() => setTick(t => t + 1), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    fetcherRef.current()
-      .then(res  => { if (!cancelled) setData(res.data); })
-      .catch(err => {
-        if (cancelled) return;
-        if (err instanceof ApiError) {
-          setError(err.message);
-        } else {
-          setError('Error de conexión. Comprueba que el servidor está activo.');
-        }
+  const execute = useCallback(() => {
+    setState(s => ({ ...s, loading: true, error: null }))
+    fetcher()
+      .then(res => setState({ data: res.data, loading: false, error: null }))
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Error desconocido'
+        setState({ data: null, loading: false, error: msg })
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
+  }, [fetcher])
 
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, ...deps]);
+  useEffect(() => { execute() }, [execute])
 
-  return { data, loading, error, refetch };
+  return { ...state, refetch: execute }
 }
