@@ -30,3 +30,4 @@ pituti-plan.md
 skills/*
 .env.local
 .env.production
+.env-development
