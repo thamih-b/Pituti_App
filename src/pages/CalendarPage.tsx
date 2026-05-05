@@ -6,71 +6,29 @@ import { useVet } from '../context/VetContext'
 import type { CareEditData } from '../components/EditCareModal'
 import EditCareModal from '../components/EditCareModal'
 import { useMedications } from '../context/MedicationsContext'
+import {useT} from '../context/LanguageContext'
 
-const L = {
-  pageTitle: 'Calendario',
-  pageSubtitle: 'Vista mensual de cuidados, vacunas, medicación y veterinaria',
+interface VaccEntry {
+  vaccKey: string
+  expired: boolean
+}
 
-  alertsTitle: 'Vacunas vencidas',
-  alertsWarn: '⚠ Consulta con el veterinario lo antes posible',
-  vacExpiredTag: 'VENCIDA',
-  vacExpiredSince: 'Venció:',
+interface VaccWithMeta extends VaccineRecord {
+  petId: string
+  petName: string
+  petEmoji: string
+}
 
-  today: 'Hoy',
-  filterLabel: 'Filtrar calendario',
-  clearFilters: 'Limpiar filtros',
-
-  filterGroupCares: 'Cuidados',
-  filterGroupVaccines: 'Vacunas',
-  filterGroupVet: 'Veterinaria',
-  filterGroupMedications: 'Medicamentos',
-
-  filterPending: 'Pendiente',
-  filterDone: 'Realizado',
-  filterVaccDue: 'Próxima vacuna',
-  filterVaccExpired: 'Vacuna vencida',
-  filterVetVisit: 'Consulta vet.',
-  filterVetReturn: 'Retorno',
-  filterMedication: 'Medicación',
-
-  dayEmpty: 'Sin eventos este día',
-  dayCares: 'Cuidados del día',
-  dayVaccines: 'Vacunas',
-  dayVetVisits: 'Consultas / Citas',
-  dayMedications: 'Medicación',
-  editCare: 'Editar cuidado',
-
-  carePending: 'Pendiente',
-  careDone: 'Realizado',
-  careSkipped: 'Omitido',
-
-  vaccineApply: 'Aplicar ahora',
-  vaccineApplied: 'Aplicada',
-
-  vetVisitKind: 'Consulta',
-  vetReturnKind: 'Retorno programado',
-
-  eventsCount: (n: number) => `${n} evento${n !== 1 ? 's' : ''}`,
-  monthPrev: 'Mes anterior',
-  monthNext: 'Mes siguiente',
-
-  weekdays: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-  months: [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
-  ],
-} as const
-
+type MedEv = {
+  id: string
+  date: string
+  petId: string
+  name: string
+  dose?: string
+  frequency?: string
+  petName: string
+  petEmoji: string
+}
 interface FilterChip {
   key: string
   label: string
@@ -79,81 +37,6 @@ interface FilterChip {
   emoji: string
 }
 
-const FILTER_GROUPS: { id: string; label: string; filters: FilterChip[] }[] = [
-  {
-    id: 'vet',
-    label: L.filterGroupVet,
-    filters: [
-      {
-        key: 'vet_visit',
-        label: L.filterVetVisit,
-        color: 'var(--primary)',
-        bg: 'var(--primary-hl)',
-        emoji: '🩺',
-      },
-      {
-        key: 'vet_return',
-        label: L.filterVetReturn,
-        color: 'var(--blue)',
-        bg: 'var(--blue-hl)',
-        emoji: '📅',
-      },
-    ],
-  },
-  {
-    id: 'medications',
-    label: L.filterGroupMedications,
-    filters: [
-      {
-        key: 'medication',
-        label: L.filterMedication,
-        color: 'var(--purple)',
-        bg: 'var(--purple-hl)',
-        emoji: '💊',
-      },
-    ],
-  },
-  {
-    id: 'vaccines',
-    label: L.filterGroupVaccines,
-    filters: [
-      {
-        key: 'vacc_due',
-        label: L.filterVaccDue,
-        color: 'var(--blue)',
-        bg: 'var(--blue-hl)',
-        emoji: '💉',
-      },
-      {
-        key: 'vacc_expired',
-        label: L.filterVaccExpired,
-        color: 'var(--err)',
-        bg: 'var(--err-hl)',
-        emoji: '🚨',
-      },
-    ],
-  },
-  {
-    id: 'cares',
-    label: L.filterGroupCares,
-    filters: [
-      {
-        key: 'pending',
-        label: L.filterPending,
-        color: 'var(--warn)',
-        bg: 'var(--warn-hl)',
-        emoji: '⏳',
-      },
-      {
-        key: 'done',
-        label: L.filterDone,
-        color: 'var(--success)',
-        bg: 'var(--success-hl)',
-        emoji: '✅',
-      },
-    ],
-  },
-]
 
 const toDateStr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -178,31 +61,9 @@ function getCareStatus(doneByDate: DoneByDate | undefined, day: string): CareSta
   return 'skip'
 }
 
-interface VaccEntry {
-  vaccKey: string
-  expired: boolean
-}
-
-interface VaccWithMeta extends VaccineRecord {
-  petId: string
-  petName: string
-  petEmoji: string
-}
-
-type MedEv = {
-  id: string
-  date: string
-  petId: string
-  name: string
-  dose?: string
-  frequency?: string
-  petName: string
-  petEmoji: string
-}
-
-const MED_COLOR = 'var(--purple)'
-
 export default function CalendarPage() {
+  const t = useT()
+  const MED_COLOR = 'var(--purple)'
   const today = new Date()
   const todayStr = toDateStr(today)
 
@@ -265,10 +126,55 @@ export default function CalendarPage() {
           nextDate: appliedDate,
           badge: 'APLICADA',
           badgeCls: 'badge-green',
-        },
+        }
       ],
     }))
-  }
+  }      
+  
+
+  const FILTER_GROUPS: { id: string; label: string; filters: FilterChip[] }[] = [
+    {
+      id: 'vet',
+      label: t.calendar.filterGroupVet,
+      filters: [
+        { key: 'vet_visit',  label: t.calendar.filterVetVisit,   color: 'var(--primary)', bg: 'var(--primary-hl)', emoji: '🩺' },
+        { key: 'vet_return', label: t.calendar.filterVetReturn,  color: 'var(--blue)',    bg: 'var(--blue-hl)',    emoji: '📅' },
+      ],
+    },
+    {
+      id: 'medications',
+      label: t.calendar.medication,
+      filters: [
+        { key: 'medication', label: t.calendar.medication, color: 'var(--purple)', bg: 'var(--purple-hl)', emoji: '💊' },
+      ],
+    },
+    {
+      id: 'vaccines',
+      label: t.calendar.filterGroupVaccines,
+      filters: [
+        { key: 'vacc_due',     label: t.calendar.filterVaccDue,     color: 'var(--blue)', bg: 'var(--blue-hl)', emoji: '💉' },
+        { key: 'vacc_expired', label: t.calendar.filterVaccExpired, color: 'var(--err)',  bg: 'var(--err-hl)',  emoji: '🚨' },
+      ],
+    },
+    {
+      id: 'cares',
+      label: t.calendar.filterGroupCares,
+      filters: [
+        { key: 'pending', label: t.calendar.filterPending, color: 'var(--warn)',    bg: 'var(--warn-hl)',    emoji: '⏳' },
+        { key: 'done',    label: t.calendar.filterDone,    color: 'var(--success)', bg: 'var(--success-hl)', emoji: '✅' },
+      ],
+    },
+  ]
+
+
+
+
+
+
+
+
+
+  
 
   const medicationEventDates = useMemo<Record<string, MedEv[]>>(() => {
     const map: Record<string, MedEv[]> = {}
@@ -616,7 +522,7 @@ export default function CalendarPage() {
       <section className="alert-banner">
         <div className="alert-banner__main">
           <div className="alert-banner__title-row">
-            <div className="alert-banner__title">🚨 {L.alertsTitle}</div>
+            <div className="alert-banner__title">🚨 {t.calendar.alertsTitle}</div>
             <span className="badge badge-red">
               {expiredVaccines.length} {expiredVaccines.length === 1 ? 'caso' : 'casos'}
             </span>
@@ -634,14 +540,14 @@ export default function CalendarPage() {
                   <div className="alert-banner__item-text">
                     <div className="alert-banner__item-top">
                       <span className="alert-banner__pet-name">{vac.petName}</span>
-                      <span className="badge badge-red">{L.vacExpiredTag}</span>
+                      <span className="badge badge-red">{t.calendar.vacExpiredTag}</span>
                     </div>
 
                     <div className="alert-banner__vacc-name">{vac.name}</div>
 
                     {vac.nextDate && (
                       <div className="alert-banner__meta">
-                        {L.vacExpiredSince} {vac.nextDate}
+                        {t.calendar.vacExpiredSince} {vac.nextDate}
                       </div>
                     )}
                   </div>
@@ -665,15 +571,15 @@ export default function CalendarPage() {
         </div>
 
         <div className="alert-banner__aside">
-          <div className="alert-banner__warn">{L.alertsWarn}</div>
+          <div className="alert-banner__warn">{t.calendar.alertsWarn}</div>
         </div>
       </section>
     )}
 
     <div className="page-header">
       <div>
-        <div className="page-title">{L.pageTitle}</div>
-        <div className="page-subtitle">{L.pageSubtitle}</div>
+        <div className="page-title">{t.calendar.title}</div>
+        <div className="page-subtitle">{t.calendar.subtitle}</div>
       </div>
     </div>
 
@@ -697,7 +603,7 @@ export default function CalendarPage() {
               setSelectedDay(todayStr)
             }}
           >
-            {L.today}
+            {t.calendar.today}
           </button>
         </div>
       </div>
@@ -705,11 +611,11 @@ export default function CalendarPage() {
       <div className="cal-toolbar-bottom">
         <div className="cal-filters">
           <div className="cal-filters-head">
-            <div className="cal-filters-label">{L.filterLabel}</div>
+            <div className="cal-filters-label">{t.calendar.filterLabel}</div>
 
             {activeFilters.size > 0 && (
               <button className="btn btn-ghost btn-sm" onClick={clearFilters}>
-                {L.clearFilters}
+                {t.calendar.clearFilters}
               </button>
             )}
           </div>
@@ -757,19 +663,19 @@ export default function CalendarPage() {
           <button
             className="btn btn-secondary btn-sm"
             onClick={prevMonth}
-            aria-label={L.monthPrev}
+            aria-label={t.calendar.monthPrev}
           >
             ‹
           </button>
 
           <div className="cal-month-label">
-            {L.months[month]} {year}
+            {t.dates.months[month]} {year}
           </div>
 
           <button
             className="btn btn-secondary btn-sm"
             onClick={nextMonth}
-            aria-label={L.monthNext}
+            aria-label={t.calendar.monthNext}
           >
             ›
           </button>
@@ -779,7 +685,7 @@ export default function CalendarPage() {
           className="cal-grid cal-grid--header"
           style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '.55rem' }}
         >
-          {L.weekdays.map((wd) => (
+          {t.dates.weekdaysShort.map((wd) => (
             <div key={wd}>{wd}</div>
           ))}
         </div>
@@ -811,7 +717,7 @@ export default function CalendarPage() {
                   .filter(Boolean)
                   .join(' ')}
                 onClick={() => setSelectedDay(key)}
-                aria-label={`${day} ${L.months[month]} ${year}`}
+                aria-label={`${day} ${t.dates.months[month]} ${year}`}
                 aria-pressed={isSelected}
               >
                 <div className="cal-cell__day">{day}</div>
@@ -845,11 +751,11 @@ export default function CalendarPage() {
           })()}
         </div>
 
-        {isDayEmpty && <div className="empty">{L.dayEmpty}</div>}
+        {isDayEmpty && <div className="empty">{t.calendar.dayEmpty}</div>}
 
         {selectedDayVet.length > 0 && (
           <div className="cal-detail__section">
-            <div className="cal-detail__section-title">{L.dayVetVisits}</div>
+            <div className="cal-detail__section-title">{t.calendar.dayVetVisits}</div>
 
             {selectedDayVet.map((ev, idx) => (
               <div key={`${ev.date}-${ev.petId}-${idx}`} className="vet-row">
@@ -857,7 +763,7 @@ export default function CalendarPage() {
                 <div className="vet-row__info">
                   <div className="vet-row__label">{ev.label}</div>
                   <div className="vet-row__kind">
-                    {ev.kind === 'past' ? L.vetVisitKind : L.vetReturnKind}
+                    {ev.kind === 'past' ? t.calendar.vetVisitKind : t.calendar.vetReturnKind}
                   </div>
                 </div>
                 <span className={`badge ${ev.kind === 'past' ? 'badge-blue' : 'badge-yellow'}`}>
@@ -870,7 +776,7 @@ export default function CalendarPage() {
 
         {selectedDayMeds.length > 0 && (
           <div className="cal-detail__section">
-            <div className="cal-detail__section-title">{L.dayMedications}</div>
+            <div className="cal-detail__section-title">{t.calendar.dayMedications}</div>
 
             {selectedDayMeds.map((med) => (
               <div key={med.id} className="med-row">
@@ -891,7 +797,7 @@ export default function CalendarPage() {
 
         {selectedDayVaccines.length > 0 && (
           <div className="cal-detail__section">
-            <div className="cal-detail__section-title">{L.dayVaccines}</div>
+            <div className="cal-detail__section-title">{t.calendar.dayVaccines}</div>
 
             {selectedDayVaccines.map((entry) => {
               const vacc = allVaccines.find((v) => `${v.petId}::${v.name}` === entry.vaccKey)
@@ -908,13 +814,13 @@ export default function CalendarPage() {
                   </div>
 
                   {entry.expired ? (
-                    <span className="badge badge-red">🚨 {L.vacExpiredTag}</span>
+                    <span className="badge badge-red">🚨 {t.calendar.vacExpiredTag}</span>
                   ) : (
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleVaccineApplied(entry.vaccKey, selectedDay)}
                     >
-                      💉 {L.vaccineApply}
+                      💉 {t.calendar.vaccineApply}
                     </button>
                   )}
                 </div>
@@ -925,7 +831,7 @@ export default function CalendarPage() {
 
         {selectedDayCares.length > 0 && (
           <div className="cal-detail__section">
-            <div className="cal-detail__section-title">{L.dayCares}</div>
+            <div className="cal-detail__section-title">{t.calendar.dayCares}</div>
 
             {selectedDayCares.map(({ careId }, listIdx) => {
               const care = careItems.find((c) => c.id === careId)
@@ -949,9 +855,9 @@ export default function CalendarPage() {
                       {care.sub && <div className="care-sub">{care.sub}</div>}
                     </div>
 
-                    {isDone && <span className="badge badge-green">✓ {L.careDone}</span>}
-                    {isSkip && <span className="badge badge-gray">{L.careSkipped}</span>}
-                    {!isDone && !isSkip && <span className="badge badge-yellow">{L.carePending}</span>}
+                    {isDone && <span className="badge badge-green">✓ {t.calendar.careDone}</span>}
+                    {isSkip && <span className="badge badge-gray">{t.calendar.careSkipped}</span>}
+                    {!isDone && !isSkip && <span className="badge badge-yellow">{t.calendar.carePending}</span>}
                   </button>
 
                   {expanded && (
@@ -961,7 +867,7 @@ export default function CalendarPage() {
                           className="btn btn-primary btn-sm"
                           onClick={() => setCareProgress(careId, selectedDay, care.total, true)}
                         >
-                          ✓ {L.careDone}
+                          ✓ {t.calendar.careDone}
                         </button>
                       )}
 
@@ -970,7 +876,7 @@ export default function CalendarPage() {
                           className="btn btn-secondary btn-sm"
                           onClick={() => setCareProgress(careId, selectedDay, 0, false)}
                         >
-                          ↺ {L.carePending}
+                          ↺ {t.calendar.carePending}
                         </button>
                       )}
 
@@ -979,12 +885,12 @@ export default function CalendarPage() {
                           className="btn btn-ghost btn-sm"
                           onClick={() => setCareProgress(careId, selectedDay, 0, false)}
                         >
-                          {L.careSkipped}
+                          {t.calendar.careSkipped}
                         </button>
                       )}
 
                       <button className="btn btn-ghost btn-sm" onClick={() => openEditCare(careId)}>
-                        ✏️ {L.editCare}
+                        ✏️ {t.calendar.editCare}
                       </button>
                     </div>
                   )}

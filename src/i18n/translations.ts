@@ -263,6 +263,7 @@ export interface Translations {
     dayCares:      string
     dayVaccines:   string
     dayVetVisits:  string
+    dayMedications: string
     editCare:      string
     // Care status
     carePending:   string
@@ -728,6 +729,7 @@ const es: Translations = {
     dayEmpty: 'Sin eventos este día',
     dayCares: 'Cuidados del día',
     dayVaccines: 'Vacunas',
+    dayMedications: 'Medicamentos',
     dayVetVisits: 'Consultas / Citas',
     editCare: 'Editar cuidado',
     // care status
@@ -1113,6 +1115,7 @@ const en: Translations = {
     dayEmpty: 'No events on this day',
     dayCares: "Day's care",
     dayVaccines: 'Vaccines',
+    dayMedications: 'Medications',
     dayVetVisits: 'Appointments',
     editCare: 'Edit care',
     carePending: 'Pending',
@@ -1495,6 +1498,7 @@ const pt: Translations = {
     dayEmpty: 'Sem eventos neste dia',
     dayCares: 'Cuidados do dia',
     dayVaccines: 'Vacinas',
+    dayMedications: 'Medicamentos',
     dayVetVisits: 'Consultas / Agendamentos',
     editCare: 'Editar cuidado',
     carePending: 'Pendente',

@@ -70,7 +70,7 @@ export default function EditPetModal({ isOpen, onClose, onSave, pet }: Props) {
   const handleClose = () => { setSuccess(false); onClose() }
 
   const handleSave = () => {
-    if (!name.trim()) { setNameErr('El nombre es obligatorio'); return }
+    if (!name.trim()) { setNameErr(t.vet.contacts.errName); return }
     setSuccess(true)
     setTimeout(() => {
       onSave({

@@ -181,7 +181,7 @@ export default function LoginPage() {
   }
   const validateRegister = () => {
     const e: Record<string,string> = {}
-    if (!name.trim())         e.name     = 'El nombre es obligatorio'
+    if (!name.trim())         e.name     = t.vet.contacts.errName
     if (!email.trim())        e.email    = 'El email es obligatorio'
     else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Email no válido'
     if (!password)            e.password = 'La contraseña es obligatoria'

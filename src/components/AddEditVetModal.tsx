@@ -62,7 +62,7 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
 
   const validate = () => {
     let ok = true
-    if (!name.trim())   { setNameErr('El nombre es obligatorio');    ok = false }
+    if (!name.trim())   { setNameErr(t.vet.contacts.errName);    ok = false }
     if (!clinic.trim()) { setClinicErr('La clínica es obligatoria'); ok = false }
     if (!phone.trim())  { setPhoneErr('El teléfono es obligatorio'); ok = false }
     return ok
@@ -101,7 +101,7 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
       icon="🩺"
       footer={
         <PfFooter>
-          <PfBtn variant="cancel" onClick={onClose}>Cancelar</PfBtn>
+          <PfBtn variant="cancel" onClick={onClose}>{t.btn.cancel}</PfBtn>
           <PfBtn variant="save" onClick={handleSave}>
             {isEdit ? 'Guardar cambios' : 'Añadir veterinario'}
           </PfBtn>

@@ -3,6 +3,7 @@ import Modal from './Modal'
 import { PfBtn, PfFooter } from './FooterButtons'
 import { MOCK_PETS, SPECIES_EMOJI } from '../hooks/usePets'
 import { useVet, type VetAppointment } from '../context/VetContext'
+import { useT } from '../context/LanguageContext'
 
 // ─── APPOINTMENT TYPES ────────────────────────────────────────────────────────
 export const APPOINTMENT_TYPES = [
@@ -33,6 +34,7 @@ export default function AddEditAppointmentModal({
 }: Props) {
   const isEdit = !!initial
   const { vets } = useVet()
+  const t = useT()
 
   const [petId,        setPetId]        = useState(defaultPetId)
   const [type,         setType]         = useState<ApptType>('routine')
@@ -124,7 +126,7 @@ export default function AddEditAppointmentModal({
       icon="📋"
       footer={
         <PfFooter>
-          <PfBtn variant="cancel" onClick={onClose}>Cancelar</PfBtn>
+          <PfBtn variant="cancel" onClick={onClose}>{t.btn.cancel}</PfBtn>
           <PfBtn variant="save"   onClick={handleSave}>
             {isEdit ? 'Guardar cambios' : 'Registrar consulta'}
           </PfBtn>
@@ -261,7 +263,7 @@ export default function AddEditAppointmentModal({
         </label>
         <textarea className="form-input" rows={2} value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="Cualquier observación relevante…" />
+          placeholder={t.vet.appointments.notesPh} />
       </div>
     </Modal>
   )

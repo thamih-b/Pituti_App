@@ -103,7 +103,7 @@ export default function EditCareModal({ isOpen, onClose, care, onSave, onDelete 
   if (!care) return null
 
   const handleSave = () => {
-    if (!title.trim()) { setTitleErr('El nombre es obligatorio'); return }
+    if (!title.trim()) { setTitleErr(t.vet.contacts.errName); return }
     const rv = Math.max(1, Number(recValue) || 1)
     const intervalDays =
       recType === 'daily'       ? 1 :

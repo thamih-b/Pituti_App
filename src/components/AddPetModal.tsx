@@ -56,7 +56,7 @@ export default function AddPetModal({ isOpen, onClose, onAdd }: Props) {
   const handleClose = () => { reset(); setSuccess(false); onClose() }
 
   const handleSubmit = () => {
-    if (!name.trim()) { setNameErr('El nombre es obligatorio'); return }
+    if (!name.trim()) { setNameErr(t.vet.contacts.errName); return }
     const petName = name.trim()
     setSuccess(true)
     setTimeout(() => {

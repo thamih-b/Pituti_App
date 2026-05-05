@@ -31,7 +31,7 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
   if (!vaccine) return null
 
   const handleSave = () => {
-    if (!name.trim()) { setNameErr('El nombre es obligatorio'); return }
+    if (!name.trim()) { setNameErr(t.vet.contacts.errName); return }
     if (!nextDate)    { setNextErr('La próxima dosis es obligatoria'); return }
     setSuccess(true)
     setTimeout(() => {

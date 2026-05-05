@@ -9,16 +9,23 @@ import EditCareModal from '../components/EditCareModal'
 import type { CareEditData } from '../components/EditCareModal'
 import { SymptomDetailModal } from '../components/SymptomModals'
 import type { SymptomEntry } from '../components/SymptomModals'
+import { useT } from '../context/LanguageContext'
 
-function useGreeting() {
-  const [text, setText] = useState({ saludo:'¡Bienvenida, Thamires!', date:'' })
+
+function useGreeting(t: ReturnType<typeof useT>) {
+  const [text, setText] = useState({ saludo: '', date: '' })
   useEffect(() => {
-    const now=new Date(); const h=now.getHours()
-    const saludo=h<12?'¡Buenos días':h<19?'¡Buenas tardes':'¡Buenas noches'
-    const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
-    const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
-    setText({ saludo:`${saludo}, Thamires!`, date:`${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}` })
-  }, [])
+    const now = new Date(); const h = now.getHours()
+    const saludo = h < 12 ? t.dashboard.greeting_morning
+                 : h < 19 ? t.dashboard.greeting_afternoon
+                 :           t.dashboard.greeting_evening
+    const days   = t.dates.weekdays    // ← já é string[], sem .split()
+    const months = t.dates.months      // ← já é string[], sem .split()
+    setText({
+      saludo: `${saludo}, Thamiris!`,
+      date: `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`
+    })
+  }, [t])
   return text
 }
 
@@ -32,12 +39,13 @@ function buildSlots(pets: PetWithAlerts[]) {
 }
 
 function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (id:string)=>void }) {
+  const t = useT() 
   const photos: Record<string,string> = {}
   try { Object.keys(localStorage).filter(k=>k.startsWith('pet-photo-')).forEach(k=>{ photos[k.replace('pet-photo-','')] = localStorage.getItem(k)! }) } catch {}
 
   if (!pets.length) return (
     <div className="paw-layout" style={{ display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div className="paw-empty"><div className="paw-empty-icon">🐾</div><p>Añade tu primera mascota</p></div>
+      <div className="paw-empty"><div className="paw-empty-icon">🐾</div><p>{t.dashboard.addFirstPet}</p></div>
     </div>
   )
   return (
@@ -101,7 +109,9 @@ export default function DashboardPage() {
   const { state } = usePituti()
   const { pets, loading } = { pets:state.pets, loading:state.petsLoading }
   const { setCaredone } = useCares()
-  const { saludo, date } = useGreeting()
+  const t = useT()   
+  const { saludo, date } = useGreeting(t)
+
   const allAlerts = pets.flatMap(p => (p.alerts ?? []).map(a => ({ ...a, petName: p.name })))
 
   const [dashCares,    setDashCares]    = useState<DashCareItem[]>(INITIAL)
@@ -135,20 +145,20 @@ export default function DashboardPage() {
         </div>
         <div className="paw-wrapper">
           {loading
-            ? <div className="paw-layout" style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-faint)', fontSize:'.875rem' }}>Cargando…</div>
+            ? <div className="paw-layout" style={{ display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-faint)', fontSize:'.875rem' }}>{t.btn.loading}...</div>
             : <PawLayout pets={pets} onPetClick={id => navigate(`/pets/${id}`)}/>
           }
-          {allAlerts.length===0 && <div className="paw-caption">Todo en día ✓</div>}
+          {allAlerts.length===0 && <div className="paw-caption">{t.dashboard.allGood} </div>}
         </div>
       </div>
 
       <div className="dash-col-center">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom:0 }}>Cuidados de hoy</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/cares')}>Ver todos →</button>
+          <div className="dash-section-label" style={{ marginBottom:0 }}>{t.dashboard.todayCares}</div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/cares')}>{t.btn.seeAll} →</button>
         </div>
         <div style={{ fontSize:'.75rem', color:'var(--text-muted)', fontWeight:700, marginBottom:'.625rem' }}>
-          Hoy — <span style={{ color:'var(--err)' }}>{dashCares.filter(c=>!c.done_state).length} pendientes</span>
+          Hoy — <span style={{ color:'var(--err)' }}>{dashCares.filter(c=>!c.done_state).length} {t.dashboard.pendingTasks}</span>
         </div>
         <div className="dash-care-col">
           {dashCares.map(c => (
@@ -163,7 +173,7 @@ export default function DashboardPage() {
 
       <div className="dash-col-eventos">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom:0 }}>Próximos eventos</div>
+          <div className="dash-section-label" style={{ marginBottom:0 }}>{t.dashboard.upcomingEvents}</div>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/vaccines')}>Ver todos →</button>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:'.5rem' }}>
@@ -185,7 +195,7 @@ export default function DashboardPage() {
 
       <div className="dash-col-right">
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom:0 }}>Alertas</div>
+          <div className="dash-section-label" style={{ marginBottom:0 }}>{t.dashboard.alerts}</div>
         </div>
         <div className="dash-kpi-col">
           {[

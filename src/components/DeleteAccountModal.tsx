@@ -66,7 +66,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Props
           /* ── Step 2: Type confirmation ── */
           <div style={{ padding:'1.25rem 1.5rem' }}>
             <div style={{ fontSize:'.875rem', color:'var(--text-muted)', lineHeight:1.5, marginBottom:'1rem' }}>
-              Para confirmar, escribe <strong style={{ color:'var(--text)', fontFamily:'monospace', background:'var(--surface-offset)', padding:'.1rem .35rem', borderRadius:'var(--r-sm)' }}>eliminar</strong> en el campo de abajo:
+              Para confirmar, escribe <strong style={{ color:'var(--text)', fontFamily:'monospace', background:'var(--surface-offset)', padding:'.1rem .35rem', borderRadius:'var(--r-sm)' }}>{t.btn.delete}</strong> en el campo de abajo:
             </div>
             <input
               className="form-input"
@@ -89,7 +89,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm }: Props
 
         {/* Footer */}
         <div style={{ display:'flex', justifyContent:'space-between', gap:'.5rem', padding:'.875rem 1.5rem 1.125rem', borderTop:'1.5px solid var(--divider)', background:'var(--surface-2)' }}>
-          <PfBtn variant="cancel" onClick={reset}>Cancelar</PfBtn>
+          <PfBtn variant="cancel" onClick={reset}>{t.btn.cancel}</PfBtn>
           {step === 1 ? (
             <PfBtn variant="delete" onClick={() => setStep(2)}>Continuar →</PfBtn>
           ) : (

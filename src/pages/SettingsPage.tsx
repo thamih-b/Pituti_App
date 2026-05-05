@@ -190,7 +190,7 @@ export default function SettingsPage() {
               {s.saved}
             </div>}
             <PfBtn variant="cancel" size="sm" onClick={()=>{setName('Thamires Lopes');setEmail('thamires@email.com');setPhone('+34 600 000 000');setBio('');setCity('Madrid, España')}}>{t.btn.discard}</PfBtn>
-            <PfBtn variant="save" size="sm" loading={saving} onClick={handleSave}>{t.btn.saveChanges}</PfBtn>
+            <PfBtn variant="save" size="sm" loading={saving} onClick={handleSave}>{t.btn.save}</PfBtn>
           </div>
         </div>
 

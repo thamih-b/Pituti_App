@@ -113,7 +113,7 @@ export default function MedDetailModal({ med, onClose, onEdit, onMarkAdministere
             </>
           ) : (
             <>
-              <button className="btn btn-secondary" onClick={() => setMarkMode(false)}>Cancelar</button>
+              <button className="btn btn-secondary" onClick={() => setMarkMode(false)}>{t.btn.cancel}</button>
               <button className="btn btn-success" onClick={handleMark}>✓ Confirmar</button>
             </>
           )}

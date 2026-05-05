@@ -169,7 +169,7 @@ function ShareModal({ petName, isOpen, onClose }: { petName: string; isOpen: boo
               <div style={{ flex: 1 }}><div className="caregiver-row-name">{u.name}</div><div className="caregiver-row-role">{u.role}</div></div>
               {u.badge
                 ? <span className="badge badge-green">{u.badge}</span>
-                : <PfBtn variant="delete" size="sm" onClick={() => { setCaregivers(p => p.filter(c => c.id !== u.id)); showToast('Cuidador eliminado') }}>Eliminar</PfBtn>}
+                : <PfBtn variant="delete" size="sm" onClick={() => { setCaregivers(p => p.filter(c => c.id !== u.id)); showToast('Cuidador eliminado') }}>{t.btn.delete}</PfBtn>}
             </div>
           ))}
         </div>
@@ -931,7 +931,7 @@ const localMeds = getActiveMedicationsByPetId(petData.id)
                   if (n) { setEditNote(n); setEditNoteOpen(true); setHistDetail(null) }
                 }}>✏ Editar nota</button>
               )}
-              <button className="btn btn-secondary" onClick={() => setHistDetail(null)}>Cerrar</button>
+              <button className="btn btn-secondary" onClick={() => setHistDetail(null)}>{t.btn.close}</button>
             </div>
           </div>
         </div>

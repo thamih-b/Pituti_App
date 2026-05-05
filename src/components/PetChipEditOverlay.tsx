@@ -180,8 +180,8 @@ export default function PetChipEditOverlay({ pet, field, onClose, onSave }: Prop
 
         {/* Footer */}
         <div className="chip-edit-footer">
-          <PfBtn variant="cancel" size="sm" onClick={onClose}>Cancelar</PfBtn>
-          <PfBtn variant="save" size="sm" onClick={handleSave}>Guardar</PfBtn>
+          <PfBtn variant="cancel" size="sm" onClick={onClose}>{t.btn.cancel}</PfBtn>
+          <PfBtn variant="save" size="sm" onClick={handleSave}>{t.btn.save}</PfBtn>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { usePituti } from '../context/PitutiContext'
 import CalicoAnimation from './CalicoAnimation'
 import NotificationsPanel from './NotificationPanel'
+import { useT } from '../context/LanguageContext'
 // catAnim.css must be imported in main.tsx: import './styles/catAnim.css'
 
 // ─── LOGO ─────────────────────────────────────────────────────────────────────
@@ -170,6 +171,8 @@ export default function AppLayout() {
   const { state, toggleTheme } = usePituti()
   const theme = state.theme
 
+  const t = useT()
+
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' })
 
   useEffect(() => {
@@ -200,13 +203,13 @@ export default function AppLayout() {
 
         <div className="topbar-search">
           {icons.search}
-          <input placeholder="Buscar mascota, registro..." aria-label="Buscar" />
+          <input placeholder={t.topbar.searchPlaceholder} aria-label={t.topbar.searchPlaceholder} />
           <span style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.4)', background: 'rgba(255,255,255,.1)', padding: '.1rem .35rem', borderRadius: '.25rem' }}>K</span>
         </div>
 
         <div className="topbar-actions">
           <NotificationsPanel />
-          <button className="topbar-icon-btn" onClick={toggleTheme} title="Cambiar tema">
+          <button className="topbar-icon-btn" onClick={toggleTheme} title={t.topbar.changeTheme}>
             {theme === 'light' ? icons.moon : icons.sun}
           </button>
         </div>
@@ -229,50 +232,50 @@ export default function AppLayout() {
           <button className="sidebar-mobile-close" onClick={closeMobile} aria-label="Cerrar menú">{icons.closeX}</button>
         </div>
 
-        <div className="sidebar-section-label">Principal</div>
-        <NavItem to="dashboard" icon={icons.dashboard} label="Dashboard"    collapsed={collapsed} />
-        <NavItem to="pets"      icon={icons.pets}      label="Mis Mascotas" collapsed={collapsed} badge="3" />
-        <NavItem to="cares"     icon={icons.cares}     label="Cuidados"     collapsed={collapsed} />
-        <NavItem to="calendar"  icon={icons.calendar}  label="Calendario"   collapsed={collapsed} />
+<div className="sidebar-section-label">{t.nav.main}</div>
+<NavItem to="dashboard" icon={icons.dashboard} label={t.nav.dashboard} collapsed={collapsed} />
+<NavItem to="pets"      icon={icons.pets}      label={t.nav.pets}      collapsed={collapsed} badge="3" />
+<NavItem to="cares"     icon={icons.cares}     label={t.nav.cares}     collapsed={collapsed} />
+<NavItem to="calendar"  icon={icons.calendar}  label={t.nav.calendar}  collapsed={collapsed} />
+
+<div className="sidebar-divider" />
+
+<div className="sidebar-section-label">{t.nav.health}</div>
+<NavItem to="vaccines"    icon={icons.vaccines}    label={t.nav.vaccines}    collapsed={collapsed} />
+<NavItem to="medications" icon={icons.medications} label={t.nav.medications} collapsed={collapsed} />
+<NavItem to="symptoms"    icon={icons.symptoms}    label={t.nav.symptoms}    collapsed={collapsed} />
+<NavItem to="notes"       icon={icons.notes}       label={t.nav.notes}       collapsed={collapsed} />
+<NavItem to="vet"         icon={icons.vet}         label={t.nav.vet}         collapsed={collapsed} />
 
         <div className="sidebar-divider" />
 
-        <div className="sidebar-section-label">Salud</div>
-        <NavItem to="vaccines"    icon={icons.vaccines}    label="Vacunas"      collapsed={collapsed} />
-        <NavItem to="medications" icon={icons.medications} label="Medicamentos" collapsed={collapsed} />
-        <NavItem to="symptoms"    icon={icons.symptoms}    label="Síntomas"     collapsed={collapsed} />
-        <NavItem to="notes"       icon={icons.notes}       label="Notas"        collapsed={collapsed} />
-        <NavItem to="vet"         icon={icons.vet}         label="Veterinaria"  collapsed={collapsed} />
-
-        <div className="sidebar-divider" />
-
-        <div className="sidebar-section-label">Cuenta</div>
-        <NavItem to="settings" icon={icons.settings} label="Ajustes" collapsed={collapsed} />
+<div className="sidebar-section-label">{t.nav.account}</div>
+<NavItem to="settings" icon={icons.settings} label={t.nav.settings} collapsed={collapsed} />
 
         <div className="sidebar-toggle">
-          <button
-            className="nav-item"
-            style={{ width: '100%' }}
-            onClick={() => setCollapsed(c => !c)}
-            title="Colapsar menú"
-          >
-            <span style={{ transform: collapsed ? 'rotate(180deg)' : undefined, transition: 'transform 200ms', display: 'flex' }}>
-              {icons.chevron}
-            </span>
-            <span className="nav-label">Colapsar</span>
-          </button>
-        </div>
+  <button
+    className="nav-item"
+    style={{ width: '100%' }}
+    onClick={() => setCollapsed(c => !c)}
+    title={t.nav.collapse}
+  >
+    <span style={{ transform: collapsed ? 'rotate(180deg)' : undefined, transition: 'transform 200ms', display: 'flex' }}>
+      {icons.chevron}
+    </span>
+    <span className="nav-label">{t.nav.collapse}</span>
+  </button>
+</div>
       </nav>
 
       {/* ── Mobile Bottom Nav ── */}
-      <nav className="mobile-bottom-nav" aria-label="Navegación móvil">
-        <MobileNavItem to="dashboard" icon={icons.dashboard} label="Inicio"      />
-        <MobileNavItem to="pets"      icon={icons.pets}      label="Mascotas"    />
-        <MobileNavItem to="cares"     icon={icons.cares}     label="Cuidados"    />
-        <MobileNavItem to="vet"       icon={icons.vet}       label="Veterinaria" />
-        <MobileNavItem to="calendar"  icon={icons.calendar}  label="Calendario"  />
-        <MobileNavItem to="settings"  icon={icons.settings}  label="Ajustes"     />
-      </nav>
+<nav className="mobile-bottom-nav" aria-label="Navegación móvil">
+  <MobileNavItem to="dashboard" icon={icons.dashboard} label={t.nav.dashboard} />
+  <MobileNavItem to="pets"      icon={icons.pets}      label={t.nav.pets}      />
+  <MobileNavItem to="cares"     icon={icons.cares}     label={t.nav.cares}     />
+  <MobileNavItem to="vet"       icon={icons.vet}       label={t.nav.vet}       />
+  <MobileNavItem to="calendar"  icon={icons.calendar}  label={t.nav.calendar}  />
+  <MobileNavItem to="settings"  icon={icons.settings}  label={t.nav.settings}  />
+</nav>
 
       {/* ── MAIN ── */}
       <main className="main" id="main-content">

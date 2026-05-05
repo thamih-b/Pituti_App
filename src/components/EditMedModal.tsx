@@ -61,7 +61,7 @@ export default function EditMedModal({ isOpen, onClose, med, onSave, onDelete }:
 
   const validate = () => {
     const e: Record<string,string> = {}
-    if (!title.trim()) e.title = 'El nombre es obligatorio'
+    if (!title.trim()) e.title = t.vet.contacts.errName
     if (!dose.trim())  e.dose  = 'Indica la dosis'
     return e
   }
@@ -93,8 +93,8 @@ export default function EditMedModal({ isOpen, onClose, med, onSave, onDelete }:
             {confirmDel ? '¿Confirmar eliminar?' : '🗑 Eliminar'}
           </Button>
           <div style={{ display:'flex', gap:'.5rem' }}>
-            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar</Button>
+            <Button variant="ghost" onClick={onClose}>{t.btn.cancel}</Button>
+            <Button onClick={handleSave}>{t.btn.save}</Button>
           </div>
         </div>
       }

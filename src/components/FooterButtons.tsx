@@ -152,9 +152,9 @@ export function FooterDetailActions({
 }) {
   return (
     <PfFooter>
-      <PfBtn variant="cancel" size="sm" onClick={onClose}>Cerrar</PfBtn>
+      <PfBtn variant="cancel" size="sm" onClick={onClose}>{t.btn.close}</PfBtn>
       <div style={{ display:'flex', gap:'.5rem', marginLeft:'auto' }}>
-        <PfBtn variant="edit" onClick={onEdit}>Editar</PfBtn>
+        <PfBtn variant="edit" onClick={onEdit}>{t.btn.edit}</PfBtn>
         {onDone && <PfBtn variant={doneVariant} onClick={onDone}>{doneLabel}</PfBtn>}
       </div>
     </PfFooter>

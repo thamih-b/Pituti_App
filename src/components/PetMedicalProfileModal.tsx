@@ -147,7 +147,7 @@ export default function PetMedicalProfileModal({
       icon="🩺"
       footer={
         <PfFooter>
-          <PfBtn variant="cancel" onClick={onClose}>Cancelar</PfBtn>
+          <PfBtn variant="cancel" onClick={onClose}>{t.btn.cancel}</PfBtn>
           <PfBtn variant="save"   onClick={handleSave}>Guardar perfil</PfBtn>
         </PfFooter>
       }

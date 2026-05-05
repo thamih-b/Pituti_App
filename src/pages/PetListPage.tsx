@@ -107,7 +107,7 @@ function AddPetModal({ isOpen, onClose, onAdd }: { isOpen:boolean; onClose:()=>v
   const [nameErr, setNameErr] = useState('')
   const set = (k: string, v: string) => setForm(f=>({...f,[k]:v}))
   const handleSubmit = () => {
-    if (!form.name.trim()) { setNameErr('El nombre es obligatorio'); return }
+    if (!form.name.trim()) { setNameErr(t.vet.contacts.errName); return }
     const petName = form.name.trim()
     onAdd({ id:`pet-${Date.now()}`, name:petName, species:form.species, breed:form.breed.trim()||undefined, birthDate:form.birthDate||undefined, photoUrl:undefined, ownerId:'user-1', createdAt:new Date().toISOString(), healthScore:100, alerts:[], vaccCoverage:100 })
     setForm({ name:'', species:'cat', breed:'', birthDate:'', weight:'' }); setNameErr(''); onClose()
