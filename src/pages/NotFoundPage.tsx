@@ -1,8 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useT } from '../context/LanguageContext'
 
 export default function NotFoundPage() {
-  const navigate   = useNavigate()
+  const navigate     = useNavigate()
   const { pathname } = useLocation()
+  const t            = useT()
 
   return (
     <div style={{
@@ -25,7 +27,7 @@ export default function NotFoundPage() {
       </h1>
 
       <p style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
-        Página não encontrada
+        {t.notFound.title}
       </p>
 
       <p style={{
@@ -34,27 +36,15 @@ export default function NotFoundPage() {
         maxWidth: 320,
         margin: 0,
       }}>
-        A rota <code style={{
-          background: 'var(--surface)',
-          padding: '.1rem .4rem',
-          borderRadius: 4,
-          fontFamily: 'monospace',
-          fontSize: '.82rem',
-        }}>{pathname}</code> não existe no Pituti.
+        {t.notFound.hint.replace('n', pathname)}
       </p>
 
       <div style={{ display: 'flex', gap: '.75rem', marginTop: '.5rem' }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate('/dashboard')}
-        >
-          Ir ao Dashboard
+        <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+          {t.nav.dashboard}
         </button>
-        <button
-          className="btn btn-ghost"
-          onClick={() => navigate(-1)}
-        >
-          ← Voltar
+        <button className="btn btn-ghost" onClick={() => navigate(-1)}>
+          ← {t.btn.back}
         </button>
       </div>
     </div>

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import Modal from './Modal'
 import { PfBtn, PfFooter } from './FooterButtons'
 import { CONDITIONS_CATALOG, type PetMedicalProfile } from '../context/VetContext'
+import { useT } from '../context/LanguageContext'
 
-// ─── LOCAL TYPES ──────────────────────────────────────────────────────────────
 type Sex = 'male' | 'female'
 type Env = 'apartment' | 'house' | 'both'
 
@@ -14,7 +14,6 @@ interface Surgery {
   notes?: string
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" className="toggle-pill"
@@ -31,7 +30,6 @@ function SectionLabel({ children }: { children: string }) {
   )
 }
 
-// ─── PROPS ────────────────────────────────────────────────────────────────────
 interface Props {
   isOpen:  boolean
   onClose: () => void
@@ -40,29 +38,26 @@ interface Props {
   onSave:  (profile: PetMedicalProfile) => void
 }
 
-// ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function PetMedicalProfileModal({
   isOpen, onClose, pet, profile, onSave,
 }: Props) {
-  // ── Basic ──
+  const t = useT()
+  const v = t.vet
+
   const [sex,          setSex]          = useState<Sex | undefined>(undefined)
   const [neutered,     setNeutered]     = useState<boolean | undefined>(undefined)
   const [neuteredAge,  setNeuteredAge]  = useState('')
   const [bloodType,    setBloodType]    = useState('')
   const [allergies,    setAllergies]    = useState('')
-  // ── Conditions ──
   const [condIds,      setCondIds]      = useState<string[]>([])
   const [customConds,  setCustomConds]  = useState<string[]>([])
   const [newCond,      setNewCond]      = useState('')
-  // ── Surgeries ──
   const [surgeries,    setSurgeries]    = useState<Surgery[]>([])
   const [newSurgName,  setNewSurgName]  = useState('')
   const [newSurgNotes, setNewSurgNotes] = useState('')
-  // ── Environment ──
   const [environment,  setEnvironment]  = useState<Env | undefined>(undefined)
   const [withAnimals,  setWithAnimals]  = useState<boolean | undefined>(undefined)
   const [parasite,     setParasite]     = useState('')
-  // ── Vet notes ──
   const [behavior,     setBehavior]     = useState('')
   const [vetQuestions, setVetQuestions] = useState('')
 
@@ -85,7 +80,6 @@ export default function PetMedicalProfileModal({
     setVetQuestions(profile.vetQuestions ?? '')
   }, [isOpen, profile])
 
-  // ── Conditions ─────────────────────────────────────────────────────────────
   const toggleCondId = (id: string) =>
     setCondIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
@@ -96,7 +90,6 @@ export default function PetMedicalProfileModal({
     setNewCond('')
   }
 
-  // ── Surgeries ──────────────────────────────────────────────────────────────
   const addSurgery = () => {
     const name = newSurgName.trim()
     if (!name) return
@@ -108,7 +101,6 @@ export default function PetMedicalProfileModal({
     setNewSurgName(''); setNewSurgNotes('')
   }
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = () => {
     const updated: PetMedicalProfile = {
       ...profile,
@@ -131,7 +123,6 @@ export default function PetMedicalProfileModal({
     onClose()
   }
 
-  // ── Shared chip style ──────────────────────────────────────────────────────
   const chip: React.CSSProperties = {
     padding: '.3rem .65rem', borderRadius: 'var(--r-full)',
     fontSize: '.8rem', fontWeight: 700, cursor: 'pointer',
@@ -143,21 +134,21 @@ export default function PetMedicalProfileModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Perfil médico · ${pet.name}`}
+      title={v.profile.modalTitle.replace('name', pet.name)}
       icon="🩺"
       footer={
         <PfFooter>
           <PfBtn variant="cancel" onClick={onClose}>{t.btn.cancel}</PfBtn>
-          <PfBtn variant="save"   onClick={handleSave}>Guardar perfil</PfBtn>
+          <PfBtn variant="save"   onClick={handleSave}>{t.btn.save}</PfBtn>
         </PfFooter>
       }
     >
       {/* ── Datos básicos ── */}
-      <SectionLabel>Datos básicos</SectionLabel>
+      <SectionLabel>{v.profile.sectionBasic}</SectionLabel>
 
       {/* Sexo */}
       <div className="form-group">
-        <label className="form-label">Sexo</label>
+        <label className="form-label">{v.profile.sex}</label>
         <div style={{ display: 'flex', gap: '.5rem' }}>
           {(['male', 'female'] as Sex[]).map(s => (
             <button key={s} type="button"
@@ -170,7 +161,7 @@ export default function PetMedicalProfileModal({
                   : 'var(--surface)',
                 color: sex === s ? 'var(--primary)' : 'var(--text)',
               }}>
-              {s === 'male' ? '♂ Macho' : '♀ Hembra'}
+              {s === 'male' ? `♂ ${v.profile.sexMale}` : `♀ ${v.profile.sexFemale}`}
             </button>
           ))}
         </div>
@@ -180,11 +171,11 @@ export default function PetMedicalProfileModal({
       <div className="form-group"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <label className="form-label" style={{ marginBottom: 0 }}>
-          Castrado / Esterilizado
+          {v.profile.neutered}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
           <span style={{ fontSize: '.8125rem', color: 'var(--text-muted)' }}>
-            {neutered == null ? '—' : neutered ? 'Sí' : 'No'}
+            {neutered == null ? '—' : neutered ? v.profile.neuteredYes : v.profile.neuteredNo}
           </span>
           <Toggle on={!!neutered} onChange={setNeutered} />
         </div>
@@ -193,40 +184,40 @@ export default function PetMedicalProfileModal({
       {neutered && (
         <div className="form-group">
           <label className="form-label">
-            Edad en la castración{' '}
-            <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+            {v.profile.neuteredAge}{' '}
+            <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
           </label>
           <input className="form-input" value={neuteredAge}
             onChange={e => setNeuteredAge(e.target.value)}
-            placeholder="Ej. 6 meses, 1 año…" />
+            placeholder={v.profile.neuteredAge} />
         </div>
       )}
 
       <div className="form-group">
         <label className="form-label">
-          Grupo sanguíneo{' '}
-          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {v.profile.bloodType}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <input className="form-input" value={bloodType}
           onChange={e => setBloodType(e.target.value)}
-          placeholder="Ej. A, B, AB, DEA 1.1…" />
+          placeholder={v.profile.bloodTypePh} />
         <div style={{ fontSize: '.75rem', color: 'var(--text-faint)', marginTop: '.25rem' }}>
-          Varía según la especie — escribe libremente
+          {v.profile.bloodTypeHint}
         </div>
       </div>
 
       <div className="form-group">
         <label className="form-label">
-          Alergias conocidas{' '}
-          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {v.profile.allergies}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <textarea className="form-input" rows={2} value={allergies}
           onChange={e => setAllergies(e.target.value)}
-          placeholder="Ej. Pollo, penicilina, pólenes…" />
+          placeholder={v.profile.allergies} />
       </div>
 
       {/* ── Condiciones crónicas ── */}
-      <SectionLabel>Condiciones crónicas</SectionLabel>
+      <SectionLabel>{v.profile.sectionConditions}</SectionLabel>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.4rem', marginBottom: '.875rem' }}>
         {CONDITIONS_CATALOG.map(c => {
@@ -251,10 +242,9 @@ export default function PetMedicalProfileModal({
         <input className="form-input" value={newCond} style={{ flex: 1 }}
           onChange={e => setNewCond(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addCustomCond()}
-          placeholder="Condición personalizada" />
-        <button type="button" className="btn btn-secondary btn-sm"
-          onClick={addCustomCond}>
-          Añadir
+          placeholder={v.profile.customConditionPh} />
+        <button type="button" className="btn btn-secondary btn-sm" onClick={addCustomCond}>
+          {v.profile.addCondition}
         </button>
       </div>
 
@@ -281,7 +271,7 @@ export default function PetMedicalProfileModal({
       )}
 
       {/* ── Cirugías ── */}
-      <SectionLabel>Cirugías e intervenciones</SectionLabel>
+      <SectionLabel>{v.profile.sectionSurgeries}</SectionLabel>
 
       {surgeries.map(s => (
         <div key={s.id} style={{
@@ -307,26 +297,26 @@ export default function PetMedicalProfileModal({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.375rem', marginTop: '.5rem' }}>
         <input className="form-input" value={newSurgName}
           onChange={e => setNewSurgName(e.target.value)}
-          placeholder="Ej. Castración, Extracción dental" />
+          placeholder={v.profile.surgeryNamePh} />
         <input className="form-input" value={newSurgNotes}
           onChange={e => setNewSurgNotes(e.target.value)}
-          placeholder="Observaciones (opcional)" />
+          placeholder={v.profile.surgeryNotesPh} />
         <button type="button" className="btn btn-secondary btn-sm"
           style={{ alignSelf: 'flex-start' }} onClick={addSurgery}>
-          + Añadir cirugía
+          + {v.profile.addSurgery}
         </button>
       </div>
 
       {/* ── Entorno ── */}
-      <SectionLabel>Entorno y comportamiento</SectionLabel>
+      <SectionLabel>{v.profile.sectionEnvironment}</SectionLabel>
 
       <div className="form-group">
-        <label className="form-label">Tipo de hábitat</label>
+        <label className="form-label">{v.profile.environment}</label>
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
           {([
-            { val: 'apartment' as Env, label: '🏢 Piso'  },
-            { val: 'house'     as Env, label: '🏠 Casa'  },
-            { val: 'both'      as Env, label: '🔄 Ambos' },
+            { val: 'apartment' as Env, label: `🏢 ${v.profile.envApartment}` },
+            { val: 'house'     as Env, label: `🏠 ${v.profile.envHouse}`     },
+            { val: 'both'      as Env, label: `🔄 ${v.profile.envBoth}`      },
           ]).map(o => (
             <button key={o.val} type="button"
               onClick={() => setEnvironment(environment === o.val ? undefined : o.val)}
@@ -347,11 +337,11 @@ export default function PetMedicalProfileModal({
       <div className="form-group"
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <label className="form-label" style={{ marginBottom: 0 }}>
-          Convive con otros animales
+          {v.profile.livingWithAnimals}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
           <span style={{ fontSize: '.8125rem', color: 'var(--text-muted)' }}>
-            {withAnimals == null ? '—' : withAnimals ? 'Sí' : 'No'}
+            {withAnimals == null ? '—' : withAnimals ? v.profile.neuteredYes : v.profile.neuteredNo}
           </span>
           <Toggle on={!!withAnimals} onChange={setWithAnimals} />
         </div>
@@ -359,35 +349,35 @@ export default function PetMedicalProfileModal({
 
       <div className="form-group">
         <label className="form-label">
-          Antiparasitario habitual{' '}
-          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {v.profile.parasiteControl}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <input className="form-input" value={parasite}
           onChange={e => setParasite(e.target.value)}
-          placeholder="Ej. Bravecto cada 3 meses, Stronghold mensual…" />
+          placeholder={v.profile.parasiteControl} />
       </div>
 
       {/* ── Notas para el vet ── */}
-      <SectionLabel>Notas para el veterinario</SectionLabel>
+      <SectionLabel>{v.profile.sectionVetNotes}</SectionLabel>
 
       <div className="form-group">
         <label className="form-label">
-          Notas de comportamiento{' '}
-          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {v.profile.behavioralNotes}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <textarea className="form-input" rows={2} value={behavior}
           onChange={e => setBehavior(e.target.value)}
-          placeholder="Ej. Muy nerviosa en la consulta, morder al manipular orejas…" />
+          placeholder={v.profile.behavioralNotes} />
       </div>
 
       <div className="form-group">
         <label className="form-label">
-          Preguntas para el veterinario{' '}
-          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {v.profile.vetQuestions}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <textarea className="form-input" rows={2} value={vetQuestions}
           onChange={e => setVetQuestions(e.target.value)}
-          placeholder="Ej. ¿Cuándo hacer la próxima analítica?" />
+          placeholder={v.profile.vetQuestions} />
       </div>
     </Modal>
   )

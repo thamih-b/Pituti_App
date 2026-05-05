@@ -4,6 +4,7 @@ import { useCares, isDueOnDate, getNextDueDate, type CareItem } from '../context
 import AddCareModal  from '../components/AddCareModal'
 import EditCareModal, { type CareEditData } from '../components/EditCareModal'
 import CareDetailModal, { type CareDetailItem } from '../components/CareDetailModal'
+import { useT } from '../context/LanguageContext'
 
 const PETS_META = [
   { id:'pet-1', emoji:'🐱', name:'Luna' },
@@ -11,12 +12,11 @@ const PETS_META = [
   { id:'pet-3', emoji:'🦜', name:'Kiwi' },
 ]
 
-// ── Shared sub-components ─────────────────────────────────────────────────────
-
 function CareCard({ item, done, doneState, onToggle, onClick }: {
   item: CareItem; done: number; doneState: boolean
   onToggle: () => void; onClick: () => void
 }) {
+  const t = useT()
   return (
     <div className={['care-card', doneState ? 'done' : ''].join(' ')}
       onClick={onClick} style={{ cursor:'pointer' }}>
@@ -34,13 +34,13 @@ function CareCard({ item, done, doneState, onToggle, onClick }: {
           ))}
         </div>
         <span>{doneState
-          ? <span style={{ color:'var(--success)' }}>Hecho ✓</span>
+          ? <span style={{ color:'var(--success)' }}>{t.cares.done} ✓</span>
           : `${done}/${item.total}`}
         </span>
       </div>
       <div className="care-actions" onClick={e => e.stopPropagation()}>
         <button className={`care-btn-do ${doneState ? 'done-btn' : ''}`} onClick={onToggle}>
-          ✓ {doneState ? 'Hecho' : 'Registrar'}
+          ✓ {doneState ? t.cares.done : t.cares.registerCare}
         </button>
       </div>
     </div>
@@ -50,6 +50,7 @@ function CareCard({ item, done, doneState, onToggle, onClick }: {
 function ScheduledRow({ item, nextDate, onClick }: {
   item: CareItem; nextDate: string; onClick: () => void
 }) {
+  const t = useT()
   const dateLabel = new Date(nextDate + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday:'short', day:'numeric', month:'short'
   })
@@ -70,17 +71,16 @@ function ScheduledRow({ item, nextDate, onClick }: {
       <div style={{ textAlign:'right', flexShrink:0 }}>
         <div style={{ fontSize:'.8125rem', fontWeight:800, color:'var(--primary)' }}>{dateLabel}</div>
         <div style={{ fontSize:'.65rem', color:'var(--text-faint)', marginTop:'.1rem' }}>
-          {daysFromNow === 0 ? 'Hoy' : `en ${daysFromNow}d`}
+          {daysFromNow === 0 ? t.dates.today : `${t.vet.time.inDays.replace('{n}', String(daysFromNow))}`}
         </div>
       </div>
     </div>
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default function CaresPage() {
   const { items, addCare, editCare, deleteCare, setCareProgress } = useCares()
+  const t = useT()
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
   const [selPet,   setSelPet]   = useState('all')
@@ -125,7 +125,7 @@ export default function CaresPage() {
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.125rem' }}>
         <div>
           <div style={{ fontFamily:'var(--font-display)', fontSize:'1.375rem', fontWeight:400, color:'var(--text)' }}>
-            Cuidados de hoy
+            {t.dashboard.todayCares}
           </div>
           <div style={{ fontSize:'.8125rem', color:'var(--text-muted)', marginTop:'.2rem' }}>
             {new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' })}
@@ -135,13 +135,13 @@ export default function CaresPage() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          Añadir cuidado
+          {t.cares.addCare}
         </button>
       </div>
 
       {/* Pet filter pills */}
       <div style={{ display:'flex', gap:'.375rem', flexWrap:'wrap', marginBottom:'1.5rem' }}>
-        {[{ id:'all', emoji:'🐾', name:'Todos' }, ...PETS_META].map(p => (
+        {[{ id:'all', emoji:'🐾', name: t.pets.allSpecies }, ...PETS_META].map(p => (
           <button key={p.id} type="button"
             style={{ display:'flex', alignItems:'center', gap:'.375rem', padding:'.4rem .875rem',
               borderRadius:'var(--r-full)',
@@ -171,7 +171,7 @@ export default function CaresPage() {
               <span style={{ fontSize:'1.25rem' }}>{pet.emoji}</span>
               <span style={{ fontWeight:800, fontSize:'1rem', color:'var(--text)' }}>{pet.name}</span>
               <span className={`badge ${doneCount===daily.length?'badge-green':'badge-yellow'}`}>
-                {doneCount}/{daily.length} hoy
+                {doneCount}/{daily.length} {t.dates.today.toLowerCase()}
               </span>
             </div>
 
@@ -184,7 +184,7 @@ export default function CaresPage() {
                     onToggle={() => {
                       const ns = !getDone(item).doneState
                       setCareProgress(item.id, today, ns ? item.total : 0, ns)
-                      showToast(ns ? `✓ ${item.title} completado` : `↩ ${item.title} desmarcado`)
+                      showToast(ns ? `✓ ${item.title} ${t.cares.completed}` : `↩ ${item.title}`)
                     }}
                     onClick={() => setDetail(item)}
                   />
@@ -199,7 +199,7 @@ export default function CaresPage() {
                 padding:'.875rem 1rem' }}>
                 <div style={{ fontSize:'.75rem', fontWeight:800, color:'var(--text-muted)',
                   textTransform:'uppercase', letterSpacing:'.07em', marginBottom:'.25rem' }}>
-                  📅 Próximos cuidados programados
+                  📅 {t.cares.subtitle}
                 </div>
                 {scheduled.map(({ item, nextDate }) => (
                   <ScheduledRow key={item.id} item={item} nextDate={nextDate}
@@ -236,8 +236,8 @@ export default function CaresPage() {
         onAdd={d => {
           addCare({
             petId: d.petId, emoji: d.emoji, title: d.title,
-            sub: `${d.total}× ${d.period==='day'?'día':'semana'}${d.quantity?' · '+d.quantity:''}`,
-            total: d.total, period: d.period, quantity: d.quantity, notify: d.notify,
+            sub: `${d.total}× ${d.period==='day'?t.modal.perDay:t.modal.perWeek}${d.quantity?' · '+d.quantity:''}`,
+            total: d.total, period: d.period ?? 'day', quantity: d.quantity, notify: d.notify,
             bg: '', time: d.time ?? '',
             intervalDays: d.intervalDays ?? 1,
             recurring: (d as any).recurring ?? true,
@@ -256,15 +256,15 @@ export default function CaresPage() {
           editCare({
             ...item,
             emoji: updated.emoji, title: updated.title, total: updated.total,
-            period: updated.period, quantity: updated.quantity ?? '', notify: updated.notify,
-            sub: `${updated.total}× ${updated.period==='day'?'día':'semana'}${updated.quantity?' · '+updated.quantity:''}`,
-            time: updated.time, intervalDays: updated.intervalDays ?? 1,
+            period: updated.period ?? 'day', quantity: updated.quantity ?? '', notify: updated.notify,
+            sub: `${updated.total}× ${updated.period==='day'?t.modal.perDay:t.modal.perWeek}${updated.quantity?' · '+updated.quantity:''}`,
+            time: updated.time ?? '', intervalDays: updated.intervalDays ?? 1,
             recurring: (updated as any).recurring ?? true,
           })
-          showToast(`${updated.emoji} ${updated.title} actualizado`)
+          showToast(`${updated.emoji} ${updated.title} ${t.btn.update.toLowerCase()}`)
           setEditOpen(false)
         }}
-        onDelete={id => { deleteCare(id); setEditOpen(false); showToast('Cuidado eliminado') }}
+        onDelete={id => { deleteCare(id); setEditOpen(false); showToast(t.notes.deletedNote) }}
       />
     </div>
   )

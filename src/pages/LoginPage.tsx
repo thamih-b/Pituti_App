@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import {useT} from '../context/LanguageContext'
 import { useNavigate } from 'react-router-dom'
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ type Mode = 'login' | 'register' | 'forgot'
 export default function LoginPage() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>('login')
+  const t = useT()
 
   // Form state
   const [name,     setName]     = useState('')

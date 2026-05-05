@@ -3,9 +3,8 @@ import Modal from './Modal'
 import { PfBtn, PfFooter } from './FooterButtons'
 import { MOCK_PETS, SPECIES_EMOJI } from '../hooks/usePets'
 import type { VetContact } from '../context/VetContext'
+import { useT } from '../context/LanguageContext'
 
-
-// ─── VET TYPES ────────────────────────────────────────────────────────────────
 export const VET_TYPES = [
   { value: 'primary',    label: 'Principal',    emoji: '🩺', color: 'var(--primary)'    },
   { value: 'specialist', label: 'Especialista', emoji: '🔬', color: 'var(--blue)'       },
@@ -13,9 +12,7 @@ export const VET_TYPES = [
   { value: 'other',      label: 'Otro',         emoji: '📋', color: 'var(--text-muted)' },
 ] as const
 
-
 type VetType = typeof VET_TYPES[number]['value']
-
 
 interface Props {
   isOpen:   boolean
@@ -25,8 +22,9 @@ interface Props {
   initial:  VetContact | null
 }
 
-
 const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial }) => {
+  const t      = useT()
+  const v      = t.vet
   const isEdit = !!initial
 
   const [type,      setType]      = useState<VetType>('primary')
@@ -62,9 +60,9 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
 
   const validate = () => {
     let ok = true
-    if (!name.trim())   { setNameErr(t.vet.contacts.errName);    ok = false }
-    if (!clinic.trim()) { setClinicErr('La clínica es obligatoria'); ok = false }
-    if (!phone.trim())  { setPhoneErr('El teléfono es obligatorio'); ok = false }
+    if (!name.trim())   { setNameErr(v.contacts.errName);   ok = false }
+    if (!clinic.trim()) { setClinicErr(v.contacts.errClinic); ok = false }
+    if (!phone.trim())  { setPhoneErr(v.contacts.errPhone);  ok = false }
     return ok
   }
 
@@ -97,115 +95,122 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? 'Editar veterinario' : 'Añadir veterinario'}
+      title={
+        isEdit
+          ? v.contacts.subtitleEdit.replace('name', initial?.name ?? '')
+          : v.contacts.titleAdd
+      }
       icon="🩺"
       footer={
         <PfFooter>
           <PfBtn variant="cancel" onClick={onClose}>{t.btn.cancel}</PfBtn>
           <PfBtn variant="save" onClick={handleSave}>
-            {isEdit ? 'Guardar cambios' : 'Añadir veterinario'}
+            {isEdit ? t.btn.saveChanges : v.contacts.addBtn}
           </PfBtn>
         </PfFooter>
       }
     >
-      <div className="modal-section">Tipo de veterinario</div>
+      <div className="modal-section">{v.contacts.sectionType}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '.5rem', marginBottom: '1rem' }}>
-        {VET_TYPES.map(t => (
+        {VET_TYPES.map(vt => (
           <button
-            key={t.value}
+            key={vt.value}
             type="button"
-            onClick={() => setType(t.value)}
+            onClick={() => setType(vt.value)}
             style={{
               padding: '.625rem .75rem', borderRadius: 'var(--r-md)', cursor: 'pointer',
               fontFamily: 'inherit', fontWeight: 700, fontSize: '.8125rem',
-              border: `1.5px solid ${type === t.value ? t.color : 'var(--border)'}`,
-              background: type === t.value
-                ? `color-mix(in oklab, ${t.color} 10%, var(--surface))`
+              border: `1.5px solid ${type === vt.value ? vt.color : 'var(--border)'}`,
+              background: type === vt.value
+                ? `color-mix(in oklab, ${vt.color} 10%, var(--surface))`
                 : 'var(--surface)',
               display: 'flex', alignItems: 'center', gap: '.5rem',
-              color: type === t.value ? t.color : 'var(--text)',
+              color: type === vt.value ? vt.color : 'var(--text)',
             }}
           >
-            <span>{t.emoji}</span><span>{t.label}</span>
+            <span>{vt.emoji}</span><span>{vt.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="modal-section">Datos de contacto</div>
+      <div className="modal-section">{v.contacts.sectionContact}</div>
 
       <div className="form-group">
-        <label className="form-label">Nombre del veterinario *</label>
+        <label className="form-label">{t.field.name} *</label>
         <input
           className={`form-input${nameErr ? ' input-err' : ''}`}
           value={name}
           onChange={e => { setName(e.target.value); setNameErr('') }}
-          placeholder="Ej. Dra. García"
+          placeholder={v.contacts.vetNamePh}
         />
         {nameErr && <div className="form-error">{nameErr}</div>}
       </div>
 
       <div className="form-group">
-        <label className="form-label">Clínica *</label>
+        <label className="form-label">{t.field.clinic} *</label>
         <input
           className={`form-input${clinicErr ? ' input-err' : ''}`}
           value={clinic}
           onChange={e => { setClinic(e.target.value); setClinicErr('') }}
-          placeholder="Ej. Clínica VetSalud"
+          placeholder={v.contacts.clinicPh}
         />
         {clinicErr && <div className="form-error">{clinicErr}</div>}
       </div>
 
       <div className="form-group">
         <label className="form-label">
-          Especialidad <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {t.field.specialty}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <input
           className="form-input"
           value={specialty}
           onChange={e => setSpecialty(e.target.value)}
-          placeholder="Ej. Dermatología, Oncología"
+          placeholder={v.contacts.specialtyPh}
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
         <div className="form-group">
-          <label className="form-label">Teléfono *</label>
+          <label className="form-label">{t.field.phone} *</label>
           <input
             type="tel"
             className={`form-input${phoneErr ? ' input-err' : ''}`}
             value={phone}
             onChange={e => { setPhone(e.target.value); setPhoneErr('') }}
-            placeholder="+34 612 345 678"
+            placeholder={v.contacts.phonePh}
           />
           {phoneErr && <div className="form-error">{phoneErr}</div>}
         </div>
         <div className="form-group">
           <label className="form-label">
-            Tel. alternativo <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+            {v.contacts.phone2}{' '}
+            <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
           </label>
           <input
             type="tel"
             className="form-input"
             value={phone2}
             onChange={e => setPhone2(e.target.value)}
-            placeholder="+34 611 222 333"
+            placeholder={v.contacts.phone2Ph}
           />
         </div>
       </div>
 
       <div className="form-group">
         <label className="form-label">
-          Dirección <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>(opcional)</span>
+          {t.field.address}{' '}
+          <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({t.btn.optional})</span>
         </label>
         <input
           className="form-input"
           value={address}
           onChange={e => setAddress(e.target.value)}
-          placeholder="Calle, número, ciudad"
+          placeholder={v.contacts.addressPh}
         />
       </div>
 
-      <div className="modal-section">Mascotas asociadas</div>
+      <div className="modal-section">{v.contacts.sectionPets}</div>
       <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         {MOCK_PETS.map(p => (
           <button
@@ -219,14 +224,14 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
         ))}
       </div>
 
-      <div className="modal-section">Notas adicionales</div>
+      <div className="modal-section">{v.contacts.sectionNotes}</div>
       <div className="form-group">
         <textarea
           className="form-input"
           rows={2}
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="Horarios, instrucciones especiales…"
+          placeholder={v.contacts.notesPh}
         />
       </div>
     </Modal>

@@ -600,6 +600,11 @@ export interface Translations {
     weekdays:      string[]
     weekdaysShort: string[]
   }
+  // -- NotFound ----------------------------
+  notFound: {
+  title: string
+  hint:  string
+}
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -656,7 +661,7 @@ const es: Translations = {
   },
   cares: {
     title: 'Cuidados diarios', subtitle: 'Rutina de todas las mascotas · hoy',
-    addCare: '+ Añadir cuidado', completed: 'completados', all: 'Todas',
+    addCare: 'Añadir cuidado', completed: 'completados', all: 'Todas',
     urgent: 'Urgentes', pending: 'Pendientes', done: 'Hechos',
     dayDone: '% del día completado', registerCare: 'Registrar',
   },
@@ -691,7 +696,7 @@ const es: Translations = {
   },
   notes: {
     title: 'Notas', subtitle: 'Notas veterinarias y observaciones',
-    new: '+ Nueva nota', archived: 'Archivadas', noNotes: 'Sin notas',
+    new: 'Nueva nota', archived: 'Archivadas', noNotes: 'Sin notas',
     content: 'Contenido', vet: 'Veterinario', type: 'Tipo',
     typeOptions: {
       control: 'Control', observacion: 'Observación', emergencia: 'Emergencia',
@@ -990,6 +995,10 @@ const es: Translations = {
     weekdays: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
     weekdaysShort: ['Do','Lu','Ma','Mi','Ju','Vi','Sa'],
   },
+  notFound: {
+  title: 'Página no encontrada',
+  hint:  'La ruta n no existe en Pituti',
+},
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1046,7 +1055,7 @@ const en: Translations = {
   },
   cares: {
     title: 'Daily care', subtitle: "All pets' routine · today",
-    addCare: '+ Add care', completed: 'completed', all: 'All',
+    addCare: 'Add care', completed: 'completed', all: 'All',
     urgent: 'Urgent', pending: 'Pending', done: 'Done',
     dayDone: '% of day completed', registerCare: 'Register',
   },
@@ -1081,7 +1090,7 @@ const en: Translations = {
   },
   notes: {
     title: 'Notes', subtitle: 'Vet notes and observations',
-    new: '+ New note', archived: 'Archived', noNotes: 'No notes',
+    new: 'New note', archived: 'Archived', noNotes: 'No notes',
     content: 'Content', vet: 'Veterinarian', type: 'Type',
     typeOptions: {
       control: 'Check-up', observacion: 'Observation', emergencia: 'Emergency',
@@ -1372,6 +1381,10 @@ const en: Translations = {
     weekdays: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     weekdaysShort: ['Su','Mo','Tu','We','Th','Fr','Sa'],
   },
+  notFound: {
+  title: 'Page not found',
+  hint:  'The route n does not exist in Pituti',
+},
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1429,7 +1442,7 @@ const pt: Translations = {
   },
   cares: {
     title: 'Cuidados diários', subtitle: 'Rotina de todas as mascotes · hoje',
-    addCare: '+ Adicionar cuidado', completed: 'concluídos', all: 'Todas',
+    addCare: 'Adicionar cuidado', completed: 'concluídos', all: 'Todas',
     urgent: 'Urgentes', pending: 'Pendentes', done: 'Feitos',
     dayDone: '% do dia concluído', registerCare: 'Registrar',
   },
@@ -1464,7 +1477,7 @@ const pt: Translations = {
   },
   notes: {
     title: 'Notas', subtitle: 'Notas veterinárias e observações',
-    new: '+ Nova nota', archived: 'Arquivadas', noNotes: 'Sem notas',
+    new: 'Nova nota', archived: 'Arquivadas', noNotes: 'Sem notas',
     content: 'Conteúdo', vet: 'Veterinário', type: 'Tipo',
     typeOptions: {
       control: 'Consulta', observacion: 'Observação', emergencia: 'Emergência',
@@ -1756,6 +1769,10 @@ const pt: Translations = {
     weekdays: ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],
     weekdaysShort: ['Do','Se','Te','Qu','Qu','Se','Sa'],
   },
+  notFound: {
+  title: 'Página não encontrada',
+  hint:  'A rota n não existe no Pituti',
+},
 }
 
 // ══════════════════════════════════════════════════════════════════
