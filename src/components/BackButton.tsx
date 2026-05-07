@@ -1,14 +1,15 @@
 import { useNavigate } from 'react-router-dom'
-import { useT } from '../context/LanguageContext'
+import { useTranslation } from 'react-i18next'
 
 interface BackButtonProps {
-  to?:    string        // specific route; if omitted uses navigate(-1)
+  to?:    string
   label?: string
 }
 
 export default function BackButton({ to, label }: BackButtonProps) {
   const navigate = useNavigate()
-  const t = useT()  
+  const { t } = useTranslation()
+
   return (
     <button
       className="back-btn"
@@ -19,7 +20,7 @@ export default function BackButton({ to, label }: BackButtonProps) {
         stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M19 12H5M12 19l-7-7 7-7"/>
       </svg>
-      {label ?? t.btn.back}
+      {label ?? t('btn.back')}
     </button>
   )
 }

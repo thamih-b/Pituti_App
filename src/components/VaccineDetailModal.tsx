@@ -1,29 +1,33 @@
+// traduzido e sem mock
+
 import { useState } from 'react'
-import type { VaccineRecord } from '../hooks/usePets'
+import { useTranslation } from 'react-i18next'
+import type { VaccineRecord } from '../utils/vaccUtils'
 
 interface Props {
-  vaccine:  (VaccineRecord & { cls: 'ok' | 'soon' | 'late'; petName: string; petEmoji: string }) | null
-  onClose:  () => void
-  onEdit:   (v: VaccineRecord) => void
+  vaccine:       (VaccineRecord & { cls: 'ok' | 'soon' | 'late'; petName: string; petEmoji: string }) | null
+  onClose:       () => void
+  onEdit:        (v: VaccineRecord) => void
   onMarkApplied: (v: VaccineRecord, appliedDate: string, nextDate: string) => void
 }
 
-const STATUS_LABEL: Record<string, string> = { ok: 'Al día', soon: 'Por vencer', late: 'Vencida' }
-const STATUS_CLASS: Record<string, string> = { ok: 'ok', soon: 'soon', late: 'late' }
+const STATUS_ICON: Record<string, string> = { ok: '✓', soon: '⚠', late: '✕' }
 
 export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApplied }: Props) {
+  const { t, i18n } = useTranslation()
   const today = new Date().toISOString().split('T')[0]
-  const [markMode,   setMarkMode]   = useState(false)
+
+  const [markMode,    setMarkMode]    = useState(false)
   const [appliedDate, setAppliedDate] = useState(today)
-  const [nextDate,   setNextDate]   = useState('')
-  const [nextErr,    setNextErr]    = useState('')
+  const [nextDate,    setNextDate]    = useState('')
+  const [nextErr,     setNextErr]     = useState('')
 
   if (!vaccine) return null
   const { cls } = vaccine
 
   const handleApply = () => {
-    if (!nextDate) { setNextErr('Indica la próxima dosis'); return }
-    if (nextDate <= appliedDate) { setNextErr('Debe ser posterior a la aplicación'); return }
+    if (!nextDate)                   { setNextErr(t('pet.vacc.detail.errNextRequired')); return }
+    if (nextDate <= appliedDate)     { setNextErr(t('pet.vacc.detail.errNextAfter'));    return }
     onMarkApplied(vaccine, appliedDate, nextDate)
     onClose()
   }
@@ -40,12 +44,14 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
             fontSize: '1.5rem',
           }}>💉</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)', lineHeight: 1.2 }}>{vaccine.name}</div>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)', lineHeight: 1.2 }}>
+              {vaccine.name}
+            </div>
             <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
               {vaccine.petEmoji} {vaccine.petName}
             </div>
           </div>
-          <button className="detail-close" onClick={onClose}>
+          <button className="detail-close" onClick={onClose} aria-label={t('btn.close')}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6 6 18M6 6l12 12"/>
             </svg>
@@ -55,45 +61,53 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
         {/* Body */}
         <div className="detail-body">
           <div style={{ display: 'flex', alignItems: 'center', gap: '.625rem', marginBottom: '1rem' }}>
-            <span className={`status-pill ${STATUS_CLASS[cls]}`}>
-              {cls === 'ok' ? '✓' : cls === 'soon' ? '⚠' : '✕'} {STATUS_LABEL[cls]}
+            <span className={`status-pill ${cls}`}>
+              {STATUS_ICON[cls]} {t(`pet.vacc.status.${cls}`)}
             </span>
             <span className={`badge ${vaccine.badgeCls}`}>{vaccine.badge}</span>
           </div>
 
           <div className="detail-info-grid">
             <div className="detail-info-chip">
-              <div className="detail-info-label">Última aplicación</div>
+              <div className="detail-info-label">{t('pet.vacc.detail.lastApplied')}</div>
               <div className="detail-info-value">{vaccine.applied}</div>
             </div>
             <div className="detail-info-chip">
-              <div className="detail-info-label">Próxima dosis</div>
-              <div className="detail-info-value" style={{ color: cls === 'late' ? 'var(--err)' : cls === 'soon' ? 'var(--warn)' : 'var(--success)' }}>
-                {new Date(vaccine.nextDate + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+              <div className="detail-info-label">{t('pet.vacc.detail.nextDose')}</div>
+              <div className="detail-info-value" style={{
+                color: cls === 'late' ? 'var(--err)' : cls === 'soon' ? 'var(--warn)' : 'var(--success)',
+              }}>
+                {new Date(vaccine.nextDate + 'T00:00:00').toLocaleDateString(i18n.language, {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                })}
               </div>
             </div>
           </div>
 
-          {/* Mark as applied form */}
+          {/* Formulário de registo de aplicação */}
           {markMode && (
             <div style={{ background: 'var(--success-hl)', border: '1.5px solid var(--success)', borderRadius: 'var(--r-xl)', padding: '1rem', marginTop: '.5rem' }}>
               <div style={{ fontWeight: 800, fontSize: '.875rem', color: 'var(--success)', marginBottom: '.75rem' }}>
-                ✓ Registrar aplicación
+                ✓ {t('pet.vacc.detail.registerTitle')}
               </div>
               <div className="detail-date-row">
-                <label>Aplicada el</label>
+                <label>{t('pet.vacc.detail.appliedOn')}</label>
                 <input type="date" value={appliedDate}
                   onChange={e => setAppliedDate(e.target.value)}
-                  max={today}/>
+                  max={today} />
               </div>
               <div className="detail-date-row">
-                <label>Próxima dosis</label>
+                <label>{t('pet.vacc.detail.nextDose')}</label>
                 <input type="date" value={nextDate}
                   onChange={e => { setNextDate(e.target.value); setNextErr('') }}
                   min={appliedDate}
-                  style={{ borderColor: nextErr ? 'var(--err)' : undefined }}/>
+                  style={{ borderColor: nextErr ? 'var(--err)' : undefined }} />
               </div>
-              {nextErr && <div style={{ fontSize: '.75rem', color: 'var(--err)', fontWeight: 700, marginTop: '.25rem' }}>{nextErr}</div>}
+              {nextErr && (
+                <div style={{ fontSize: '.75rem', color: 'var(--err)', fontWeight: 700, marginTop: '.25rem' }}>
+                  {nextErr}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -106,16 +120,16 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
                 </svg>
-                Editar
+                {t('btn.edit')}
               </button>
               <button className="btn btn-success" onClick={() => setMarkMode(true)}>
-                💉 Marcar aplicada
+                💉 {t('pet.vacc.detail.markApplied')}
               </button>
             </>
           ) : (
-            <>
-              <button className="btn btn-success" onClick={handleApply}>✓ Confirmar aplicación</button>
-            </>
+            <button className="btn btn-success" onClick={handleApply}>
+              ✓ {t('pet.vacc.detail.confirmApply')}
+            </button>
           )}
         </div>
       </div>

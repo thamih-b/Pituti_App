@@ -1,0 +1,50 @@
+//sem mock
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
+
+export interface Pet {
+  id:         string
+  name:       string
+  species:    string
+  breed?:     string
+  birthDate?: string
+  weightKg?:  number
+  photoUrl?:  string
+}
+
+// Mantido aqui — usado como tipo em VaccineDetailModal, EditVaccineModal, RegisterVaccineModal
+export interface VaccineRecord {
+  name:     string
+  applied:  string
+  nextDate: string
+  badge:    string
+  badgeCls: string
+}
+
+interface PetsContextValue {
+  pets:      Pet[]
+  addPet:    (pet: Pet) => void
+  updatePet: (pet: Pet) => void
+  removePet: (id: string) => void
+}
+
+const PetsContext = createContext<PetsContextValue | null>(null)
+
+export function PetsProvider({ children }: { children: ReactNode }) {
+  const [pets, setPets] = useState<Pet[]>([])
+
+  const addPet    = useCallback((pet: Pet) => setPets(prev => [...prev, pet]),                           [])
+  const updatePet = useCallback((pet: Pet) => setPets(prev => prev.map(p => p.id === pet.id ? pet : p)), [])
+  const removePet = useCallback((id: string) => setPets(prev => prev.filter(p => p.id !== id)),          [])
+
+  return (
+    <PetsContext.Provider value={{ pets, addPet, updatePet, removePet }}>
+      {children}
+    </PetsContext.Provider>
+  )
+}
+
+export function usePetsContext() {
+  const ctx = useContext(PetsContext)
+  if (!ctx) throw new Error('usePetsContext must be used inside PetsProvider')
+  return ctx
+}

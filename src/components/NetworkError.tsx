@@ -2,12 +2,18 @@
  * Reusable error state component for network failures.
  * Shows the error message + an optional retry button.
  */
+
+//traduzido e sem mock
+import { useTranslation } from 'react-i18next'
+
 interface Props {
-  message: string;
-  onRetry?: () => void;
+  message:  string
+  onRetry?: () => void
 }
 
 export default function NetworkError({ message, onRetry }: Props) {
+  const { t } = useTranslation()
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -19,13 +25,10 @@ export default function NetworkError({ message, onRetry }: Props) {
         {message}
       </p>
       {onRetry && (
-        <button
-          className="pf-btn pf-btn--primary"
-          onClick={onRetry}
-        >
-          🔄 Reintentar
+        <button className="pf-btn pf-btn--primary" onClick={onRetry}>
+          🔄 {t('btn.retry')}
         </button>
       )}
     </div>
-  );
+  )
 }

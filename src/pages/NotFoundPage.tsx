@@ -1,10 +1,13 @@
+// traduzido
+
+
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useT } from '../context/LanguageContext'
+import { useTranslation } from 'react-i18next'
 
 export default function NotFoundPage() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
-  const t            = useT()
+  const t            = useTranslation
 
   return (
     <div style={{
@@ -27,7 +30,7 @@ export default function NotFoundPage() {
       </h1>
 
       <p style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
-        {t.notFound.title}
+        t('notFound.title')
       </p>
 
       <p style={{
@@ -36,15 +39,15 @@ export default function NotFoundPage() {
         maxWidth: 320,
         margin: 0,
       }}>
-        {t.notFound.hint.replace('n', pathname)}
+        t('notFound.hint.replace('n', pathname)')
       </p>
 
       <div style={{ display: 'flex', gap: '.75rem', marginTop: '.5rem' }}>
         <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
-          {t.nav.dashboard}
+          t('nav.dashboard')
         </button>
         <button className="btn btn-ghost" onClick={() => navigate(-1)}>
-          ← {t.btn.back}
+          ← t('btn.back')
         </button>
       </div>
     </div>

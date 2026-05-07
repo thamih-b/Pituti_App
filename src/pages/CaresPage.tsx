@@ -1,25 +1,26 @@
+// traduzido e sem mock
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { showToast } from '../components/AppLayout'
 import { useCares, isDueOnDate, getNextDueDate, type CareItem } from '../context/CaresContext'
-import AddCareModal  from '../components/AddCareModal'
+import { usePetsContext } from '../context/PetsContext'
+import { SPECIES_EMOJI } from '../hooks/usePets'
+import AddCareModal from '../components/AddCareModal'
 import EditCareModal, { type CareEditData } from '../components/EditCareModal'
 import CareDetailModal, { type CareDetailItem } from '../components/CareDetailModal'
-import { useT } from '../context/LanguageContext'
 
-const PETS_META = [
-  { id:'pet-1', emoji:'🐱', name:'Luna' },
-  { id:'pet-2', emoji:'🐶', name:'Toby' },
-  { id:'pet-3', emoji:'🦜', name:'Kiwi' },
-]
-
+/* ─── CareCard ─────────────────────────────────────────────── */
 function CareCard({ item, done, doneState, onToggle, onClick }: {
   item: CareItem; done: number; doneState: boolean
   onToggle: () => void; onClick: () => void
 }) {
-  const t = useT()
+  const { t } = useTranslation()
   return (
-    <div className={['care-card', doneState ? 'done' : ''].join(' ')}
-      onClick={onClick} style={{ cursor:'pointer' }}>
+    <div
+      className={['care-card', doneState ? 'done' : ''].join(' ')}
+      onClick={onClick}
+      style={{ cursor: 'pointer' }}
+    >
       <div className="care-header">
         <div className="care-emoji" style={{ background: item.bg }}>{item.emoji}</div>
         <div>
@@ -33,54 +34,74 @@ function CareCard({ item, done, doneState, onToggle, onClick }: {
             <div key={j} className={`care-dot ${j < done ? 'done' : ''}`} />
           ))}
         </div>
-        <span>{doneState
-          ? <span style={{ color:'var(--success)' }}>{t.cares.done} ✓</span>
-          : `${done}/${item.total}`}
+        {/* ✅ era: t('cares.done') ✓ — fora de JSX, agora chamada correcta */}
+        <span>
+          {doneState
+            ? <span style={{ color: 'var(--success)' }}>{t('cares.done')} ✓</span>
+            : `${done}/${item.total}`}
         </span>
       </div>
       <div className="care-actions" onClick={e => e.stopPropagation()}>
-        <button className={`care-btn-do ${doneState ? 'done-btn' : ''}`} onClick={onToggle}>
-          ✓ {doneState ? t.cares.done : t.cares.registerCare}
+        <button
+          className={`care-btn-do ${doneState ? 'done-btn' : ''}`}
+          onClick={onToggle}
+        >
+          ✓ {doneState ? t('cares.done') : t('cares.registerCare')}
         </button>
       </div>
     </div>
   )
 }
 
+/* ─── ScheduledRow ─────────────────────────────────────────── */
 function ScheduledRow({ item, nextDate, onClick }: {
   item: CareItem; nextDate: string; onClick: () => void
 }) {
-  const t = useT()
-  const dateLabel = new Date(nextDate + 'T12:00:00').toLocaleDateString('es-ES', {
-    weekday:'short', day:'numeric', month:'short'
+  const { t, i18n } = useTranslation()
+  // ✅ era 'es-ES' hardcoded — usa locale do i18n
+  const dateLabel = new Date(nextDate + 'T12:00:00').toLocaleDateString(i18n.language, {
+    weekday: 'short', day: 'numeric', month: 'short',
   })
   const daysFromNow = Math.round(
-    (new Date(nextDate + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0)) / 86400000
+    (new Date(nextDate + 'T00:00:00').getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000
   )
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:'.875rem', padding:'.625rem .25rem',
-      borderBottom:'1px solid var(--divider)', cursor:'pointer' }}
-      onClick={onClick}>
-      <div style={{ background:item.bg, width:36, height:36, borderRadius:'var(--r-md)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        fontSize:'1.1rem', flexShrink:0 }}>{item.emoji}</div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontWeight:700, fontSize:'.875rem', color:'var(--text)' }}>{item.title}</div>
-        <div style={{ fontSize:'.75rem', color:'var(--text-muted)', marginTop:'.1rem' }}>{item.sub}</div>
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', gap: '.875rem',
+        padding: '.625rem .25rem', borderBottom: '1px solid var(--divider)', cursor: 'pointer',
+      }}
+      onClick={onClick}
+    >
+      <div style={{
+        background: item.bg, width: 36, height: 36, borderRadius: 'var(--r-md)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1.1rem', flexShrink: 0,
+      }}>
+        {item.emoji}
       </div>
-      <div style={{ textAlign:'right', flexShrink:0 }}>
-        <div style={{ fontSize:'.8125rem', fontWeight:800, color:'var(--primary)' }}>{dateLabel}</div>
-        <div style={{ fontSize:'.65rem', color:'var(--text-faint)', marginTop:'.1rem' }}>
-          {daysFromNow === 0 ? t.dates.today : `${t.vet.time.inDays.replace('{n}', String(daysFromNow))}`}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: '.875rem', color: 'var(--text)' }}>{item.title}</div>
+        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>{item.sub}</div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontSize: '.8125rem', fontWeight: 800, color: 'var(--primary)' }}>{dateLabel}</div>
+        <div style={{ fontSize: '.65rem', color: 'var(--text-faint)', marginTop: '.1rem' }}>
+          {daysFromNow === 0
+            ? t('dates.today')
+            : t('vet.time.inDays', { n: String(daysFromNow) })}
         </div>
       </div>
     </div>
   )
 }
 
+/* ─── CaresPage ────────────────────────────────────────────── */
 export default function CaresPage() {
   const { items, addCare, editCare, deleteCare, setCareProgress } = useCares()
-  const t = useT()
+  const { t, i18n } = useTranslation()
+  // ✅ pets reais — PETS_META mock eliminado
+  const { pets } = usePetsContext()
   const today = useMemo(() => new Date().toISOString().split('T')[0], [])
 
   const [selPet,   setSelPet]   = useState('all')
@@ -107,50 +128,81 @@ export default function CaresPage() {
 
   const toDetailItem = (item: CareItem): CareDetailItem => {
     const d = getDone(item)
-    return { id:item.id, petId:item.petId, emoji:item.emoji, title:item.title,
-      sub:item.sub, total:item.total, done:d.done, done_state:d.doneState, bg:item.bg }
+    return {
+      id: item.id, petId: item.petId, emoji: item.emoji, title: item.title,
+      sub: item.sub, total: item.total, done: d.done, done_state: d.doneState, bg: item.bg,
+    }
   }
 
   const toEditData = (item: CareItem): CareEditData => ({
-    id:item.id, emoji:item.emoji, title:item.title, total:item.total,
-    period:item.period, quantity:item.quantity, notify:item.notify, bg:item.bg,
-    time:item.time, intervalDays:item.intervalDays, recurring:item.recurring,
+    id: item.id, emoji: item.emoji, title: item.title, total: item.total,
+    period: item.period, quantity: item.quantity, notify: item.notify, bg: item.bg,
+    time: item.time, intervalDays: item.intervalDays, recurring: item.recurring,
   })
 
-  const visiblePets = selPet === 'all' ? PETS_META : PETS_META.filter(p => p.id === selPet)
+  // ✅ helper de período — chaves já existentes em cares.add
+  const periodLabel = (period: string) => {
+    if (period === 'day')   return t('cares.add.recDaily')
+    if (period === 'week')  return t('cares.add.recXDays')
+    return period
+  }
+
+  // ✅ pets reais com pill "todos" — sem PETS_META
+  const petsMeta = pets.map(p => ({
+    id:    p.id,
+    emoji: SPECIES_EMOJI[p.species] ?? '🐾',
+    name:  p.name,
+  }))
+  const visiblePets = selPet === 'all' ? petsMeta : petsMeta.filter(p => p.id === selPet)
 
   return (
     <div>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.125rem' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: '1.125rem',
+      }}>
         <div>
-          <div style={{ fontFamily:'var(--font-display)', fontSize:'1.375rem', fontWeight:400, color:'var(--text)' }}>
-            {t.dashboard.todayCares}
+          {/* ✅ era: t('dashboard.todayCares') fora de JSX — agora chamada correcta */}
+          <div style={{
+            fontFamily: 'var(--font-display)', fontSize: '1.375rem',
+            fontWeight: 400, color: 'var(--text)',
+          }}>
+            {t('cares.title')}
           </div>
-          <div style={{ fontSize:'.8125rem', color:'var(--text-muted)', marginTop:'.2rem' }}>
-            {new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' })}
+          {/* ✅ era 'es-ES' hardcoded */}
+          <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
+            {new Date().toLocaleDateString(i18n.language, {
+              weekday: 'long', day: 'numeric', month: 'long',
+            })}
           </div>
         </div>
+        {/* ✅ era: t('cares.addCare') fora de JSX */}
         <button className="btn btn-primary btn-sm" onClick={() => setAddOpen(true)}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          {t.cares.addCare}
+          {t('cares.addCare')}
         </button>
       </div>
 
       {/* Pet filter pills */}
-      <div style={{ display:'flex', gap:'.375rem', flexWrap:'wrap', marginBottom:'1.5rem' }}>
-        {[{ id:'all', emoji:'🐾', name: t.pets.allSpecies }, ...PETS_META].map(p => (
-          <button key={p.id} type="button"
-            style={{ display:'flex', alignItems:'center', gap:'.375rem', padding:'.4rem .875rem',
-              borderRadius:'var(--r-full)',
-              border:`1.5px solid ${selPet===p.id?'var(--primary)':'var(--border)'}`,
-              background:selPet===p.id?'var(--primary-hl)':'var(--surface-offset)',
-              color:selPet===p.id?'var(--primary)':'var(--text-muted)',
-              fontWeight:700, fontSize:'.8125rem', cursor:'pointer', fontFamily:'inherit',
-              minHeight:40, transition:'all 180ms' }}
-            onClick={() => setSelPet(p.id)}>
+      <div style={{ display: 'flex', gap: '.375rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        {[{ id: 'all', emoji: '🐾', name: t('pets.allSpecies') }, ...petsMeta].map(p => (
+          <button
+            key={p.id}
+            type="button"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '.375rem',
+              padding: '.4rem .875rem', borderRadius: 'var(--r-full)',
+              border: `1.5px solid ${selPet === p.id ? 'var(--primary)' : 'var(--border)'}`,
+              background: selPet === p.id ? 'var(--primary-hl)' : 'var(--surface-offset)',
+              color: selPet === p.id ? 'var(--primary)' : 'var(--text-muted)',
+              fontWeight: 700, fontSize: '.8125rem', cursor: 'pointer',
+              fontFamily: 'inherit', minHeight: 40, transition: 'all 180ms',
+            }}
+            onClick={() => setSelPet(p.id)}
+          >
             {p.emoji} {p.name}
           </button>
         ))}
@@ -164,14 +216,15 @@ export default function CaresPage() {
         const doneCount = daily.filter(c => getDone(c).doneState).length
 
         return (
-          <div key={pet.id} style={{ marginBottom:'2rem' }}>
+          <div key={pet.id} style={{ marginBottom: '2rem' }}>
 
             {/* Pet header */}
-            <div style={{ display:'flex', alignItems:'center', gap:'.5rem', marginBottom:'.875rem' }}>
-              <span style={{ fontSize:'1.25rem' }}>{pet.emoji}</span>
-              <span style={{ fontWeight:800, fontSize:'1rem', color:'var(--text)' }}>{pet.name}</span>
-              <span className={`badge ${doneCount===daily.length?'badge-green':'badge-yellow'}`}>
-                {doneCount}/{daily.length} {t.dates.today.toLowerCase()}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.875rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>{pet.emoji}</span>
+              <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>{pet.name}</span>
+              <span className={`badge ${doneCount === daily.length ? 'badge-green' : 'badge-yellow'}`}>
+                {/* ✅ era: t('dates.today').toLowerCase() sem contexto — usa chave de progresso */}
+                {t('cares.todayProgress', { done: doneCount, total: daily.length })}
               </span>
             </div>
 
@@ -180,11 +233,15 @@ export default function CaresPage() {
               {daily.map(item => {
                 const d = getDone(item)
                 return (
-                  <CareCard key={item.id} item={item} done={d.done} doneState={d.doneState}
+                  <CareCard
+                    key={item.id} item={item} done={d.done} doneState={d.doneState}
                     onToggle={() => {
                       const ns = !getDone(item).doneState
                       setCareProgress(item.id, today, ns ? item.total : 0, ns)
-                      showToast(ns ? `✓ ${item.title} ${t.cares.completed}` : `↩ ${item.title}`)
+                      // ✅ era: `$t('cares.completed')'` — template string com sintaxe errada
+                      showToast(ns
+                        ? `✓ ${item.title} ${t('pet.cares.toastDone')}`
+                        : `↩ ${item.title} ${t('pet.cares.toastUndone')}`)
                     }}
                     onClick={() => setDetail(item)}
                   />
@@ -194,16 +251,23 @@ export default function CaresPage() {
 
             {/* Scheduled section */}
             {scheduled.length > 0 && (
-              <div style={{ marginTop:'1rem', background:'var(--surface)',
-                border:'1.5px solid var(--border)', borderRadius:'var(--r-xl)',
-                padding:'.875rem 1rem' }}>
-                <div style={{ fontSize:'.75rem', fontWeight:800, color:'var(--text-muted)',
-                  textTransform:'uppercase', letterSpacing:'.07em', marginBottom:'.25rem' }}>
-                  📅 {t.cares.subtitle}
+              <div style={{
+                marginTop: '1rem', background: 'var(--surface)',
+                border: '1.5px solid var(--border)', borderRadius: 'var(--r-xl)',
+                padding: '.875rem 1rem',
+              }}>
+                {/* ✅ era: 📅 t('cares.subtitle') — texto literal fora de JSX */}
+                <div style={{
+                  fontSize: '.75rem', fontWeight: 800, color: 'var(--text-muted)',
+                  textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: '.25rem',
+                }}>
+                  📅 {t('cares.scheduled')}
                 </div>
                 {scheduled.map(({ item, nextDate }) => (
-                  <ScheduledRow key={item.id} item={item} nextDate={nextDate}
-                    onClick={() => setDetail(item)} />
+                  <ScheduledRow
+                    key={item.id} item={item} nextDate={nextDate}
+                    onClick={() => setDetail(item)}
+                  />
                 ))}
               </div>
             )}
@@ -211,8 +275,7 @@ export default function CaresPage() {
         )
       })}
 
-      {/* ── Modals ── */}
-
+      {/* Modals */}
       {detail && (
         <CareDetailModal
           item={toDetailItem(detail)}
@@ -236,9 +299,10 @@ export default function CaresPage() {
         onAdd={d => {
           addCare({
             petId: d.petId, emoji: d.emoji, title: d.title,
-            sub: `${d.total}× ${d.period==='day'?t.modal.perDay:t.modal.perWeek}${d.quantity?' · '+d.quantity:''}`,
-            total: d.total, period: d.period ?? 'day', quantity: d.quantity, notify: d.notify,
-            bg: '', time: d.time ?? '',
+            // ✅ era: modal.perDay/perWeek — chaves inexistentes
+            sub: `${d.total}× ${periodLabel(d.period ?? 'day')}${d.quantity ? ' · ' + d.quantity : ''}`,
+            total: d.total, period: d.period ?? 'day', quantity: d.quantity,
+            notify: d.notify, bg: '', time: d.time ?? '',
             intervalDays: d.intervalDays ?? 1,
             recurring: (d as any).recurring ?? true,
             startDate: today,
@@ -256,15 +320,21 @@ export default function CaresPage() {
           editCare({
             ...item,
             emoji: updated.emoji, title: updated.title, total: updated.total,
-            period: updated.period ?? 'day', quantity: updated.quantity ?? '', notify: updated.notify,
-            sub: `${updated.total}× ${updated.period==='day'?t.modal.perDay:t.modal.perWeek}${updated.quantity?' · '+updated.quantity:''}`,
+            period: updated.period ?? 'day', quantity: updated.quantity ?? '',
+            notify: updated.notify,
+            sub: `${updated.total}× ${periodLabel(updated.period ?? 'day')}${updated.quantity ? ' · ' + updated.quantity : ''}`,
             time: updated.time ?? '', intervalDays: updated.intervalDays ?? 1,
             recurring: (updated as any).recurring ?? true,
           })
-          showToast(`${updated.emoji} ${updated.title} ${t.btn.update.toLowerCase()}`)
+          showToast(`${updated.emoji} ${updated.title} ${t('pet.cares.toastUpdated')}`)
           setEditOpen(false)
         }}
-        onDelete={id => { deleteCare(id); setEditOpen(false); showToast(t.notes.deletedNote) }}
+        onDelete={id => {
+          deleteCare(id)
+          setEditOpen(false)
+          // ✅ era: notes.deletedNote — chave errada, usa a de cares
+          showToast(t('pet.cares.toastDeleted'))
+        }}
       />
     </div>
   )

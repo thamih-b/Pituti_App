@@ -1,8 +1,12 @@
+// traduzido e sem mock
+
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import { showToast } from './AppLayout'
-import { MOCK_PETS, type PetWithAlerts } from '../hooks/usePets'
+import { usePetsContext } from '../context/PetsContext'
 import { PfBtn, PfFooter } from '../components/FooterButtons'
+
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +19,6 @@ export interface AddCareData {
   recurrenceValue:  number
   quantity:         string
   notify:           boolean
-  // compat legado / campos opcionais usados pelo PetDetailPage
   period?:          string
   intervalDays?:    number
   time?:            string
@@ -23,11 +26,12 @@ export interface AddCareData {
 }
 
 interface Props {
-  isOpen:         boolean
-  onClose:        () => void
-  onAdd:          (data: AddCareData) => void
-  defaultPetId?:  string
+  isOpen:        boolean
+  onClose:       () => void
+  onAdd:         (data: AddCareData) => void
+  defaultPetId?: string
 }
+
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -36,15 +40,10 @@ const CARE_EMOJIS = [
   '🐾','🌿','🪺','🐟','🐇','🐦','🧸','🩺','⏰','📅',
 ]
 
-const RECURRENCE_OPTS = [
-  { val: 'daily'       as const, icon: '📅', label: 'Diário'         },
-  { val: 'everyXDays'  as const, icon: '🗓️', label: 'A cada X días'  },
-  { val: 'everyXHours' as const, icon: '⏰', label: 'A cada X horas' },
-]
-
 const PET_EMOJI: Record<string, string> = {
   cat:'🐱', dog:'🐶', bird:'🐦', rabbit:'🐰', reptile:'🦎', fish:'🐠', other:'🐾',
 }
+
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 
@@ -60,10 +59,21 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: Props) {
-  const [petId,    setPetId   ] = useState(defaultPetId ?? MOCK_PETS[0]?.id ?? '')
+  const { t } = useTranslation()
+  // ✅ dentro do componente, não no módulo
+  const { pets } = usePetsContext()
+
+  const RECURRENCE_OPTS = [
+    { val: 'daily'       as const, icon: '📅', label: t('cares.add.recDaily')   },
+    { val: 'everyXDays'  as const, icon: '🗓️', label: t('cares.add.recXDays')  },
+    { val: 'everyXHours' as const, icon: '⏰', label: t('cares.add.recXHours') },
+  ]
+
+  const [petId,    setPetId   ] = useState(defaultPetId ?? pets[0]?.id ?? '')
   const [emoji,    setEmoji   ] = useState('')
   const [title,    setTitle   ] = useState('')
   const [total,    setTotal   ] = useState(1)
@@ -84,11 +94,11 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
   const handleClose = () => { reset(); setSuccess(false); onClose() }
 
   const handleSubmit = () => {
-    if (!title.trim()) { setTitleErr('El nombre del cuidado es obligatorio'); return }
+    if (!title.trim()) { setTitleErr(t('cares.add.errTitle')); return }
     const rv = Math.max(1, Number(recValue) || 1)
     const intervalDays =
-      recType === 'daily'       ? 1 :
-      recType === 'everyXDays'  ? rv :
+      recType === 'daily'      ? 1 :
+      recType === 'everyXDays' ? rv :
       rv / 24
 
     setSuccess(true)
@@ -105,14 +115,14 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
         period:      recType === 'daily' ? 'day' : 'custom',
         intervalDays,
       })
-      showToast(`${emoji} Cuidado "${title.trim()}" añadido`)
+      showToast(`${emoji} ${t('cares.add.toast', { title: title.trim() })}`)
       reset()
       setSuccess(false)
       onClose()
     }, 1100)
   }
 
-  const selectedPet = MOCK_PETS.find((p: PetWithAlerts) => p.id === petId)
+  const selectedPet = pets.find(p => p.id === petId)
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
     display: 'flex',
@@ -141,7 +151,7 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
       accentFg="var(--success)"
       footer={!success ? (
         <PfFooter>
-          <PfBtn variant="save" onClick={handleSubmit}>Añadir cuidado</PfBtn>
+          <PfBtn variant="save" onClick={handleSubmit}>{t('cares.add.submitBtn')}</PfBtn>
         </PfFooter>
       ) : undefined}
     >
@@ -149,12 +159,12 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
       <div className="modal-hero" style={{ background:'linear-gradient(135deg,var(--success-hl),var(--surface))' }}>
         <div className="modal-hero-icon" style={{ background:'var(--success)', fontSize:'1.5rem' }}>{emoji}</div>
         <div style={{ flex:1 }}>
-          <div className="modal-hero-title">Nuevo cuidado</div>
+          <div className="modal-hero-title">{t('cares.add.heroTitle')}</div>
           <div className="modal-hero-sub">
-            Rutina para <strong>{selectedPet?.name ?? '—'}</strong>
+            {t('cares.add.heroSub')} <strong>{selectedPet?.name ?? '—'}</strong>
           </div>
         </div>
-        <button className="pm-close" onClick={handleClose} aria-label="Cerrar modal">
+        <button className="pm-close" onClick={handleClose} aria-label={t('modal.close')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M18 6 6 18M6 6l12 12"/>
           </svg>
@@ -164,15 +174,15 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
       {success ? (
         <div className="modal-success">
           <div className="modal-success-icon">✅</div>
-          <div className="modal-success-title">¡Cuidado añadido!</div>
-          <div className="modal-success-sub">{emoji} <strong>{title}</strong> ya aparece en la rutina</div>
+          <div className="modal-success-title">{t('cares.add.successTitle')}</div>
+          <div className="modal-success-sub">{emoji} <strong>{title}</strong> {t('cares.add.successSub')}</div>
         </div>
       ) : (
         <>
           {/* Pet selector */}
-          <div className="modal-section">Mascota</div>
-          <div className="mf-species-grid" style={{ gridTemplateColumns:`repeat(${MOCK_PETS.length},1fr)`, marginBottom:'1rem' }}>
-            {MOCK_PETS.map((p: PetWithAlerts) => (
+          <div className="modal-section">{t('cares.add.sectionPet')}</div>
+          <div className="mf-species-grid" style={{ gridTemplateColumns:`repeat(${pets.length},1fr)`, marginBottom:'1rem' }}>
+            {pets.map(p => (
               <button key={p.id} type="button"
                 className={['mf-species-card', petId === p.id ? 'active' : ''].join(' ')}
                 onClick={() => setPetId(p.id)}
@@ -183,10 +193,10 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
             ))}
           </div>
 
-          {/* Cuidado — icono + nombre */}
-          <div className="modal-section">Cuidado</div>
+          {/* Cuidado — ícone + nome */}
+          <div className="modal-section">{t('cares.add.sectionCare')}</div>
           <div className="form-group">
-            <label className="form-label">Icono</label>
+            <label className="form-label">{t('cares.add.labelIcon')}</label>
             <div className="emoji-picker-grid">
               {CARE_EMOJIS.map(e => (
                 <button key={e} type="button"
@@ -197,12 +207,12 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Nombre</label>
+            <label className="form-label">{t('field.name')}</label>
             <div className="field-icon-wrap">
               <span className="field-icon" style={{ fontSize:'1rem' }}>{emoji}</span>
               <input
                 className={['form-input', titleErr ? 'form-input--err' : ''].join(' ')}
-                placeholder="Ej. Alimentación, Paseo, Cepillado"
+                placeholder={t('cares.add.namePh')}
                 value={title}
                 onChange={e => { setTitle(e.target.value); setTitleErr('') }}
                 autoFocus
@@ -211,8 +221,8 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
             {titleErr && <span className="form-hint-err">{titleErr}</span>}
           </div>
 
-          {/* ── Recurrencia — Pills ──────────────────────────────────────── */}
-          <div className="modal-section">Recurrencia</div>
+          {/* Recorrência */}
+          <div className="modal-section">{t('cares.add.sectionRecurrence')}</div>
           <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap', marginBottom:'.875rem' }}>
             {RECURRENCE_OPTS.map(opt => (
               <button key={opt.val} type="button"
@@ -225,11 +235,10 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
             ))}
           </div>
 
-          {/* X input — só para everyXDays / everyXHours */}
           {(recType === 'everyXDays' || recType === 'everyXHours') && (
             <div className="form-group" style={{ marginBottom:'.875rem' }}>
               <label className="form-label">
-                {recType === 'everyXDays' ? 'Intervalo (días)' : 'Intervalo (horas)'}
+                {recType === 'everyXDays' ? t('cares.add.intervalDays') : t('cares.add.intervalHours')}
               </label>
               <div style={{ display:'flex', alignItems:'center', gap:'.625rem' }}>
                 <input
@@ -242,7 +251,7 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
                   style={{ width:90, textAlign:'center', fontWeight:700, fontSize:'1.1rem' }}
                 />
                 <span style={{ color:'var(--text-muted)', fontSize:'.875rem', fontWeight:600 }}>
-                  {recType === 'everyXDays' ? 'día(s)' : 'hora(s)'}
+                  {recType === 'everyXDays' ? t('cares.add.unitDays') : t('cares.add.unitHours')}
                 </span>
                 <span style={{
                   marginLeft:'auto', fontSize:'.75rem', color:'var(--success)',
@@ -250,17 +259,16 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
                   borderRadius:'var(--r-full)', fontWeight:700,
                 }}>
                   {recType === 'everyXDays'
-                    ? `📅 cada ${recValue} día${recValue !== 1 ? 's' : ''}`
-                    : `⏰ cada ${recValue}h`}
+                    ? t('cares.add.previewDays', { count: recValue })
+                    : t('cares.add.previewHours', { count: recValue })}
                 </span>
               </div>
             </div>
           )}
 
-          {/* Veces al día — só quando 'daily' */}
           {recType === 'daily' && (
             <div className="form-group" style={{ marginBottom:'.875rem' }}>
-              <label className="form-label">Veces al día</label>
+              <label className="form-label">{t('cares.add.timesPerDay')}</label>
               <input
                 className="form-input"
                 type="number" min={1} max={10}
@@ -271,29 +279,28 @@ export default function AddCareModal({ isOpen, onClose, onAdd, defaultPetId }: P
             </div>
           )}
 
-          {/* Cantidad / dosis */}
           <div className="form-group" style={{ marginTop:'.25rem' }}>
             <label className="form-label">
-              Cantidad o dosis{' '}
-              <span style={{ color:'var(--text-faint)', fontWeight:500 }}>opcional</span>
+              {t('cares.add.labelQuantity')}{' '}
+              <span style={{ color:'var(--text-faint)', fontWeight:500 }}>{t('btn.optional')}</span>
             </label>
             <div className="field-icon-wrap">
               <span className="field-icon">⚖️</span>
               <input
                 className="form-input"
-                placeholder="Ej. 80g, 200ml, 2 cucharadas"
+                placeholder={t('cares.add.quantityPh')}
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Notificaciones */}
-          <div className="modal-section">Preferencias</div>
+          {/* Notificações */}
+          <div className="modal-section">{t('cares.add.sectionPrefs')}</div>
           <div className="toggle-row">
             <div className="toggle-row-info">
-              <div className="toggle-row-label">Notificaciones</div>
-              <div className="toggle-row-sub">Recordatorio a la hora del cuidado</div>
+              <div className="toggle-row-label">{t('cares.add.notifyLabel')}</div>
+              <div className="toggle-row-sub">{t('cares.add.notifySub')}</div>
             </div>
             <Toggle on={notify} onChange={setNotify} />
           </div>

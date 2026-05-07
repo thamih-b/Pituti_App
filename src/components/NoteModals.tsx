@@ -1,34 +1,26 @@
+// traduzido e sem mock
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import { showToast } from './AppLayout'
 import FormDateField from './FormDateField'
 import { PfBtn, PfFooter } from './FooterButtons'
-
-
-/* ═══════════════════════════════════════════════════════════════
-   CURRENT USER MOCK — substitua pelo contexto de auth real
-══════════════════════════════════════════════════════════════════ */
-export const CURRENT_USER = {
-  id:       'user-1',
-  name:     'Tú',
-  avatar:   'TL',
-  color:    'var(--primary-hl)',
-  colorFg:  'var(--primary)',
-}
-
+import { useUser } from '../context/UserContext'
+import { usePetsContext } from '../context/PetsContext'
+import { SPECIES_EMOJI } from '../hooks/usePets'
 
 /* ═══════════════════════════════════════════════════════════════
    TIPOS
 ══════════════════════════════════════════════════════════════════ */
 export interface NoteReply {
-  id:           string
-  authorId:     string
-  authorName:   string
-  authorAvatar: string
-  authorColor:  string   /* background */
-  authorColorFg:string   /* texto */
-  content:      string
-  date:         string   /* ISO YYYY-MM-DD */
+  id:            string
+  authorId:      string
+  authorName:    string
+  authorAvatar:  string
+  authorColor:   string
+  authorColorFg: string
+  content:       string
+  date:          string
 }
 
 export interface NoteEntry {
@@ -39,55 +31,39 @@ export interface NoteEntry {
   date:     string
   type:     string
   archived: boolean
-  /* Author */
   authorId?:     string
   authorName?:   string
   authorAvatar?: string
   authorColor?:  string
   authorColorFg?:string
-  /* Thread */
   replies?: NoteReply[]
 }
 
-
 /* ═══════════════════════════════════════════════════════════════
-   CONSTANTES
+   CONSTANTES — sem labels hardcoded, usadas só para cores/ícones
 ══════════════════════════════════════════════════════════════════ */
-const TYPEICON:  Record<string,string> = {
-  control:'🩺', observacion:'👁', emergencia:'🚨', vacuna:'💉', cirugia:'🔬', otro:'📋',
+const TYPEICON: Record<string, string> = {
+  control:'🩺', observacion:'👁', emergencia:'🚨',
+  vacuna:'💉', cirugia:'🔬', otro:'📋',
 }
-const TYPEBG:    Record<string,string> = {
+const TYPEBG: Record<string, string> = {
   control:'var(--blue-hl)', observacion:'var(--primary-hl)', emergencia:'var(--err-hl)',
   vacuna:'var(--success-hl)', cirugia:'var(--warn-hl)', otro:'var(--surface-offset)',
 }
-const TYPEFG:    Record<string,string> = {
+const TYPEFG: Record<string, string> = {
   control:'var(--blue)', observacion:'var(--primary)', emergencia:'var(--err)',
   vacuna:'var(--success)', cirugia:'var(--warn)', otro:'var(--text-muted)',
 }
-const TYPELABEL: Record<string,string> = {
-  control:'Control', observacion:'Observación', emergencia:'Emergencia',
-  vacuna:'Post-vacuna', cirugia:'Cirugía', otro:'Nota',
-}
-const PETMETA: Record<string,{ emoji:string; name:string }> = {
-  'pet-1':{ emoji:'🐱', name:'Luna' },
-  'pet-2':{ emoji:'🐶', name:'Toby' },
-  'pet-3':{ emoji:'🦜', name:'Kiwi' },
-}
-const NOTE_TYPES_EDIT = [
-  { val:'control',     icon:'🩺', label:'Control'     },
-  { val:'observacion', icon:'👁', label:'Observación' },
-  { val:'emergencia',  icon:'🚨', label:'Emergencia'  },
-  { val:'vacuna',      icon:'💉', label:'Post-vacuna' },
-  { val:'cirugia',     icon:'🔬', label:'Cirugía'     },
-  { val:'otro',        icon:'📋', label:'Otro'        },
-]
 
+// NOTE_TYPES_EDIT sem labels — gerados via t() dentro dos componentes
+const NOTE_TYPE_KEYS = ['control','observacion','emergencia','vacuna','cirugia','otro'] as const
+type NoteTypeKey = typeof NOTE_TYPE_KEYS[number]
 
 /* ═══════════════════════════════════════════════════════════════
    AVATAR INLINE
 ══════════════════════════════════════════════════════════════════ */
 function Avatar({ name, avatar, color, colorFg, size = 28 }: {
-  name:string; avatar:string; color:string; colorFg:string; size?:number
+  name: string; avatar: string; color: string; colorFg: string; size?: number
 }) {
   return (
     <div title={name} style={{
@@ -101,12 +77,12 @@ function Avatar({ name, avatar, color, colorFg, size = 28 }: {
   )
 }
 
-
 /* ═══════════════════════════════════════════════════════════════
-   REPLY BUBBLE — "nota dentro da nota"
+   REPLY BUBBLE
 ══════════════════════════════════════════════════════════════════ */
-function ReplyBubble({ reply, isOwn }: { reply:NoteReply; isOwn:boolean }) {
-  const dateStr = new Date(reply.date + 'T12:00:00').toLocaleDateString('es-ES', {
+function ReplyBubble({ reply, isOwn }: { reply: NoteReply; isOwn: boolean }) {
+  const { t, i18n } = useTranslation()
+  const dateStr = new Date(reply.date + 'T12:00:00').toLocaleDateString(i18n.language, {
     day:'2-digit', month:'short',
   })
   return (
@@ -118,7 +94,6 @@ function ReplyBubble({ reply, isOwn }: { reply:NoteReply; isOwn:boolean }) {
       padding:'.625rem .875rem',
       marginBottom:'.5rem',
     }}>
-      {/* mini header */}
       <div style={{ display:'flex', alignItems:'center', gap:'.5rem', marginBottom:'.4rem' }}>
         <Avatar
           name={reply.authorName} avatar={reply.authorAvatar}
@@ -128,20 +103,20 @@ function ReplyBubble({ reply, isOwn }: { reply:NoteReply; isOwn:boolean }) {
           {reply.authorName}
         </span>
         {isOwn && (
-          <span className="badge badge-blue" style={{ fontSize:'.6rem', padding:'.1rem .35rem' }}>Tú</span>
+          <span className="badge badge-blue" style={{ fontSize:'.6rem', padding:'.1rem .35rem' }}>
+            {t('notes.replyYou')}
+          </span>
         )}
         <span style={{ marginLeft:'auto', fontSize:'.72rem', color:'var(--text-faint)' }}>
           {dateStr}
         </span>
       </div>
-      {/* content */}
       <p style={{ fontSize:'.875rem', color:'var(--text)', lineHeight:1.6, margin:0 }}>
         {reply.content}
       </p>
     </div>
   )
 }
-
 
 /* ═══════════════════════════════════════════════════════════════
    NOTE DETAIL MODAL
@@ -157,11 +132,14 @@ interface DetailProps {
 }
 
 export function NoteDetailModal({
-  note, onClose, onEdit, onArchive, onUnarchive, onDelete, onAddReply, 
+  note, onClose, onEdit, onArchive, onUnarchive, onDelete, onAddReply,
 }: DetailProps) {
+  const { t, i18n } = useTranslation()
+  const { user } = useUser()
+  const { pets } = usePetsContext()
+
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [replyText,     setReplyText]     = useState('')
-  
+  const [replyText, setReplyText] = useState('')
 
   useEffect(() => {
     if (!note) { setConfirmDelete(false); setReplyText('') }
@@ -169,38 +147,59 @@ export function NoteDetailModal({
 
   if (!note) return null
 
-  const pm   = PETMETA[note.petId] ?? { emoji:'🐾', name:'Mascota' }
-  const fg   = TYPEFG[note.type]   ?? 'var(--text-muted)'
-  const bg   = TYPEBG[note.type]   ?? 'var(--surface-offset)'
-  const ic   = TYPEICON[note.type] ?? '📋'
-  const lbl  = TYPELABEL[note.type]?? 'Nota'
+  // Derivado de contextos reais — sem PETMETA mock
+  const petMatch = pets.find(p => p.id === note.petId)
+  const pm = {
+    emoji: SPECIES_EMOJI[petMatch?.species ?? ''] ?? '🐾',
+    name:  petMatch?.name ?? t('pets.noPets'),
+  }
+
+  const fg  = TYPEFG[note.type]   ?? 'var(--text-muted)'
+  const bg  = TYPEBG[note.type]   ?? 'var(--surface-offset)'
+  const ic  = TYPEICON[note.type] ?? '📋'
+  const lbl = t(`notes.typeOptions.${note.type}` as never, { defaultValue: note.type })
+
   const replies = note.replies ?? []
-  const dateStr = new Date(note.date + 'T12:00:00').toLocaleDateString('es-ES', {
+  const dateStr = new Date(note.date + 'T12:00:00').toLocaleDateString(i18n.language, {
     day:'2-digit', month:'short', year:'numeric',
   })
+
+  // CURRENT_USER derivado do contexto real — sem mock
+  const currentUser = {
+    id:       user.email,
+    name:     user.name || '?',
+    avatar:   user.avatar,
+    color:    user.color,
+    colorFg:  user.colorFg,
+  }
 
   const handleAddReply = () => {
     if (!replyText.trim() || !onAddReply) return
     const reply: NoteReply = {
-      id:           `reply-${Date.now()}`,
-      authorId:     CURRENT_USER.id,
-      authorName:   CURRENT_USER.name,
-      authorAvatar: CURRENT_USER.avatar,
-      authorColor:  CURRENT_USER.color,
-      authorColorFg:CURRENT_USER.colorFg,
-      content:      replyText.trim(),
-      date:         new Date().toISOString().split('T')[0],
+      id:            `reply-${Date.now()}`,
+      authorId:      currentUser.id,
+      authorName:    currentUser.name,
+      authorAvatar:  currentUser.avatar,
+      authorColor:   currentUser.color,
+      authorColorFg: currentUser.colorFg,
+      content:       replyText.trim(),
+      date:          new Date().toISOString().split('T')[0],
     }
     onAddReply(note.id, reply)
     setReplyText('')
-    showToast('📝 Nota añadida')
+    showToast(t('notes.replyAdded'))
   }
+
+  const replyCount = replies.length
+  const replyLabel = replyCount === 1
+    ? t('notes.replySingular')
+    : t('notes.replyPlural', { count: replyCount })
 
   return (
     <div className="detail-overlay" onClick={onClose}>
       <div className="detail-sheet" style={{ maxWidth:460 }} onClick={e => e.stopPropagation()}>
 
-        {/* ── Header ──────────────────────────────────── */}
+        {/* Header */}
         <div className="detail-header">
           <div className="detail-icon" style={{ background:bg, color:fg, fontSize:'1.375rem' }}>
             {ic}
@@ -220,27 +219,27 @@ export function NoteDetailModal({
           </button>
         </div>
 
-        {/* ── Body ────────────────────────────────────── */}
+        {/* Body */}
         <div className="detail-body" style={{ display:'flex', flexDirection:'column', gap:'.875rem' }}>
 
-          {/* Status + arquivo */}
           <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap' }}>
             <span className="status-pill ok">{lbl}</span>
-            {note.archived && <span className="badge badge-gray">📁 Archivada</span>}
+            {note.archived && (
+              <span className="badge badge-gray">{t('notes.archivedBadge')}</span>
+            )}
           </div>
 
-          {/* Autor da nota */}
           {note.authorName && (
             <div style={{ display:'flex', alignItems:'center', gap:'.5rem' }}>
               <Avatar
                 name={note.authorName}
                 avatar={note.authorAvatar ?? note.authorName.slice(0,2).toUpperCase()}
-                color={note.authorColor  ?? 'var(--primary-hl)'}
+                color={note.authorColor   ?? 'var(--primary-hl)'}
                 colorFg={note.authorColorFg ?? 'var(--primary)'}
                 size={26}
               />
               <span style={{ fontSize:'.8125rem', color:'var(--text-muted)' }}>
-                Añadida por{' '}
+                {t('notes.addedBy')}{' '}
                 <strong style={{ color:'var(--text)' }}>{note.authorName}</strong>
               </span>
               {note.vet && (
@@ -251,7 +250,6 @@ export function NoteDetailModal({
             </div>
           )}
 
-          {/* Conteúdo principal da nota */}
           <div style={{
             background:'var(--surface-offset)',
             border:'1.5px solid var(--border)',
@@ -264,29 +262,24 @@ export function NoteDetailModal({
             </p>
           </div>
 
-          {/* ── Thread de respostas ("notas dentro da nota") ── */}
           {(replies.length > 0 || onAddReply) && (
             <div>
-              {/* Separador + contador */}
               {replies.length > 0 && (
                 <div style={{
-                  display:'flex', alignItems:'center', gap:'.625rem',
-                  marginBottom:'.75rem',
+                  display:'flex', alignItems:'center', gap:'.625rem', marginBottom:'.75rem',
                   fontSize:'.72rem', fontWeight:800, textTransform:'uppercase',
                   letterSpacing:'.07em', color:'var(--text-faint)',
                 }}>
                   <div style={{ flex:1, height:1, background:'var(--divider)' }} />
-                  {replies.length} {replies.length === 1 ? 'respuesta' : 'respuestas'}
+                  {replyCount} {replyLabel}
                   <div style={{ flex:1, height:1, background:'var(--divider)' }} />
                 </div>
               )}
 
-              {/* Cada resposta = nota dentro da nota */}
               {replies.map(r => (
-                <ReplyBubble key={r.id} reply={r} isOwn={r.authorId === CURRENT_USER.id} />
+                <ReplyBubble key={r.id} reply={r} isOwn={r.authorId === currentUser.id} />
               ))}
 
-              {/* Input para adicionar nova resposta */}
               {onAddReply && (
                 <div style={{
                   marginTop: replies.length > 0 ? '.375rem' : 0,
@@ -297,8 +290,8 @@ export function NoteDetailModal({
                 }}>
                   <div style={{ display:'flex', alignItems:'flex-start', gap:'.625rem', padding:'.625rem .875rem' }}>
                     <Avatar
-                      name={CURRENT_USER.name} avatar={CURRENT_USER.avatar}
-                      color={CURRENT_USER.color} colorFg={CURRENT_USER.colorFg} size={26}
+                      name={currentUser.name} avatar={currentUser.avatar}
+                      color={currentUser.color} colorFg={currentUser.colorFg} size={26}
                     />
                     <textarea
                       style={{
@@ -306,7 +299,7 @@ export function NoteDetailModal({
                         fontFamily:'inherit', fontSize:'.875rem', resize:'none',
                         minHeight:52, color:'var(--text)', lineHeight:1.6, paddingTop:'.1rem',
                       }}
-                      placeholder="Añadir una nota…"
+                      placeholder={t('notes.replyPlaceholder')}
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddReply() }}
@@ -319,10 +312,10 @@ export function NoteDetailModal({
                       borderTop:'1px solid var(--divider)',
                     }}>
                       <span style={{ fontSize:'.72rem', color:'var(--text-faint)' }}>
-                        Ctrl + Enter para enviar
+                        {t('notes.replyHint')}
                       </span>
                       <button className="btn btn-primary btn-sm" onClick={handleAddReply}>
-                        📝 Añadir nota
+                        {t('notes.replyBtn')}
                       </button>
                     </div>
                   )}
@@ -332,22 +325,22 @@ export function NoteDetailModal({
           )}
         </div>
 
-        {/* ── Footer ──────────────────────────────────── */}
+        {/* Footer */}
         <div className="detail-footer">
           {confirmDelete ? (
             <>
               <span style={{ fontSize:'.8125rem', color:'var(--err)', flex:1 }}>
-                ¿Eliminar esta nota permanentemente?
+                {t('notes.deleteConfirm')}
               </span>
               <button className="btn btn-secondary btn-sm" onClick={() => setConfirmDelete(false)}>
-                No
+                {t('btn.no')}
               </button>
               <button
                 className="btn btn-sm"
                 style={{ background:'var(--err)', color:'#fff' }}
                 onClick={() => { onDelete?.(note.id); onClose() }}
               >
-                Sí, eliminar
+                {t('notes.deleteConfirmYes')}
               </button>
             </>
           ) : (
@@ -358,16 +351,20 @@ export function NoteDetailModal({
                   style={{ color:'var(--err)' }}
                   onClick={() => setConfirmDelete(true)}
                 >
-                  🗑 Eliminar
+                  {t('btn.delete')}
                 </button>
               )}
               <div style={{ marginLeft:'auto', display:'flex', gap:'.5rem' }}>
                 {note.archived
-                  ? <button className="btn btn-secondary btn-sm" onClick={() => { onUnarchive(note.id); onClose() }}>✓ Restaurar</button>
-                  : <button className="btn btn-secondary btn-sm" onClick={() => { onArchive(note.id); onClose() }}>📁 Archivar</button>
+                  ? <button className="btn btn-secondary btn-sm" onClick={() => { onUnarchive(note.id); onClose() }}>
+                      {t('btn.unarchive')}
+                    </button>
+                  : <button className="btn btn-secondary btn-sm" onClick={() => { onArchive(note.id); onClose() }}>
+                      {t('btn.archive')}
+                    </button>
                 }
                 <button className="btn btn-secondary btn-sm" onClick={() => { onEdit(note); onClose() }}>
-                  ✏ Editar
+                  {t('btn.edit')}
                 </button>
               </div>
             </>
@@ -377,7 +374,6 @@ export function NoteDetailModal({
     </div>
   )
 }
-
 
 /* ═══════════════════════════════════════════════════════════════
    EDIT NOTE MODAL
@@ -390,6 +386,7 @@ interface EditProps {
 }
 
 export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
+  const { t, i18n } = useTranslation()
   const today = new Date().toISOString().split('T')[0]
   const [type,    setType]    = useState('control')
   const [content, setContent] = useState('')
@@ -401,21 +398,28 @@ export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
   useEffect(() => {
     if (note && isOpen) {
       setType(note.type); setContent(note.content)
-      setVet(note.vet); setDate(note.date)
-      setContErr(''); setSuccess(false)
+      setVet(note.vet);   setDate(note.date)
+      setContErr('');     setSuccess(false)
     }
   }, [note, isOpen])
 
   if (!note) return null
 
-  const selType = NOTE_TYPES_EDIT.find(n => n.val === type)!
+  // Labels gerados via t() — sem TYPELABEL hardcoded
+  const noteTypesEdit = NOTE_TYPE_KEYS.map(key => ({
+    val:   key,
+    icon:  TYPEICON[key],
+    label: t(`notes.typeOptions.${key}` as never),
+  }))
+
+  const selType = noteTypesEdit.find(n => n.val === type) ?? noteTypesEdit[0]
 
   const handleSave = () => {
-    if (!content.trim()) { setContErr('El contenido no puede estar vacío'); return }
+    if (!content.trim()) { setContErr(t('notes.errContent')); return }
     setSuccess(true)
     setTimeout(() => {
       onSave({ ...note, type, content: content.trim(), vet: vet.trim(), date })
-      showToast('📋 Nota actualizada')
+      showToast(t('pet.notes.toastUpdated'))
       setSuccess(false); onClose()
     }, 900)
   }
@@ -424,14 +428,14 @@ export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar nota"
+      title={t('notes.editTitle')}
       icon={selType.icon}
       accentBg={TYPEBG[type] ?? 'var(--primary-hl)'}
       accentFg={TYPEFG[type] ?? 'var(--primary)'}
       size="md"
       footer={!success ? (
         <PfFooter>
-          <PfBtn variant="save" onClick={handleSave}>Guardar cambios</PfBtn>
+          <PfBtn variant="save" onClick={handleSave}>{t('btn.saveChanges')}</PfBtn>
         </PfFooter>
       ) : <></>}
     >
@@ -442,11 +446,11 @@ export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div className="modal-hero-title" style={{ fontSize:'1rem' }}>
-            {TYPELABEL[type] ?? 'Nota'}
+            {selType.label}
           </div>
           {note.authorName && (
             <div className="modal-hero-sub">
-              por {note.authorName}{note.vet ? ` · 🩺 ${note.vet}` : ''}
+              {t('notes.editBy', { name: note.authorName })}{note.vet ? ` · 🩺 ${note.vet}` : ''}
             </div>
           )}
         </div>
@@ -455,26 +459,27 @@ export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
       {success ? (
         <div className="modal-success">
           <div className="modal-success-icon">✓</div>
-          <div className="modal-success-title">¡Nota actualizada!</div>
+          <div className="modal-success-title">{t('notes.editSuccess')}</div>
         </div>
       ) : (
         <>
           {/* Tipo */}
-          <div className="modal-section">Tipo de nota</div>
+          <div className="modal-section">{t('notes.type')}</div>
           <div className="note-type-grid" style={{ marginBottom:'1rem' }}>
-            {NOTE_TYPES_EDIT.map(n => (
+            {noteTypesEdit.map(n => (
               <button key={n.val} type="button"
                 className={['note-type-btn', type === n.val ? 'active' : ''].join(' ')}
                 style={type === n.val ? { background:TYPEBG[n.val], borderColor:TYPEFG[n.val], color:TYPEFG[n.val] } : {}}
-                onClick={() => setType(n.val)}>
+                onClick={() => setType(n.val)}
+              >
                 <span style={{ fontSize:'1.1rem' }}>{n.icon}</span>
                 <span style={{ fontSize:'.72rem', fontWeight:700 }}>{n.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Contenido */}
-          <div className="modal-section">Contenido</div>
+          {/* Conteúdo */}
+          <div className="modal-section">{t('notes.content')}</div>
           <div className="form-group">
             <div className={['form-input', contErr ? 'form-input--err' : ''].join(' ')} style={{ padding:0 }}>
               <textarea
@@ -483,25 +488,32 @@ export function EditNoteModal({ isOpen, onClose, note, onSave }: EditProps) {
                   minHeight:100, color:'var(--text)', lineHeight:1.6 }}
                 value={content}
                 onChange={e => { setContent(e.target.value); setContErr('') }}
-                placeholder="Contenido de la nota…"
+                placeholder={t('notes.addHint')}
                 autoFocus
               />
             </div>
             {contErr && <span className="form-hint-err">{contErr}</span>}
           </div>
 
-          {/* Vet + fecha */}
-          <div className="modal-section">Detalles</div>
+          {/* Vet + data */}
+          <div className="modal-section">{t('vet.appointments.sectionDetails')}</div>
           <div className="form-row">
             <div className="form-group" style={{ marginBottom:0 }}>
-              <label className="form-label">Veterinario <span style={{ color:'var(--text-faint)', fontWeight:500 }}>(opcional)</span></label>
+              <label className="form-label">
+                {t('field.vet')}{' '}
+                <span style={{ color:'var(--text-faint)', fontWeight:500 }}>({t('btn.optional')})</span>
+              </label>
               <div className="field-icon-wrap">
                 <span className="field-icon">🩺</span>
-                <input className="form-input" placeholder="Dra. García · VetSalud"
-                  value={vet} onChange={e => setVet(e.target.value)} />
+                <input
+                  className="form-input"
+                  placeholder={t('vet.appointments.vetNamePh')}
+                  value={vet}
+                  onChange={e => setVet(e.target.value)}
+                />
               </div>
             </div>
-            <FormDateField label="Fecha" value={date} onChange={setDate} max={today} />
+            <FormDateField label={t('field.date')} value={date} onChange={setDate} max={today} />
           </div>
         </>
       )}

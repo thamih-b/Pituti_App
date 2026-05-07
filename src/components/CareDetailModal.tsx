@@ -1,4 +1,7 @@
+// traduzido e sem mock
+
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PfBtn, PfFooter } from './FooterButtons'
 
 export interface CareDetailItem {
@@ -14,6 +17,7 @@ interface Props {
 }
 
 export default function CareDetailModal({ item, onClose, onToggle, onEdit }: Props) {
+  const { t } = useTranslation()
   const [localDone, setLocalDone] = useState<number | null>(null)
 
   if (!item) return null
@@ -61,14 +65,14 @@ export default function CareDetailModal({ item, onClose, onToggle, onEdit }: Pro
           <div className="care-detail-progress-row">
             <div style={{ flex:1 }}>
               <div style={{ fontSize:'.75rem', fontWeight:700, color:'var(--text-muted)', marginBottom:'.5rem' }}>
-                Progreso de hoy — {done} de {item.total}
+                {t('cares.todayProgress', { done, total: item.total })}
               </div>
               <div className="care-detail-dots">
                 {Array.from({ length: item.total }).map((_, i) => (
                   <button key={i}
                     className={['care-detail-dot-btn', i < done ? 'filled' : ''].join(' ')}
                     onClick={() => clickDot(i)}
-                    title={i < done ? 'Marcar como pendiente' : 'Marcar como hecho'}>
+                    title={i < done ? t('btn.unarchive') : t('btn.done')}>
                     {i < done ? '✓' : '○'}
                   </button>
                 ))}
@@ -78,7 +82,7 @@ export default function CareDetailModal({ item, onClose, onToggle, onEdit }: Pro
               <div style={{ background:'var(--success-hl)', border:'1.5px solid var(--success)',
                 borderRadius:'var(--r-full)', padding:'.25rem .75rem', fontSize:'.75rem',
                 fontWeight:800, color:'var(--success)', flexShrink:0 }}>
-                Completado ✓
+                {t('status.finished')} ✓
               </div>
             )}
           </div>
@@ -86,8 +90,9 @@ export default function CareDetailModal({ item, onClose, onToggle, onEdit }: Pro
           {/* Meta chips */}
           <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap' }}>
             {[
-              { label:'Frecuencia', value: item.sub },
-              { label:'Estado',    value: isDone ? 'Completado' : 'Pendiente',
+              { label: t('modal.frequency'),  value: item.sub },
+              { label: t('modal.status'),
+                value: isDone ? t('status.finished') : t('cares.pending'),
                 color: isDone ? 'var(--success)' : 'var(--warn)' },
             ].map(c => (
               <div key={c.label} style={{ background:'var(--surface-offset)', border:'1.5px solid var(--border)',
@@ -101,23 +106,22 @@ export default function CareDetailModal({ item, onClose, onToggle, onEdit }: Pro
           </div>
         </div>
 
-
-{/* ── Footer ── */}
-<div className="detail-footer">
-  <button className="btn btn-secondary" onClick={() => { onEdit(item); onClose() }}>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9"/>
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-    </svg>
-    Editar
-  </button>
-  <button
-    className={isDone ? 'btn btn-secondary' : 'btn btn-success'}
-    onClick={handleMarkDone}>
-    {isDone ? '↩ Desmarcar' : '✓ Marcar hecho'}
-  </button>
-</div>
+        {/* ── Footer ── */}
+        <div className="detail-footer">
+          <button className="btn btn-secondary" onClick={() => { onEdit(item); onClose() }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+            </svg>
+            {t('btn.edit')}
+          </button>
+          <button
+            className={isDone ? 'btn btn-secondary' : 'btn btn-success'}
+            onClick={handleMarkDone}>
+            {isDone ? `↩ ${t('btn.unarchive')}` : `✓ ${t('cares.done')}`}
+          </button>
+        </div>
 
       </div>
     </div>

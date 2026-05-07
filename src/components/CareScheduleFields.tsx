@@ -1,3 +1,6 @@
+// traduzido e sem mock
+
+import { useTranslation } from 'react-i18next'
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -26,27 +29,32 @@ export default function CareScheduleFields({
   intervalDays, setIntervalDays,
   recurring, setRecurring,
 }: Props) {
+  const { t } = useTranslation()
+
   return (
     <>
-      <div className="modal-section">Horario y repetición</div>
+      <div className="modal-section">{t('cares.schedule.section')}</div>
 
       <div className="form-group">
         <label className="form-label">
-          Horario <span style={{ color:'var(--text-faint)', fontWeight:500 }}>(opcional)</span>
+          {t('cares.schedule.time')}{' '}
+          <span style={{ color:'var(--text-faint)', fontWeight:500 }}>({t('btn.optional')})</span>
         </label>
         <div className="field-icon-wrap">
           <span className="field-icon">🕐</span>
           <input className="form-input" type="time" value={time}
             onChange={e => setTime(e.target.value)}
-            style={{ colorScheme:'light' }} />
+            style={{ colorScheme:'light' }}/>
         </div>
       </div>
 
       <div className="toggle-row">
         <div className="toggle-row-info">
-          <div className="toggle-row-label">📅 Repetir cada X días</div>
+          <div className="toggle-row-label">📅 {t('cares.schedule.everyXDaysLabel')}</div>
           <div className="toggle-row-sub">
-            {everyXDays ? `Cada ${intervalDays} días` : 'Se repite diariamente'}
+            {everyXDays
+              ? t('cares.schedule.everyXDaysSub', { n: intervalDays })
+              : t('cares.schedule.dailySub')}
           </div>
         </div>
         <Toggle on={everyXDays} onChange={setEveryXDays} />
@@ -54,7 +62,7 @@ export default function CareScheduleFields({
 
       {everyXDays && (
         <div className="form-group" style={{ marginTop:'.625rem' }}>
-          <label className="form-label">Repetir cada</label>
+          <label className="form-label">{t('cares.schedule.repeatEvery')}</label>
           <div style={{ display:'flex', alignItems:'center', gap:'.75rem' }}>
             <button type="button"
               style={{ width:36, height:36, borderRadius:'var(--r-md)',
@@ -72,16 +80,20 @@ export default function CareScheduleFields({
                 fontSize:'1.1rem', cursor:'pointer' }}
               onClick={() => setIntervalDays(d => String(Math.min(60, Number(d)+1)))}>+
             </button>
-            <span style={{ fontSize:'.8125rem', color:'var(--text-muted)' }}>días</span>
+            <span style={{ fontSize:'.8125rem', color:'var(--text-muted)' }}>
+              {t('cares.schedule.days')}
+            </span>
           </div>
         </div>
       )}
 
       <div className="toggle-row" style={{ marginTop: everyXDays ? '.75rem' : 0 }}>
         <div className="toggle-row-info">
-          <div className="toggle-row-label">🔁 Recurrente</div>
+          <div className="toggle-row-label">🔁 {t('cares.schedule.recurringLabel')}</div>
           <div className="toggle-row-sub">
-            {recurring ? 'Se repite indefinidamente' : 'Se realiza una sola vez'}
+            {recurring
+              ? t('cares.schedule.recurringSub')
+              : t('cares.schedule.onceSub')}
           </div>
         </div>
         <Toggle on={recurring} onChange={setRecurring} />

@@ -1,14 +1,16 @@
+// traduzido e sem mock
 import { useRef, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface FormDateFieldProps {
-  label:    ReactNode
-  value:    string
-  onChange: (val: string) => void
-  min?:     string
-  max?:     string
-  required?: boolean
-  hint?:    string
-  error?:   string
+  label:        ReactNode
+  value:        string
+  onChange:     (val: string) => void
+  min?:         string
+  max?:         string
+  required?:    boolean
+  hint?:        string
+  error?:       string
   placeholder?: string
 }
 
@@ -18,31 +20,32 @@ function CalendarIcon() {
       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2"/>
       <line x1="16" y1="2" x2="16" y2="6"/>
-      <line x1="8" y1="2" x2="8" y2="6"/>
-      <line x1="3" y1="10" x2="21" y2="10"/>
+      <line x1="8"  y1="2" x2="8"  y2="6"/>
+      <line x1="3"  y1="10" x2="21" y2="10"/>
     </svg>
   )
 }
 
-const MONTHS_ES = [
-  'enero','febrero','marzo','abril','mayo','junio',
-  'julio','agosto','septiembre','octubre','noviembre','diciembre',
-]
-
-function formatDate(val: string): string {
-  if (!val) return ''
-  const d = new Date(val + 'T00:00:00')
-  if (isNaN(d.getTime())) return val
-  const day  = d.getDate()
-  const mon  = MONTHS_ES[d.getMonth()]
-  const year = d.getFullYear()
-  return `${day} de ${mon}, ${year}`
+function useFormatDate() {
+  const { i18n } = useTranslation()
+  return (val: string): string => {
+    if (!val) return ''
+    const d = new Date(val + 'T00:00:00')
+    if (isNaN(d.getTime())) return val
+    return d.toLocaleDateString(i18n.language, {
+      day: 'numeric', month: 'long', year: 'numeric',
+    })
+  }
 }
 
 export default function FormDateField({
-  label, value, onChange, min, max, required, hint, error, placeholder = 'Selecciona una fecha',
+  label, value, onChange, min, max, required, hint, error, placeholder,
 }: FormDateFieldProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const { t }     = useTranslation()
+  const inputRef  = useRef<HTMLInputElement>(null)
+  const formatDate = useFormatDate()
+
+  const ph = placeholder ?? t('formDate.placeholder')
 
   const trigger = () => {
     try { inputRef.current?.showPicker?.() }
@@ -56,7 +59,6 @@ export default function FormDateField({
         {required && <span className="fdf-required">*</span>}
       </label>
 
-      {/* Clickable display row */}
       <div
         className={['fdf-row', error ? 'fdf-row--err' : ''].join(' ')}
         onClick={trigger}
@@ -66,13 +68,13 @@ export default function FormDateField({
       >
         <span className="fdf-icon"><CalendarIcon /></span>
         <span className={['fdf-display', !value ? 'fdf-placeholder' : ''].join(' ')}>
-          {value ? formatDate(value) : placeholder}
+          {value ? formatDate(value) : ph}
         </span>
         {value && (
           <button
             className="fdf-clear"
             onClick={e => { e.stopPropagation(); onChange('') }}
-            title="Limpiar fecha"
+            title={t('formDate.clear')}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -80,7 +82,6 @@ export default function FormDateField({
             </svg>
           </button>
         )}
-        {/* Hidden native input */}
         <input
           ref={inputRef}
           type="date"
@@ -93,7 +94,7 @@ export default function FormDateField({
         />
       </div>
 
-      {error  && <span className="fdf-msg fdf-msg--err">{error}</span>}
+      {error   && <span className="fdf-msg fdf-msg--err">{error}</span>}
       {!error && hint && <span className="fdf-msg fdf-msg--hint">{hint}</span>}
     </div>
   )

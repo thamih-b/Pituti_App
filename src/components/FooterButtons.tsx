@@ -47,10 +47,7 @@ const DEFAULT_ICONS: Partial<Record<PfVariant, ReactNode>> = {
   archive:  <ArchiveIcon/>,
 }
 
-/**
- * PfBtn — Professional Footer Button
- * Uses .pf-btn CSS system for consistent appearance across all modals and forms.
- */
+
 export function PfBtn({
   variant,
   size = 'md',
@@ -152,9 +149,9 @@ export function FooterDetailActions({
 }) {
   return (
     <PfFooter>
-      <PfBtn variant="cancel" size="sm" onClick={onClose}>{t.btn.close}</PfBtn>
+      <PfBtn variant="cancel" size="sm" onClick={onClose}>t('btn.close')</PfBtn>
       <div style={{ display:'flex', gap:'.5rem', marginLeft:'auto' }}>
-        <PfBtn variant="edit" onClick={onEdit}>{t.btn.edit}</PfBtn>
+        <PfBtn variant="edit" onClick={onEdit}>t('btn.edit')</PfBtn>
         {onDone && <PfBtn variant={doneVariant} onClick={onDone}>{doneLabel}</PfBtn>}
       </div>
     </PfFooter>

@@ -1,44 +1,44 @@
+//traduzido e sem mock
+
+import { useTranslation } from 'react-i18next'
 import type { Pet } from '../types'
-import Avatar from './Avatar'
-import Badge, { } from './Badge'
-import Card from './Card'
 import type { BadgeStatus } from '../types'
+import Avatar from './Avatar'
+import Badge from './Badge'
+import Card from './Card'
 
 interface PetCardProps {
-  pet: Pet
-  onClick?: (pet: Pet) => void
+  pet:       Pet
+  onClick?:  (pet: Pet) => void
   isActive?: boolean
 }
 
-const speciesLabel: Record<string, string> = {
-  dog: 'Perro',
-  cat: 'Gato',
-  bird: 'Ave',
-  rabbit: 'Conejo',
-  reptile: 'Reptil',
-  other: 'Otro',
-}
-
 const speciesStatus: Record<string, BadgeStatus> = {
-  dog: 'info',
-  cat: 'success',
-  bird: 'warning',
-  rabbit: 'neutral',
+  dog:     'info',
+  cat:     'success',
+  bird:    'warning',
+  rabbit:  'neutral',
   reptile: 'danger',
-  other: 'neutral',
+  other:   'neutral',
 }
 
-function calcAge(birthDate?: string): string {
-  if (!birthDate) return 'Edad desconocida'
-  const birth = new Date(birthDate)
-  const now = new Date()
-  const months = (now.getFullYear() - birth.getFullYear()) * 12 + now.getMonth() - birth.getMonth()
-  if (months < 12) return `${months} mes${months === 1 ? '' : 'es'}`
-  const years = Math.floor(months / 12)
-  return `${years} año${years === 1 ? '' : 's'}`
+function useCalcAge() {
+  const { t } = useTranslation()
+  return (birthDate?: string): string => {
+    if (!birthDate) return t('pet.ageUnknown')
+    const birth  = new Date(birthDate)
+    const now    = new Date()
+    const months = (now.getFullYear() - birth.getFullYear()) * 12 + now.getMonth() - birth.getMonth()
+    if (months < 12) return t('pet.ageMonths', { count: months })
+    const years = Math.floor(months / 12)
+    return t('pet.ageYears', { count: years })
+  }
 }
 
 export default function PetCard({ pet, onClick, isActive = false }: PetCardProps) {
+  const { t }   = useTranslation()
+  const calcAge = useCalcAge()
+
   return (
     <Card
       padding="md"
@@ -51,12 +51,12 @@ export default function PetCard({ pet, onClick, isActive = false }: PetCardProps
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-stone-900 truncate">{pet.name}</p>
           <p className="text-xs text-stone-500 truncate">
-            {pet.breed ?? 'Raza desconocida'} · {calcAge(pet.birthDate)}
+            {pet.breed ?? t('pet.breedUnknown')} · {calcAge(pet.birthDate)}
           </p>
         </div>
 
         <Badge
-          label={speciesLabel[pet.species] ?? 'Otro'}
+          label={t(`pet.species.${pet.species}`, { defaultValue: t('pet.species.other') })}
           status={speciesStatus[pet.species] ?? 'neutral'}
         />
       </div>

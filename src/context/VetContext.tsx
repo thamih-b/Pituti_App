@@ -1,4 +1,9 @@
-import { createContext, useContext, useMemo, useState, useCallback, useEffect, type ReactNode } from 'react'
+// traduzido e sem mock
+
+import {
+  createContext, useContext, useMemo, useState, useCallback, useEffect, type ReactNode,
+} from 'react'
+import { useTranslation } from 'react-i18next'
 import { vetsApi, appointmentsApi } from '../api'
 import type { ApiVet, ApiAppointment } from '../api'
 
@@ -59,6 +64,8 @@ function buildDefaultProfile(petId: string): PetMedicalProfile {
 }
 
 export function VetProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
+
   const [profiles,     setProfiles]     = useState<Record<string, PetMedicalProfile>>({})
   const [vets,         setVets]         = useState<VetContact[]>([])
   const [appointments, setAppointments] = useState<VetAppointment[]>([])
@@ -86,15 +93,23 @@ export function VetProvider({ children }: { children: ReactNode }) {
         )
         if (!cancelled) setAppointments(results.flat())
       })
-      .catch(err => { if (!cancelled) setError(err?.message ?? 'Error al cargar veterinarios') })
+      .catch(err => {
+        if (!cancelled) setError(err?.message ?? t('vet.errorLoadingVets'))
+      })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [tick])
+  }, [tick, t])
 
-  const getMedicalProfile  = useCallback((petId: string) => profiles[petId] ?? buildDefaultProfile(petId), [profiles])
-  const saveMedicalProfile = useCallback((profile: PetMedicalProfile) =>
-    setProfiles(prev => ({ ...prev, [profile.petId]: { ...profile, updatedAt: new Date().toISOString() } })), [])
+  const getMedicalProfile  = useCallback(
+    (petId: string) => profiles[petId] ?? buildDefaultProfile(petId),
+    [profiles],
+  )
+  const saveMedicalProfile = useCallback(
+    (profile: PetMedicalProfile) =>
+      setProfiles(prev => ({ ...prev, [profile.petId]: { ...profile, updatedAt: new Date().toISOString() } })),
+    [],
+  )
 
   const addVet    = useCallback((data: Omit<VetContact, 'id' | 'createdAt'>) =>
     setVets(prev => [...prev, { ...data, id: `vet-${Date.now()}`, createdAt: new Date().toISOString() }]), [])
@@ -115,10 +130,15 @@ export function VetProvider({ children }: { children: ReactNode }) {
     for (const appt of appointments) {
       result.push({ date: appt.date, petId: appt.petId, label: appt.reason, kind: 'past' })
       if (appt.nextAppointmentDate)
-        result.push({ date: appt.nextAppointmentDate, petId: appt.petId, label: appt.nextAppointmentNote ?? 'Retorno programado', kind: 'next' })
+        result.push({
+          date:  appt.nextAppointmentDate,
+          petId: appt.petId,
+          label: appt.nextAppointmentNote ?? t('vet.scheduledReturn'),
+          kind:  'next',
+        })
     }
     return result
-  }, [appointments])
+  }, [appointments, t])
 
   return (
     <VetContext.Provider value={{

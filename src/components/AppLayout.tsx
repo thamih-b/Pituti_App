@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { usePituti } from '../context/PitutiContext'
+import { useUser } from '../context/UserContext'
 import CalicoAnimation from './CalicoAnimation'
 import NotificationsPanel from './NotificationPanel'
-import { useT } from '../context/LanguageContext'
+import { useTranslation } from 'react-i18next'
 // catAnim.css must be imported in main.tsx: import './styles/catAnim.css'
 
 // ─── LOGO ─────────────────────────────────────────────────────────────────────
@@ -171,7 +172,8 @@ export default function AppLayout() {
   const { state, toggleTheme } = usePituti()
   const theme = state.theme
 
-  const t = useT()
+  const { t } = useTranslation()
+  const { user } = useUser()
 
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' })
 
@@ -187,7 +189,11 @@ export default function AppLayout() {
 
       {/* ── TOPBAR ── */}
       <header className="topbar">
-        <button className="mobile-menu-btn" aria-label="Abrir menú" onClick={() => setMobileOpen(o => !o)}>
+        <button
+          className="mobile-menu-btn"
+          aria-label={mobileOpen ? t('topbar.closeMenu') : t('topbar.openMenu')}
+          onClick={() => setMobileOpen(o => !o)}
+        >
           {mobileOpen ? icons.closeX : icons.menu}
         </button>
 
@@ -203,18 +209,27 @@ export default function AppLayout() {
 
         <div className="topbar-search">
           {icons.search}
-          <input placeholder={t.topbar.searchPlaceholder} aria-label={t.topbar.searchPlaceholder} />
+          <input placeholder={t('topbar.searchPlaceholder')} aria-label={t('topbar.searchPlaceholder')} />
           <span style={{ fontSize: '.7rem', color: 'rgba(255,255,255,.4)', background: 'rgba(255,255,255,.1)', padding: '.1rem .35rem', borderRadius: '.25rem' }}>K</span>
         </div>
 
         <div className="topbar-actions">
           <NotificationsPanel />
-          <button className="topbar-icon-btn" onClick={toggleTheme} title={t.topbar.changeTheme}>
+          <button className="topbar-icon-btn" onClick={toggleTheme} title={t('topbar.changeTheme')}>
             {theme === 'light' ? icons.moon : icons.sun}
           </button>
         </div>
 
-        <div className="topbar-avatar" title="Thamires Lopes" onClick={() => navigate('settings')} role="button" tabIndex={0}>TL</div>
+        <div
+          className="topbar-avatar"
+          title={user.name}
+          onClick={() => navigate('settings')}
+          role="button"
+          tabIndex={0}
+          style={{ background: user.color, color: user.colorFg }}
+        >
+          {user.avatar}
+        </div>
       </header>
 
       {mobileOpen && (
@@ -222,60 +237,60 @@ export default function AppLayout() {
       )}
 
       {/* ── SIDEBAR ── */}
-      <nav className={['sidebar', mobileOpen ? 'mobile-open' : ''].join(' ')} aria-label="Navegación principal">
+      <nav className={['sidebar', mobileOpen ? 'mobile-open' : ''].join(' ')} aria-label={t('nav.main')}>
 
         <div className="sidebar-mobile-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
             <PitutiLogo />
             <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.125rem', color: 'var(--nav-text-active)' }}>Pituti</span>
           </div>
-          <button className="sidebar-mobile-close" onClick={closeMobile} aria-label="Cerrar menú">{icons.closeX}</button>
+          <button className="sidebar-mobile-close" onClick={closeMobile} aria-label={t('topbar.closeMenu')}>{icons.closeX}</button>
         </div>
 
-<div className="sidebar-section-label">{t.nav.main}</div>
-<NavItem to="dashboard" icon={icons.dashboard} label={t.nav.dashboard} collapsed={collapsed} />
-<NavItem to="pets"      icon={icons.pets}      label={t.nav.pets}      collapsed={collapsed} badge="3" />
-<NavItem to="cares"     icon={icons.cares}     label={t.nav.cares}     collapsed={collapsed} />
-<NavItem to="calendar"  icon={icons.calendar}  label={t.nav.calendar}  collapsed={collapsed} />
-
-<div className="sidebar-divider" />
-
-<div className="sidebar-section-label">{t.nav.health}</div>
-<NavItem to="vaccines"    icon={icons.vaccines}    label={t.nav.vaccines}    collapsed={collapsed} />
-<NavItem to="medications" icon={icons.medications} label={t.nav.medications} collapsed={collapsed} />
-<NavItem to="symptoms"    icon={icons.symptoms}    label={t.nav.symptoms}    collapsed={collapsed} />
-<NavItem to="notes"       icon={icons.notes}       label={t.nav.notes}       collapsed={collapsed} />
-<NavItem to="vet"         icon={icons.vet}         label={t.nav.vet}         collapsed={collapsed} />
+        <div className="sidebar-section-label">{t('nav.main')}</div>
+        <NavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} collapsed={collapsed} />
+        <NavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      collapsed={collapsed} badge="3" />
+        <NavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     collapsed={collapsed} />
+        <NavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  collapsed={collapsed} />
 
         <div className="sidebar-divider" />
 
-<div className="sidebar-section-label">{t.nav.account}</div>
-<NavItem to="settings" icon={icons.settings} label={t.nav.settings} collapsed={collapsed} />
+        <div className="sidebar-section-label">{t('nav.health')}</div>
+        <NavItem to="vaccines"    icon={icons.vaccines}    label={t('nav.vaccines')}    collapsed={collapsed} />
+        <NavItem to="medications" icon={icons.medications} label={t('nav.medications')} collapsed={collapsed} />
+        <NavItem to="symptoms"    icon={icons.symptoms}    label={t('nav.symptoms')}    collapsed={collapsed} />
+        <NavItem to="notes"       icon={icons.notes}       label={t('nav.notes')}       collapsed={collapsed} />
+        <NavItem to="vet"         icon={icons.vet}         label={t('nav.vet')}         collapsed={collapsed} />
+
+        <div className="sidebar-divider" />
+
+        <div className="sidebar-section-label">{t('nav.account')}</div>
+        <NavItem to="settings" icon={icons.settings} label={t('nav.settings')} collapsed={collapsed} />
 
         <div className="sidebar-toggle">
-  <button
-    className="nav-item"
-    style={{ width: '100%' }}
-    onClick={() => setCollapsed(c => !c)}
-    title={t.nav.collapse}
-  >
-    <span style={{ transform: collapsed ? 'rotate(180deg)' : undefined, transition: 'transform 200ms', display: 'flex' }}>
-      {icons.chevron}
-    </span>
-    <span className="nav-label">{t.nav.collapse}</span>
-  </button>
-</div>
+          <button
+            className="nav-item"
+            style={{ width: '100%' }}
+            onClick={() => setCollapsed(c => !c)}
+            title={t('nav.collapse')}
+          >
+            <span style={{ transform: collapsed ? 'rotate(180deg)' : undefined, transition: 'transform 200ms', display: 'flex' }}>
+              {icons.chevron}
+            </span>
+            <span className="nav-label">{t('nav.collapse')}</span>
+          </button>
+        </div>
       </nav>
 
       {/* ── Mobile Bottom Nav ── */}
-<nav className="mobile-bottom-nav" aria-label="Navegación móvil">
-  <MobileNavItem to="dashboard" icon={icons.dashboard} label={t.nav.dashboard} />
-  <MobileNavItem to="pets"      icon={icons.pets}      label={t.nav.pets}      />
-  <MobileNavItem to="cares"     icon={icons.cares}     label={t.nav.cares}     />
-  <MobileNavItem to="vet"       icon={icons.vet}       label={t.nav.vet}       />
-  <MobileNavItem to="calendar"  icon={icons.calendar}  label={t.nav.calendar}  />
-  <MobileNavItem to="settings"  icon={icons.settings}  label={t.nav.settings}  />
-</nav>
+      <nav className="mobile-bottom-nav" aria-label={t('nav.mobile')}>
+        <MobileNavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} />
+        <MobileNavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      />
+        <MobileNavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     />
+        <MobileNavItem to="vet"       icon={icons.vet}       label={t('nav.vet')}       />
+        <MobileNavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  />
+        <MobileNavItem to="settings"  icon={icons.settings}  label={t('nav.settings')}  />
+      </nav>
 
       {/* ── MAIN ── */}
       <main className="main" id="main-content">
@@ -302,7 +317,7 @@ export default function AppLayout() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--text-muted)', border: 'none', background: 'none', cursor: 'pointer',
           }}
-          onClick={() => setToast(t => ({ ...t, show: false }))}
+          onClick={() => setToast(prev => ({ ...prev, show: false }))}
         >
           {icons.closeX}
         </button>
