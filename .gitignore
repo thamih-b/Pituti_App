@@ -24,6 +24,9 @@ dist-ssr
 *.sw?
 repomix-output.xml
 repomix-output.md
+repomix-src.md
+repomix-src-2.md
+repomix-src-3.md
 repomix
 contexto.md
 .env
