@@ -18,7 +18,7 @@
 .paw-bubble:hover { transform: scale(1.08); box-shadow: var(--sh-lg) }
 
 /* Palma — grande, circular, frente de todos */
-.paw-main { width: 164px; height: 164px; bottom: 0; left: 50%; transform: translateX(-50%); border-width: 5px; font-size: 3rem; border-radius: 50%; z-index: 2 }
+.paw-main { width: 164px; height: 164px; bottom: 0; left: 50%; transform: translateX(-50%); border-width: 5px; font-size: 3rem; border-radius: 50%; z-index: 2; background: var(--pal-lilac)}
 .paw-main:hover { transform: translateX(-50%) scale(1.05) }
 .paw-main .paw-bubble-clip { border-radius: 50% }
 
@@ -27,10 +27,10 @@
    toe-3 e toe-4: mesma altura nas laterais, um nível abaixo            */
 .paw-toe { font-size: 1.25rem; z-index: 1 }
 
-.paw-toe-1 { width: 84px; height: 84px; top: 10px; left: 68px  }
-.paw-toe-2 { width: 84px; height: 84px; top: 10px; right: 68px }
-.paw-toe-3 { width: 76px; height: 76px; top: 96px; left: 0     }
-.paw-toe-4 { width: 76px; height: 76px; top: 96px; right: 0    }
+.paw-toe-1 { width: 84px; height: 84px; top: 10px; left: 68px; background: var(--brown-yellow)  }
+.paw-toe-2 { width: 84px; height: 84px; top: 10px; right: 68px; background: var(--pal-candy) }
+.paw-toe-3 { width: 76px; height: 76px; top: 96px; left: 0; background: var(--pal-candy)     }
+.paw-toe-4 { width: 76px; height: 76px; top: 96px; right: 0; background: var(--brown-yellow)    }
 
 .paw-dot { position: absolute; top: 5px; right: 5px; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--bg); z-index: 3; pointer-events: none }
 .paw-dot.warn  { background: var(--warn) }
@@ -84,12 +84,12 @@
 
 .dash-mockup-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.3fr;
+  grid-template-columns: 1fr 1fr 0.90fr;
   grid-template-rows: auto auto;
   grid-template-areas:
     "left  center right"
     "left  events right";
-  gap: 1.25rem;
+  gap: 0.5rem 1.25rem ;
   align-items: start;
   width: 100%;
   padding: 1.25rem 1.5rem 2rem;
@@ -98,7 +98,7 @@
 
 .dash-col-left    { grid-area: left;   display: flex; flex-direction: column; gap: 1.25rem; }
 .dash-col-center  { grid-area: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1rem 1rem 1.25rem; }
-.dash-col-eventos { grid-area: events; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1rem; }
+.dash-col-eventos { grid-area: events; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1rem; margin-top: -2rem;}
 .dash-col-right   { grid-area: right;  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1rem; }
 
 /* KPIs na coluna direita */
@@ -122,3 +122,54 @@
 
 /* Paw layout photo */
 .paw-bubble-clip img { width:100%; height:100%; object-fit:cover; }
+
+/*novo*/
+
+
+/* ── Extra pets (6+) abaixo da patinha ── */
+.paw-extra-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  justify-content: center;
+  margin-top: .5rem;
+  max-width: 320px;
+}
+
+.paw-extra-bubble {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 200ms cubic-bezier(.16,1,.3,1), box-shadow 200ms;
+  box-shadow: var(--sh-sm);
+  overflow: hidden;
+}
+.paw-extra-bubble:hover {
+  transform: scale(1.08);
+  box-shadow: var(--sh-md);
+}
+.paw-extra-bubble .paw-pet-name {
+  bottom: -18px;
+}
+
+.paw-bubble-empty .paw-plus-hint {
+  display: none;
+  font-size: 2rem;
+  color: var(--text-faint);
+  opacity: .45;
+  pointer-events: none;
+  position: absolute;
+}
+.paw-bubble-empty:hover .paw-plus-hint {
+  display: flex;
+}
+.paw-bubble-empty:hover {
+  border-color: var(--pal-denim);
+}

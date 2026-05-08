@@ -1,5 +1,5 @@
 // traduzido e sem mock
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { SPECIESEMOJI } from '../hooks/usePets';
 import { usePetsContext } from '../context/PetsContext';       
 import { useVet, type PetMedicalProfile, type VetContact, type VetAppointment } from '../context/VetContext';
@@ -23,7 +23,7 @@ type TabKey = typeof TAB_KEYS[number];
 export default function VetPage() {
   const { t } = useTranslation();
   const { pets } = usePetsContext();                              // ← real
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id ?? '');
+  const [selectedPetId, setSelectedPetId] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('profile');
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [vetModalOpen, setVetModalOpen] = useState(false);
@@ -33,6 +33,11 @@ export default function VetPage() {
   const [confirmDeleteVet, setConfirmDeleteVet] = useState<string | null>(null);
   const [confirmDeleteAppt, setConfirmDeleteAppt] = useState<string | null>(null);
 
+  useEffect(() => {
+  if (!selectedPetId && pets.length > 0) {
+    setSelectedPetId(pets[0].id)
+  }
+}, [pets, selectedPetId])
   const {
     getMedicalProfile, saveMedicalProfile,
     vets, addVet, updateVet, deleteVet,

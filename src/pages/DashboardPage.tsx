@@ -71,7 +71,59 @@ function buildSlots(pets: PetWithAlerts[]) {
   })
 }
 
-function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (id: string) => void }) {
+// function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (id: string) => void }) {
+//   const { t } = useTranslation()
+
+//   const photos: Record<string, string> = {}
+//   try {
+//     Object.keys(localStorage)
+//       .filter(k => k.startsWith('pet-photo-'))
+//       .forEach(k => { photos[k.replace('pet-photo-', '')] = localStorage.getItem(k)! })
+//   } catch {}
+
+//   if (!pets.length) return (
+//     <div className="paw-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+//       <div className="paw-empty">
+//         <div className="paw-empty-icon">🐾</div>
+//         <p>{t('dashboard.addFirstPet')}</p>
+//       </div>
+//     </div>
+//   )
+
+//   return (
+//     <div className="paw-layout">
+//       {buildSlots(pets).map((slot, i) => {
+//         const photo        = slot.pet ? (photos[slot.pet.id] || null) : null
+//         const highestAlert = slot.pet?.alerts?.[0] ?? null
+//         return (
+//           <div
+//             key={i}
+//             className={SLOT_CLASSES[i]}
+//             style={!slot.pet ? { cursor: 'default' } : undefined}
+//             onClick={slot.pet ? () => onPetClick(slot.pet!.id) : undefined}
+//           >
+//             <div
+//               className="paw-bubble-clip"
+//               style={{ background: photo ? undefined : slot.paletteColor, fontSize: i === 0 ? '3rem' : '1.4rem' }}
+//             >
+//               {photo
+//                 ? <img src={photo} alt={slot.pet?.name} loading="lazy" />
+//                 : <span>{slot.pet ? SPECIES_EMOJI[slot.pet.species] ?? '🐾' : ''}</span>}
+//             </div>
+//             {highestAlert && <div className="paw-dot warn" />}
+//             {slot.pet && <div className="paw-pet-name">{slot.pet.name}</div>}
+//           </div>
+//         )
+//       })}
+//     </div>
+//   )
+// }
+
+function PawLayout({ pets, onPetClick, onAddPet }: {
+  pets: PetWithAlerts[]
+  onPetClick: (id: string) => void
+  onAddPet?: () => void
+}) {
   const { t } = useTranslation()
 
   const photos: Record<string, string> = {}
@@ -90,32 +142,80 @@ function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (i
     </div>
   )
 
+  // Primeiros 5 vão na patinha, restantes vão no extra row
+  const pawPets   = pets.slice(0, 5)
+  const extraPets = pets.slice(5)
+
   return (
-    <div className="paw-layout">
-      {buildSlots(pets).map((slot, i) => {
-        const photo        = slot.pet ? (photos[slot.pet.id] || null) : null
-        const highestAlert = slot.pet?.alerts?.[0] ?? null
-        return (
-          <div
-            key={i}
-            className={SLOT_CLASSES[i]}
-            style={!slot.pet ? { cursor: 'default' } : undefined}
-            onClick={slot.pet ? () => onPetClick(slot.pet!.id) : undefined}
-          >
+    <>
+      <div className="paw-layout">
+        {buildSlots(pawPets).map((slot, i) => {
+          const photo        = slot.pet ? (photos[slot.pet.id] || null) : null
+          const highestAlert = slot.pet?.alerts?.[0] ?? null
+          const isEmpty      = !slot.pet
+
+          return (
             <div
-              className="paw-bubble-clip"
-              style={{ background: photo ? undefined : slot.paletteColor, fontSize: i === 0 ? '3rem' : '1.4rem' }}
+              key={i}
+              className={[
+                SLOT_CLASSES[i],
+                isEmpty ? 'paw-bubble-empty' : '',
+              ].join(' ')}
+              style={isEmpty ? undefined : undefined}
+              onClick={isEmpty ? onAddPet : () => onPetClick(slot.pet!.id)}
             >
-              {photo
-                ? <img src={photo} alt={slot.pet?.name} loading="lazy" />
-                : <span>{slot.pet ? SPECIES_EMOJI[slot.pet.species] ?? '🐾' : ''}</span>}
+              {isEmpty ? (
+                <>
+                  <div className="paw-plus-hint">＋</div>
+                </>
+              ) : (
+                <div
+                  className="paw-bubble-clip"
+                  style={{ background: photo ? undefined : slot.paletteColor, fontSize: i === 0 ? '3rem' : '1.4rem' }}
+                >
+                  {photo
+                    ? <img src={photo} alt={slot.pet?.name} loading="lazy" />
+                    : <span>{SPECIES_EMOJI[slot.pet!.species] ?? '🐾'}</span>
+                  }
+                </div>
+              )}
+              {highestAlert && <div className="paw-dot warn" />}
+              {slot.pet && <div className="paw-pet-name">{slot.pet.name}</div>}
             </div>
-            {highestAlert && <div className="paw-dot warn" />}
-            {slot.pet && <div className="paw-pet-name">{slot.pet.name}</div>}
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+
+      {/* Extra pets (6+) */}
+      {extraPets.length > 0 && (
+        <div className="paw-extra-row">
+          {extraPets.map((pet) => {
+            const photo = photos[pet.id] || null
+            return (
+              <div
+                key={pet.id}
+                className="paw-extra-bubble"
+                onClick={() => onPetClick(pet.id)}
+              >
+                <div
+                  className="paw-bubble-clip"
+                  style={{ background: photo ? undefined : PALETTE_COLORS[pets.indexOf(pet) % PALETTE_COLORS.length], fontSize: '1.3rem', width: '100%', height: '100%', borderRadius: '50%' }}
+                >
+                  {photo
+                    ? <img src={photo} alt={pet.name} loading="lazy" />
+                    : <span>{SPECIES_EMOJI[pet.species] ?? '🐾'}</span>
+                  }
+                </div>
+                {(pet.alerts ?? []).length > 0 && (
+                  <div className="paw-dot warn" style={{ top: 2, right: 2 }} />
+                )}
+                <div className="paw-pet-name">{pet.name}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -230,7 +330,12 @@ export default function DashboardPage() {
             ? <div className="paw-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '.875rem' }}>
                 {t('btn.loading')}
               </div>
-            : <PawLayout pets={pets} onPetClick={id => navigate(`/pets/${id}`)} />
+            // : <PawLayout pets={pets} onPetClick={id => navigate(`/pets/${id}`)} />
+            : <PawLayout
+    pets={pets}
+    onPetClick={id => navigate(`/pets/${id}`)}
+    onAddPet={() => navigate('/pets/new')}   // ← Adiciona
+  />
           }
           {allAlerts.length === 0 && <div className="paw-caption">{t('dashboard.allGood')}</div>}
         </div>

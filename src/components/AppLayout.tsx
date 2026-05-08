@@ -170,6 +170,7 @@ export default function AppLayout() {
   const navigate = useNavigate()
 
   const { state, toggleTheme } = usePituti()
+  const petCount = state.pets?.length ?? 0
   const theme = state.theme
 
   const { t } = useTranslation()
@@ -185,7 +186,7 @@ export default function AppLayout() {
   const closeMobile = () => setMobileOpen(false)
 
   return (
-    <div className={['app', collapsed ? 'sidebar-collapsed' : ''].join(' ')}>
+    <div className={['app', collapsed && !mobileOpen ? 'sidebar-collapsed' : ''].join(' ')}>
 
       {/* ── TOPBAR ── */}
       <header className="topbar">
@@ -249,7 +250,7 @@ export default function AppLayout() {
 
         <div className="sidebar-section-label">{t('nav.main')}</div>
         <NavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} collapsed={collapsed} />
-        <NavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      collapsed={collapsed} badge="3" />
+        <NavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      collapsed={collapsed} badge={petCount > 0 ? String(petCount) : undefined} />
         <NavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     collapsed={collapsed} />
         <NavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  collapsed={collapsed} />
 
