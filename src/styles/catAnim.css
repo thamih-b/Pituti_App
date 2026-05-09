@@ -58,8 +58,7 @@ export const ANIM_CSS = `
 /* Mobile: shift cat further right so it never overlaps "Pituti" text */
 @media (max-width: 768px) {
   .calico-cat {
-    left: auto;
-    right: 72px;   /* stays safely before the action buttons */
+    left: 170px;
     animation: catJourneyMobile 5.6s cubic-bezier(.08, 0, .6, 1) 0.4s forwards;
   }
 }
