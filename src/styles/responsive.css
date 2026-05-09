@@ -133,10 +133,10 @@
   .sidebar { width: 64px; }
   .sidebar .nav-label,
   .sidebar .nav-badge,
-  .sidebar .sidebar-section-label { display: none; }
   .sidebar .sidebar-toggle .nav-label { display: none; }
-  /* .sidebar .nav-item { justify-content: center; padding: .625rem; } */
+  .sidebar .nav-item { justify-content: center; padding: .625rem; }
   .sidebar .sidebar-section-label { display: none; }
+
   .sidebar .sidebar-toggle { display: none; }
 
   .main { padding: 1.5rem 1.25rem;
@@ -145,6 +145,12 @@
     padding: 1rem;      
     width: 100%;
     box-sizing: border-box;}
+  
+    .dash-col-right {
+    word-break: break-word;
+  }
+ 
+
 }
 
 
@@ -242,6 +248,7 @@
     box-shadow: none;
     overflow-y: auto;
   }
+  
   .sidebar.mobile-open {
     transform: translateX(0);
     box-shadow: 4px 0 40px rgba(16,12,36,.35);
