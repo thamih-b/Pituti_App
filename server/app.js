@@ -54,7 +54,22 @@ app.use(
 );
 
 // Responde aos preflight OPTIONS em todas as rotas
-app.options('*', cors());
+// ✅ DEPOIS — passa a mesma config CORS ao preflight
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    const ok = ALLOWED_ORIGINS.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    ok ? callback(null, origin) : callback(new Error(`CORS blocked: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));  // ← mesma config
 
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
