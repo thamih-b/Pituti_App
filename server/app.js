@@ -1,7 +1,6 @@
 /*Express bootstrap, monta todas as rotas*/
 
-/**  * PITUTI API — Express Application
- * Layer: Application bootstrap  */
+/**  * PITUTI API — Express Application Layer: Application bootstrap  */
 
 import express from 'express';
 import cors from 'cors';
@@ -33,25 +32,6 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4173',
 ];
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Permite requests sem origin (Postman, servidor-a-servidor)
-      if (!origin) return callback(null, true);
-
-      const ok = ALLOWED_ORIGINS.some((o) =>
-        typeof o === 'string' ? o === origin : o.test(origin)
-      );
-
-      ok
-        ? callback(null, origin)   // devolve a origem exata, nunca '*'
-        : callback(new Error(`CORS blocked: ${origin}`));
-    },
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  })
-);
 
 // Responde aos preflight OPTIONS em todas as rotas
 // ✅ DEPOIS — passa a mesma config CORS ao preflight
