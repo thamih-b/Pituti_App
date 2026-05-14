@@ -11,11 +11,12 @@
   ],
   "routes": [
     {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
       "src": "/(.*)",
       "dest": "/server/index.js"
     }
-  ],
-  "env": {
-    "CLIENT_ORIGIN": "https://pituti-app.vercel.app"
-  }
+  ]
 }
