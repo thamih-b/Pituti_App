@@ -17,6 +17,8 @@ import { useSymptoms } from '../context/SymptomsContext'
 import { useMedications } from '../context/MedicationsContext'
 import { useVaccines } from '../context/VaccinesContext'
 import type { VaccineWithMeta } from '../context/VaccinesContext'
+import AddPetModal from '../components/AddPetModal'
+
 
 const PALETTE_COLORS = [
   'var(--pal-lilac)',
@@ -61,63 +63,15 @@ const SLOT_CLASSES = [
   'paw-bubble paw-toe paw-toe-4',
 ]
 
+
 function buildSlots(pets: PetWithAlerts[]) {
-  return Array.from({ length: 5 }, (_, i) => {
-    const pet = pets.length === 1 && i > 0 ? null : (pets[i] ?? null)
-    return {
-      pet:          pets.length === 1 ? (i === 0 ? pets[0] : null) : pet,
-      paletteColor: PALETTE_COLORS[i % PALETTE_COLORS.length],
-    }
-  })
+  return Array.from({ length: 5 }, (_, i) => ({
+    pet: pets[i] ?? null,
+    paletteColor: PALETTE_COLORS[i % PALETTE_COLORS.length],
+  }))
 }
 
-// function PawLayout({ pets, onPetClick }: { pets: PetWithAlerts[]; onPetClick: (id: string) => void }) {
-//   const { t } = useTranslation()
 
-//   const photos: Record<string, string> = {}
-//   try {
-//     Object.keys(localStorage)
-//       .filter(k => k.startsWith('pet-photo-'))
-//       .forEach(k => { photos[k.replace('pet-photo-', '')] = localStorage.getItem(k)! })
-//   } catch {}
-
-//   if (!pets.length) return (
-//     <div className="paw-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-//       <div className="paw-empty">
-//         <div className="paw-empty-icon">🐾</div>
-//         <p>{t('dashboard.addFirstPet')}</p>
-//       </div>
-//     </div>
-//   )
-
-//   return (
-//     <div className="paw-layout">
-//       {buildSlots(pets).map((slot, i) => {
-//         const photo        = slot.pet ? (photos[slot.pet.id] || null) : null
-//         const highestAlert = slot.pet?.alerts?.[0] ?? null
-//         return (
-//           <div
-//             key={i}
-//             className={SLOT_CLASSES[i]}
-//             style={!slot.pet ? { cursor: 'default' } : undefined}
-//             onClick={slot.pet ? () => onPetClick(slot.pet!.id) : undefined}
-//           >
-//             <div
-//               className="paw-bubble-clip"
-//               style={{ background: photo ? undefined : slot.paletteColor, fontSize: i === 0 ? '3rem' : '1.4rem' }}
-//             >
-//               {photo
-//                 ? <img src={photo} alt={slot.pet?.name} loading="lazy" />
-//                 : <span>{slot.pet ? SPECIES_EMOJI[slot.pet.species] ?? '🐾' : ''}</span>}
-//             </div>
-//             {highestAlert && <div className="paw-dot warn" />}
-//             {slot.pet && <div className="paw-pet-name">{slot.pet.name}</div>}
-//           </div>
-//         )
-//       })}
-//     </div>
-//   )
-// }
 
 function PawLayout({ pets, onPetClick, onAddPet }: {
   pets: PetWithAlerts[]
@@ -161,8 +115,15 @@ function PawLayout({ pets, onPetClick, onAddPet }: {
                 SLOT_CLASSES[i],
                 isEmpty ? 'paw-bubble-empty' : '',
               ].join(' ')}
-              style={isEmpty ? undefined : undefined}
-              onClick={isEmpty ? onAddPet : () => onPetClick(slot.pet!.id)}
+              style={isEmpty ? { cursor: onAddPet ? "pointer" : "default" } : undefined}
+              onClick={(e) => {
+  e.stopPropagation();
+  if (isEmpty) {
+    onAddPet?.();
+  } else {
+    onPetClick(slot.pet!.id);
+  }
+}}
             >
               {isEmpty ? (
                 <>
@@ -254,11 +215,13 @@ function CareStripItem({ emoji, label, total = 1, doneInit = 0, urgent = false, 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate          = useNavigate()
-  const { state }         = usePituti()
+  const { state, addPet } = usePituti()
   const { pets, loading } = { pets: state.pets as PetWithAlerts[], loading: state.petsLoading }
   const { t, i18n }       = useTranslation()
   const { saludo, date }  = useGreeting()
 
+  const [addPetOpen, setAddPetOpen] = useState(false) 
+  
   // Sintomas reais
   const { symptoms }    = useSymptoms()
   const activeSymptoms  = symptoms.filter(s => !s.resolved)
@@ -330,12 +293,11 @@ export default function DashboardPage() {
             ? <div className="paw-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', fontSize: '.875rem' }}>
                 {t('btn.loading')}
               </div>
-            // : <PawLayout pets={pets} onPetClick={id => navigate(`/pets/${id}`)} />
-            : <PawLayout
-    pets={pets}
-    onPetClick={id => navigate(`/pets/${id}`)}
-    onAddPet={() => navigate('/pets/new')}   // ← Adiciona
-  />
+: <PawLayout
+  pets={pets}
+  onPetClick={id => navigate(`/pets/${id}`)}        // ← barra inicial
+  onAddPet={() => setAddPetOpen(true)}              // ← arrow function!
+/>
           }
           {allAlerts.length === 0 && <div className="paw-caption">{t('dashboard.allGood')}</div>}
         </div>
@@ -514,6 +476,13 @@ export default function DashboardPage() {
         }}
         onUnresolve={() => setSymptomDetail(null)}
       />
+
+<AddPetModal
+  isOpen={addPetOpen}
+  onClose={() => setAddPetOpen(false)}
+  onAdd={(pet) => { addPet(pet); setAddPetOpen(false) }}
+/>
+
     </div>
   )
 }

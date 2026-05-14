@@ -713,3 +713,36 @@
   color: var(--primary);
 }
 .coming-soon-text { color: var(--text-muted); max-width: 42ch }
+
+
+/* Estado vazio — sem animais */
+.vet-no-pets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4, 1rem);
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 60vh;
+}
+
+.vet-no-pets-icon {
+  font-size: 4rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.10));
+}
+
+.vet-no-pets-title {
+  font-size: var(--text-xl, 1.5rem);
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.vet-no-pets-text {
+  font-size: var(--text-base, 1rem);
+  color: var(--text-muted);
+  max-width: 36ch;
+  margin: 0;
+}

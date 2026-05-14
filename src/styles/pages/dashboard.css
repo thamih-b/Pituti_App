@@ -25,7 +25,7 @@
 /* Dedos — layout SIMÉTRICO como no modelo:
    toe-1 e toe-2: mesma altura no topo, centrados, quase se tocando
    toe-3 e toe-4: mesma altura nas laterais, um nível abaixo            */
-.paw-toe { font-size: 1.25rem; z-index: 1 }
+.paw-toe { font-size: 1.25rem; z-index: 3 }
 
 .paw-toe-1 { width: 84px; height: 84px; top: 10px; left: 68px; background: var(--brown-yellow)  }
 .paw-toe-2 { width: 84px; height: 84px; top: 10px; right: 68px; background: var(--pal-candy) }

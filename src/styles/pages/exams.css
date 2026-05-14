@@ -1,0 +1,371 @@
+/* ─── Tab Exames — estilos específicos ────────────────────────────────────── */
+
+/* Header da aba: filtros à esquerda, botão à direita */
+.exam-tab-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+/* Barra de chips de filtro */
+.exam-tab-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  flex: 1;
+}
+
+/* Chip de filtro por tipo */
+.exam-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .375rem .75rem;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--trans);
+  font-family: inherit;
+}
+.exam-filter-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.exam-filter-chip.active {
+  background: var(--primary-hl);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Contador de itens dentro do chip */
+.exam-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 .3rem;
+  border-radius: var(--r-full);
+  background: var(--surface-offset);
+  font-size: .7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.exam-filter-chip.active .exam-filter-count {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ── Lista de exames ────────────────────────────────────────────────────────── */
+
+.exam-list {
+  display: grid;
+  gap: .625rem;
+}
+
+.exam-card-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Card de exame — botão clicável que abre o detalhe */
+.exam-card {
+  display: flex;
+  align-items: flex-start;
+  gap: .875rem;
+  padding: .875rem 1rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-sm);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: box-shadow var(--trans), border-color var(--trans), transform var(--trans);
+  width: 100%;
+}
+.exam-card:hover {
+  box-shadow: var(--sh-md);
+  border-color: color-mix(in oklab, var(--primary) 22%, var(--border));
+  transform: translateY(-1px);
+}
+
+/* Ícone do tipo de exame */
+.exam-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: var(--surface-offset);
+  box-shadow: var(--sh-sm);
+}
+
+/* Cores por tipo */
+.exam-card-icon[data-type="blood"]      { background: var(--err-hl); }
+.exam-card-icon[data-type="urine"]      { background: var(--warn-hl); }
+.exam-card-icon[data-type="xray"]       { background: var(--blue-hl); }
+.exam-card-icon[data-type="ultrasound"] { background: var(--primary-hl); }
+.exam-card-icon[data-type="ecg"]        { background: color-mix(in oklab, var(--err) 10%, var(--surface)); }
+.exam-card-icon[data-type="culture"]    { background: var(--success-hl); }
+.exam-card-icon[data-type="biopsy"]     { background: color-mix(in oklab, var(--purple) 10%, var(--surface)); }
+
+/* Corpo do card */
+.exam-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+
+.exam-card-type {
+  font-size: .8125rem;
+  font-weight: 800;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.exam-card-date {
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+.exam-card-lab {
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+.exam-card-preview {
+  font-size: .875rem;
+  color: var(--text);
+  margin-top: .25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+/* Badge de ficheiro anexado */
+.exam-file-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-md);
+  font-size: .875rem;
+  flex-shrink: 0;
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+}
+.exam-file-badge.pdf { background: var(--warn-hl); }
+.exam-file-badge.img { background: var(--blue-hl); }
+
+/* Confirmação de delete inline abaixo do card */
+.exam-confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: .5rem .75rem;
+  background: var(--err-hl);
+  border: 1.5px solid color-mix(in oklab, var(--err) 30%, transparent);
+  border-radius: 0 0 var(--r-xl) var(--r-xl);
+  font-size: .8125rem;
+  color: var(--err);
+  font-weight: 700;
+  margin-top: -0.5rem;
+}
+
+/* ── Modal: grid de tipos ──────────────────────────────────────────────────── */
+
+.exam-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+  margin-bottom: 1.125rem;
+}
+
+.exam-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  padding: .625rem .375rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-offset);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--trans);
+}
+.exam-type-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-hl);
+}
+.exam-type-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-hl);
+  box-shadow: 0 0 0 2.5px var(--primary-hl);
+}
+
+.exam-type-emoji { font-size: 1.25rem; }
+.exam-type-label {
+  font-size: .65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+.exam-type-btn.active .exam-type-label { color: var(--primary); }
+
+/* ── Upload area ─────────────────────────────────────────────────────────── */
+
+.exam-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .375rem;
+  padding: 1.5rem 1rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--r-xl);
+  cursor: pointer;
+  transition: border-color var(--trans), background var(--trans);
+  text-align: center;
+  margin-bottom: .875rem;
+  background: var(--surface-offset);
+}
+.exam-upload-area:hover {
+  border-color: var(--primary);
+  background: var(--primary-hl);
+}
+
+.exam-upload-icon { font-size: 1.75rem; }
+.exam-upload-title {
+  font-size: .875rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.exam-upload-hint {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
+
+/* Preview do ficheiro selecionado */
+.exam-file-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-bottom: .875rem;
+}
+
+.exam-file-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--border);
+  background: var(--surface-offset);
+}
+
+.exam-pdf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .875rem;
+  background: var(--warn-hl);
+  border: 1.5px solid color-mix(in oklab, var(--warn) 30%, transparent);
+  border-radius: var(--r-lg);
+  font-size: .875rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.exam-pdf-name {
+  font-size: .8125rem;
+  color: var(--text-muted);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exam-remove-file { color: var(--err); }
+.exam-remove-file:hover { color: var(--err); background: var(--err-hl); }
+
+/* ── Detalhe do exame ─────────────────────────────────────────────────────── */
+
+.exam-detail-section-label {
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-faint);
+  margin-bottom: .375rem;
+}
+
+.exam-detail-results {
+  font-size: .9rem;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background: var(--surface-offset);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: .75rem .875rem;
+}
+
+.exam-detail-notes {
+  font-size: .875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.exam-attachment-wrap {
+  margin-top: .875rem;
+}
+
+.exam-pdf-preview {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem .875rem;
+  background: var(--warn-hl);
+  border: 1.5px solid color-mix(in oklab, var(--warn) 25%, transparent);
+  border-radius: var(--r-lg);
+}
+
+.exam-pdf-icon { font-size: 1.5rem; flex-shrink: 0; }
+
+.exam-image-preview {
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--border);
+  background: var(--surface-offset);
+}
+
+/* ── Responsivo ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .exam-type-grid { grid-template-columns: repeat(4, 1fr); gap: .375rem; }
+  .exam-type-emoji { font-size: 1rem; }
+  .exam-type-label { font-size: .6rem; }
+  .exam-tab-header { flex-direction: column; }
+  .tab-add-btn { align-self: flex-start; }
+}

@@ -22,13 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-repomix-output.xml
-repomix-output.md
-repomix-src.md
-repomix-src-2.md
-repomix-src-3.md
-repomix
-contexto.md
+repomix/*
 .env
 pituti-plan.md
 skills/*
