@@ -24,7 +24,38 @@ import appointmentsRouter   from './routes/appointments.js';
 const app = express();
 
 // ── Global middleware ────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
+
+// Origens permitidas: produção + qualquer preview do mesmo projeto
+const ALLOWED_ORIGINS = [
+  'https://pituti-app.vercel.app',
+  /^https:\/\/pituti-app[\w-]*\.vercel\.app$/,
+  'http://localhost:5173',
+  'http://localhost:4173',
+];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Permite requests sem origin (Postman, servidor-a-servidor)
+      if (!origin) return callback(null, true);
+
+      const ok = ALLOWED_ORIGINS.some((o) =>
+        typeof o === 'string' ? o === origin : o.test(origin)
+      );
+
+      ok
+        ? callback(null, origin)   // devolve a origem exata, nunca '*'
+        : callback(new Error(`CORS blocked: ${origin}`));
+    },
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  })
+);
+
+// Responde aos preflight OPTIONS em todas as rotas
+app.options('*', cors());
+
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 
