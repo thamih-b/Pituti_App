@@ -1,9 +1,9 @@
-// src/pages/vet/TabExams.tsx
+// src/pages/vet/tabExams.tsx
 import { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ExamRecord, ExamType } from '../../context/VetContext';
 
-// ─── Tipos de exame (só value + emoji — labels via t()) ────────────────────────
+// ─── Tipos de exame ────────────────────────────────────────────────────────────
 
 const EXAM_TYPE_VALUES: { value: ExamType; emoji: string }[] = [
   { value: 'blood',      emoji: '🩸' },
@@ -38,7 +38,6 @@ export default function TabExams({
   const [detailItem,    setDetailItem]    = useState<ExamRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // labels resolvidos dentro do componente
   const examTypes = EXAM_TYPE_VALUES.map((et) => ({
     ...et,
     label: t(`vet.exams.types.${et.value}`),
@@ -180,17 +179,17 @@ function ExamModal({
   }));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [type,      setType]      = useState<ExamType>(initial?.type ?? 'blood');
-  const [date,      setDate]      = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
-  const [lab,       setLab]       = useState(initial?.lab ?? '');
-  const [vetName,   setVetName]   = useState(initial?.vetName ?? '');
-  const [results,   setResults]   = useState(initial?.results ?? '');
-  const [notes,     setNotes]     = useState(initial?.notes ?? '');
-  const [fileUrl,   setFileUrl]   = useState<string | null>(initial?.fileUrl ?? null);
-  const [fileName,  setFileName]  = useState<string | null>(initial?.fileName ?? null);
-  const [fileType,  setFileType]  = useState<'pdf' | 'image' | null>(initial?.fileType ?? null);
-  const [fileError, setFileError] = useState('');
-  const [errDate,   setErrDate]   = useState('');
+  const [type,       setType]      = useState<ExamType>(initial?.type ?? 'blood');
+  const [date,       setDate]      = useState(initial?.date ?? new Date().toISOString().split('T')[0]);
+  const [lab,        setLab]       = useState(initial?.lab ?? '');
+  const [vetName,    setVetName]   = useState(initial?.vetName ?? '');
+  const [results,    setResults]   = useState(initial?.results ?? '');
+  const [notes,      setNotes]     = useState(initial?.notes ?? '');
+  const [fileUrl,    setFileUrl]   = useState<string | null>(initial?.fileUrl ?? null);
+  const [fileName,   setFileName]  = useState<string | null>(initial?.fileName ?? null);
+  const [fileType,   setFileType]  = useState<'pdf' | 'image' | null>(initial?.fileType ?? null);
+  const [fileError,  setFileError] = useState('');
+  const [errDate,    setErrDate]   = useState('');
   const [errResults, setErrResults] = useState('');
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -244,7 +243,7 @@ function ExamModal({
 
   return (
     <div className="modal-backdrop open" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 500 }}>
+      <div className="modal" style={{ maxWidth: 500, overflowY: 'auto', maxHeight: 'calc(100dvh - 2rem)' }}>
         <div className="modal-header">
           <span className="modal-title">
             {initial ? t('vet.exams.modalEdit') : t('vet.exams.modalAdd')}
@@ -253,7 +252,7 @@ function ExamModal({
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Tipo */}
+          {/* Tipo de exame */}
           <div className="field-group" style={{ marginBottom: '1rem' }}>
             <label className="field-label">{t('vet.exams.fieldType')}</label>
             <div className="exam-type-grid">
@@ -264,8 +263,8 @@ function ExamModal({
                   className={`exam-type-btn${type === et.value ? ' active' : ''}`}
                   onClick={() => setType(et.value)}
                 >
-                  <span>{et.emoji}</span>
-                  <span>{et.label}</span>
+                  <span className="exam-type-emoji">{et.emoji}</span>
+                  <span className="exam-type-label">{et.label}</span>
                 </button>
               ))}
             </div>
@@ -283,8 +282,8 @@ function ExamModal({
             {errDate && <span className="field-error-msg">{errDate}</span>}
           </div>
 
-          {/* Lab + Vet */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* Lab + Veterinário */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
             <div className="field-group">
               <label className="field-label">{t('vet.exams.fieldLab')}</label>
               <input
@@ -323,8 +322,9 @@ function ExamModal({
           {/* Upload */}
           <div className="field-group">
             <label className="field-label">{t('vet.exams.fieldAttach')}</label>
+            {/* ✅ exam-upload-area (nome correto no CSS) */}
             <div
-              className={`exam-upload-zone${fileUrl ? ' has-file' : ''}`}
+              className={`exam-upload-area${fileUrl ? ' has-file' : ''}`}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -343,12 +343,10 @@ function ExamModal({
                   }
                   <button
                     type="button"
-                    className="btn btn-ghost btn-sm exam-upload-remove"
+                    className="btn btn-ghost btn-sm exam-remove-file"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFileUrl(null);
-                      setFileName(null);
-                      setFileType(null);
+                      setFileUrl(null); setFileName(null); setFileType(null);
                     }}
                   >
                     {t('vet.exams.uploadRemove')}
@@ -357,7 +355,7 @@ function ExamModal({
               ) : (
                 <>
                   <span className="exam-upload-icon">📎</span>
-                  <span className="exam-upload-text">{t('vet.exams.uploadDrag')}</span>
+                  <span className="exam-upload-title">{t('vet.exams.uploadDrag')}</span>
                   <span className="exam-upload-hint">{t('vet.exams.uploadHint')}</span>
                 </>
               )}
@@ -466,7 +464,7 @@ function ExamDetailOverlay({
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
-            <div className="detail-info-label" style={{ marginBottom: '0.375rem' }}>
+            <div className="detail-info-label" style={{ marginBottom: '.375rem' }}>
               {t('vet.exams.detailResults')}
             </div>
             <div className="exam-detail-results">{exam.results}</div>
@@ -474,7 +472,7 @@ function ExamDetailOverlay({
 
           {exam.notes && (
             <div style={{ marginBottom: '1rem' }}>
-              <div className="detail-info-label" style={{ marginBottom: '0.375rem' }}>
+              <div className="detail-info-label" style={{ marginBottom: '.375rem' }}>
                 {t('vet.exams.detailNotes')}
               </div>
               <div className="exam-detail-results" style={{ color: 'var(--text-muted)' }}>
@@ -489,7 +487,7 @@ function ExamDetailOverlay({
                 <img
                   src={exam.fileUrl}
                   alt={t('vet.exams.detailResults')}
-                  style={{ width: '100%', borderRadius: 8, marginBottom: '0.5rem' }}
+                  className="exam-file-preview-img"
                 />
               )}
               <button
@@ -499,7 +497,7 @@ function ExamDetailOverlay({
               >
                 {exam.fileType === 'pdf' ? t('vet.exams.openPdf') : t('vet.exams.viewImage')}
                 {exam.fileName && (
-                  <span style={{ marginLeft: '0.5rem', fontWeight: 400, opacity: 0.7 }}>
+                  <span style={{ marginLeft: '.5rem', fontWeight: 400, opacity: .7 }}>
                     {exam.fileName}
                   </span>
                 )}

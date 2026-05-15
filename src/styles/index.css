@@ -24,6 +24,9 @@
 @import './pages/dashboard.css';
 @import './pages/calendar.css';
 @import './pages/vet.css';
+@import './pages/exams.css';
+@import './pages/prescriptions.css';
+@import './pages/documents.css';
 @import './pages/pets.css';
 @import './pages/medications.css';
 @import './pages/care.css';
@@ -31,20 +34,3 @@
 
 /* 4. Responsive — sempre por último */
 @import './responsive.css';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

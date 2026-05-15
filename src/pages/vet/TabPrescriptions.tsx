@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { DigitalPrescription, DigitalPrescriptionStatus } from '../../context/VetPrescriptionsContext'
 import { computePrescriptionStatus } from '../../context/VetContext';
 
-// ─── Tipos locais ──────────────────────────────────────────────────────────────
+export type { DigitalPrescriptionStatus }
 
 export interface MedicationOption {
   id:        string;
@@ -15,19 +15,12 @@ export interface MedicationOption {
   endDate:   string | null;
 }
 
-// ─── Cores/emojis de status (sem labels — resolvidos via t() nos componentes) ──
-
-const STATUS_STYLE: Record<
-  DigitalPrescriptionStatus,
-  { color: string; bg: string; emoji: string }
-> = {
+const STATUS_STYLE: Record<DigitalPrescriptionStatus, { color: string; bg: string; emoji: string }> = {
   active:   { color: 'var(--success)',    bg: 'var(--success-hl)',     emoji: '✅' },
   expiring: { color: 'var(--warn)',       bg: 'var(--warn-hl)',        emoji: '⏳' },
   expired:  { color: 'var(--err)',        bg: 'var(--err-hl)',         emoji: '❌' },
   used:     { color: 'var(--text-muted)', bg: 'var(--surface-offset)', emoji: '✔️' },
 };
-
-// ─── Props ─────────────────────────────────────────────────────────────────────
 
 interface TabPrescriptionsProps {
   petId: string;
@@ -39,8 +32,6 @@ interface TabPrescriptionsProps {
   onDelete: (id: string) => void;
   onToggleUsed: (id: string, used: boolean) => void;
 }
-
-// ─── Componente principal ──────────────────────────────────────────────────────
 
 export default function TabPrescriptions({
   petId, petName, prescriptions, medications,
@@ -54,19 +45,16 @@ export default function TabPrescriptions({
   const [filterStatus,  setFilterStatus]  = useState<DigitalPrescriptionStatus | 'all'>('all');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const ORDER: Record<DigitalPrescriptionStatus, number> = {
-    active: 0, expiring: 1, expired: 2, used: 3,
-  };
+  const ORDER: Record<DigitalPrescriptionStatus, number> = { active: 0, expiring: 1, expired: 2, used: 3 };
 
-  const sorted = useMemo(() => {
-    return prescriptions
+  const sorted = useMemo(() =>
+    prescriptions
       .filter((p) => p.petId === petId)
       .map((p) => ({ ...p, status: computePrescriptionStatus(p) }))
       .filter((p) => filterStatus === 'all' || p.status === filterStatus)
-      .sort((a, b) =>
-        ORDER[a.status] - ORDER[b.status] || b.issuedAt.localeCompare(a.issuedAt)
-      );
-  }, [prescriptions, petId, filterStatus]);
+      .sort((a, b) => ORDER[a.status] - ORDER[b.status] || b.issuedAt.localeCompare(a.issuedAt)),
+    [prescriptions, petId, filterStatus]
+  );
 
   const counts = useMemo(() => {
     const all = prescriptions
@@ -105,7 +93,6 @@ export default function TabPrescriptions({
 
   return (
     <div className="tab-content">
-      {/* Alerta de receitas a expirar */}
       {counts.expiring > 0 && (
         <div className="rx-alert-banner">
           <span>⏳</span>
@@ -119,22 +106,17 @@ export default function TabPrescriptions({
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => { setEditing(null); setShowModal(true); }}
-        >
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '.5rem' }}>
+        <button className="btn btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
           {t('vet.prescriptions.newBtn')}
         </button>
       </div>
 
-      {/* Filtros */}
       {counts.all > 0 && (
         <div className="rx-filter-bar">
           {filters.map(([val, label]) => (
             <button
-              key={val}
-              type="button"
+              key={val} type="button"
               className={`rx-filter-btn${filterStatus === val ? ' active' : ''}`}
               onClick={() => setFilterStatus(val)}
             >
@@ -144,16 +126,12 @@ export default function TabPrescriptions({
         </div>
       )}
 
-      {/* Lista / Empty states */}
       {counts.all === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📋</div>
           <h3>{t('vet.prescriptions.emptyTitle')}</h3>
           <p>{t('vet.prescriptions.emptyHint', { name: petName })}</p>
-          <button
-            className="btn btn-primary"
-            onClick={() => { setEditing(null); setShowModal(true); }}
-          >
+          <button className="btn btn-primary" onClick={() => { setEditing(null); setShowModal(true); }}>
             {t('vet.prescriptions.emptyBtn')}
           </button>
         </div>
@@ -169,49 +147,33 @@ export default function TabPrescriptions({
             const statusLabel = t(`vet.prescriptions.status.${p.status}`);
             const linked = medications.find((m) => m.id === p.medicationId);
             const daysLeft = p.expiresAt
-              ? Math.ceil(
-                  (new Date(p.expiresAt + 'T12:00:00').getTime() - Date.now()) / 86400000
-                )
+              ? Math.ceil((new Date(p.expiresAt + 'T12:00:00').getTime() - Date.now()) / 86400000)
               : null;
-
             const daysLeftLabel = daysLeft === null ? null
-              : daysLeft < 0  ? t('vet.prescriptions.expiredAgo',    { days: Math.abs(daysLeft) })
-              : daysLeft === 0 ? t('vet.prescriptions.expiresТoday')
-              :                  t('vet.prescriptions.daysLeft',      { days: daysLeft });
+              : daysLeft < 0   ? t('vet.prescriptions.expiredAgo',  { days: Math.abs(daysLeft) })
+              : daysLeft === 0  ? t('vet.prescriptions.expiresToday')
+              :                   t('vet.prescriptions.daysLeft',    { days: daysLeft });
 
             return (
               <div
-                key={p.id}
-                className="rx-card"
-                onClick={() => setDetailItem(p)}
-                role="button"
-                tabIndex={0}
+                key={p.id} className="rx-card"
+                onClick={() => setDetailItem(p)} role="button" tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && setDetailItem(p)}
               >
-                <span
-                  className="rx-status-badge"
-                  style={{ color: sc.color, background: sc.bg }}
-                >
+                <span className="rx-status-badge" style={{ color: sc.color, background: sc.bg }}>
                   {sc.emoji} {statusLabel}
                 </span>
                 <div className="rx-card-header">
                   <div className="rx-card-icon">💊</div>
                   <div className="rx-card-main">
                     <div className="rx-card-name">{p.medicationName}</div>
-                    <div className="rx-card-dosage">{p.dosage} · {p.frequency}</div>
+                    <div className="rx-card-dosage">{p.dosage}{p.frequency ? ` · ${p.frequency}` : ''}</div>
                   </div>
                 </div>
                 <div className="rx-card-meta">
                   <span>🩺 {p.prescribedBy}</span>
-                  <span>
-                    📅{' '}
-                    {new Date(p.issuedAt + 'T12:00:00').toLocaleDateString(undefined, {
-                      day: '2-digit', month: 'short', year: 'numeric',
-                    })}
-                  </span>
-                  {daysLeftLabel && (
-                    <span style={{ color: sc.color }}>{daysLeftLabel}</span>
-                  )}
+                  <span>📅 {new Date(p.issuedAt + 'T12:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  {daysLeftLabel && <span style={{ color: sc.color }}>{daysLeftLabel}</span>}
                 </div>
                 {linked && (
                   <div className="rx-linked-med">
@@ -226,9 +188,7 @@ export default function TabPrescriptions({
 
       {showModal && (
         <PrescriptionModal
-          initial={editing}
-          petId={petId}
-          medications={petMeds}
+          initial={editing} petId={petId} medications={petMeds}
           onClose={() => { setShowModal(false); setEditing(null); }}
           onSave={(data) => {
             if (editing) { onUpdate(editing.id, data); }
@@ -261,8 +221,10 @@ export default function TabPrescriptions({
 
 type PrescriptionFormData = Omit<DigitalPrescription, 'id' | 'petId' | 'createdAt'>;
 
+const RX_FORM_ID = 'rx-prescription-form';
+
 function PrescriptionModal({
-  initial, petId, medications, onClose, onSave,
+  initial, petId: _petId, medications, onClose, onSave,
 }: {
   initial: DigitalPrescription | null;
   petId: string;
@@ -278,9 +240,7 @@ function PrescriptionModal({
   const [frequency,      setFrequency]      = useState(initial?.frequency ?? '');
   const [duration,       setDuration]       = useState(initial?.duration ?? '');
   const [prescribedBy,   setPrescribedBy]   = useState(initial?.prescribedBy ?? '');
-  const [issuedAt,       setIssuedAt]       = useState(
-    initial?.issuedAt ?? new Date().toISOString().split('T')[0]
-  );
+  const [issuedAt,       setIssuedAt]       = useState(initial?.issuedAt ?? new Date().toISOString().split('T')[0]);
   const [expiresAt,      setExpiresAt]      = useState(initial?.expiresAt ?? '');
   const [instructions,   setInstructions]   = useState(initial?.instructions ?? '');
   const [notes,          setNotes]          = useState(initial?.notes ?? '');
@@ -307,34 +267,29 @@ function PrescriptionModal({
     if (!dosage.trim())         { setErrDosage(t('vet.prescriptions.fieldDoseRequired'));    valid = false; }
     if (!prescribedBy.trim())   { setErrPrescribed(t('vet.prescriptions.fieldVetRequired')); valid = false; }
     if (!valid) return;
-
     onSave({
-      medicationId,
-      medicationName:  medicationName.trim(),
-      dosage:          dosage.trim(),
-      frequency:       frequency.trim(),
-      duration:        duration.trim(),
-      prescribedBy:    prescribedBy.trim(),
-      issuedAt,
-      expiresAt:       expiresAt || null,
-      instructions:    instructions.trim() || null,
-      notes:           notes.trim()        || null,
-      status:          'active',
-      attachmentUrl:   null,
-      attachmentName:  null,
+      medicationId, medicationName: medicationName.trim(),
+      dosage: dosage.trim(), frequency: frequency.trim(),
+      duration: duration.trim(), prescribedBy: prescribedBy.trim(),
+      issuedAt, expiresAt: expiresAt || null,
+      instructions: instructions.trim() || null,
+      notes: notes.trim() || null,
+      status: 'active', attachmentUrl: null, attachmentName: null,
     });
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+    <div className="modal-backdrop open" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box" style={{ maxWidth: 520 }}>
         <div className="modal-header">
-          <span>💊</span>
-          <h2>{initial ? t('vet.prescriptions.modalEdit') : t('vet.prescriptions.modalAdd')}</h2>
+          <span style={{ fontSize: '1.25rem' }}>💊</span>
+          <span className="modal-title">
+            {initial ? t('vet.prescriptions.modalEdit') : t('vet.prescriptions.modalAdd')}
+          </span>
           <button className="modal-close" onClick={onClose} aria-label={t('btn.close')}>✕</button>
         </div>
 
-        <form className="modal-body" onSubmit={handleSubmit} noValidate>
+        <form id={RX_FORM_ID} className="modal-body" onSubmit={handleSubmit} noValidate>
           {medications.length > 0 && (
             <div className="form-group">
               <label className="form-label">{t('vet.prescriptions.fieldImport')}</label>
@@ -350,7 +305,7 @@ function PrescriptionModal({
           <div className="form-group">
             <label className="form-label">{t('vet.prescriptions.fieldMed')} *</label>
             <input
-              className={`form-input${errName ? ' input-err' : ''}`}
+              className={`form-input${errName ? ' input-error' : ''}`}
               value={medicationName}
               onChange={(e) => { setMedicationName(e.target.value); setErrName(''); }}
               placeholder={t('vet.prescriptions.fieldMedPh')}
@@ -358,11 +313,11 @@ function PrescriptionModal({
             {errName && <div className="form-error">{errName}</div>}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="mf-row">
             <div className="form-group">
               <label className="form-label">{t('vet.prescriptions.fieldDose')} *</label>
               <input
-                className={`form-input${errDosage ? ' input-err' : ''}`}
+                className={`form-input${errDosage ? ' input-error' : ''}`}
                 value={dosage}
                 onChange={(e) => { setDosage(e.target.value); setErrDosage(''); }}
                 placeholder={t('vet.prescriptions.fieldDosePh')}
@@ -372,8 +327,7 @@ function PrescriptionModal({
             <div className="form-group">
               <label className="form-label">{t('vet.prescriptions.fieldFreq')}</label>
               <input
-                className="form-input"
-                value={frequency}
+                className="form-input" value={frequency}
                 onChange={(e) => setFrequency(e.target.value)}
                 placeholder={t('vet.prescriptions.fieldFreqPh')}
               />
@@ -382,18 +336,15 @@ function PrescriptionModal({
 
           <div className="form-group">
             <label className="form-label">{t('vet.prescriptions.fieldDuration')}</label>
-            <input
-              className="form-input"
-              value={duration}
+            <input className="form-input" value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              placeholder={t('vet.prescriptions.fieldDurationPh')}
-            />
+              placeholder={t('vet.prescriptions.fieldDurationPh')} />
           </div>
 
           <div className="form-group">
             <label className="form-label">{t('vet.prescriptions.fieldVet')} *</label>
             <input
-              className={`form-input${errPrescribed ? ' input-err' : ''}`}
+              className={`form-input${errPrescribed ? ' input-error' : ''}`}
               value={prescribedBy}
               onChange={(e) => { setPrescribedBy(e.target.value); setErrPrescribed(''); }}
               placeholder={t('vet.prescriptions.fieldVetPh')}
@@ -401,50 +352,42 @@ function PrescriptionModal({
             {errPrescribed && <div className="form-error">{errPrescribed}</div>}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="mf-row">
             <div className="form-group">
               <label className="form-label">{t('vet.prescriptions.fieldIssueDate')}</label>
-              <input
-                type="date" className="form-input" value={issuedAt}
-                onChange={(e) => setIssuedAt(e.target.value)}
-              />
+              <input type="date" className="form-input" value={issuedAt}
+                onChange={(e) => setIssuedAt(e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">{t('vet.prescriptions.fieldExpiry')}</label>
-              <input
-                type="date" className="form-input" value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-              />
+              <input type="date" className="form-input" value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)} />
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">{t('vet.prescriptions.fieldInstructions')}</label>
-            <textarea
-              className="form-input" rows={2} value={instructions}
+            <textarea className="form-input" rows={2} value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder={t('vet.prescriptions.fieldInstructionsPh')}
-            />
+              placeholder={t('vet.prescriptions.fieldInstructionsPh')} />
           </div>
 
           <div className="form-group">
             <label className="form-label">{t('vet.prescriptions.fieldNotes')}</label>
-            <textarea
-              className="form-input" rows={2} value={notes}
+            <textarea className="form-input" rows={2} value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={t('vet.prescriptions.fieldNotesPh')}
-            />
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              {t('btn.cancel')}
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {initial ? t('btn.save') : t('btn.register')}
-            </button>
+              placeholder={t('vet.prescriptions.fieldNotesPh')} />
           </div>
         </form>
+
+        <div className="modal-footer">
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            {t('btn.cancel')}
+          </button>
+          <button type="submit" form={RX_FORM_ID} className="btn btn-primary">
+            {initial ? t('btn.save') : t('btn.register')}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -469,7 +412,7 @@ function PrescriptionDetailOverlay({
   onCancelDelete: () => void;
 }) {
   const { t } = useTranslation();
-  const p = prescription;
+  const p  = prescription;
   const sc = STATUS_STYLE[p.status];
   const statusLabel = t(`vet.prescriptions.status.${p.status}`);
 
@@ -479,29 +422,31 @@ function PrescriptionDetailOverlay({
 
   const daysLeftLabel = daysLeft === null ? null
     : daysLeft < 0   ? t('vet.prescriptions.expiredAgo',  { days: Math.abs(daysLeft) })
-    : daysLeft === 0  ? t('vet.prescriptions.expiresТoday')
+    : daysLeft === 0  ? t('vet.prescriptions.expiresToday')
     :                   t('vet.prescriptions.daysLeft',    { days: daysLeft });
 
   const fmt = (d: string) =>
-    new Date(d + 'T12:00:00').toLocaleDateString(undefined, {
-      day: '2-digit', month: 'short', year: 'numeric',
-    });
+    new Date(d + 'T12:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div className="modal-header">
-          <span>💊</span>
-          <h2>{p.medicationName}</h2>
-          <button className="modal-close" onClick={onClose} aria-label={t('btn.close')}>✕</button>
+    <div className="detail-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="detail-sheet">
+        <div className="detail-header">
+          <div className="detail-icon" style={{ background: 'var(--primary-hl)' }}>💊</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {p.medicationName}
+            </div>
+            <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.15rem' }}>
+              {p.dosage}{p.frequency ? ` · ${p.frequency}` : ''}
+            </div>
+          </div>
+          <button className="detail-close" onClick={onClose} aria-label={t('btn.close')}>✕</button>
         </div>
 
-        <div className="modal-body">
+        <div className="detail-body">
           <div style={{ marginBottom: '1rem' }}>
-            <span
-              className="rx-status-badge"
-              style={{ color: sc.color, background: sc.bg, fontSize: '0.875rem', padding: '0.3rem 0.75rem' }}
-            >
+            <span className="rx-status-badge" style={{ color: sc.color, background: sc.bg, fontSize: '.875rem', padding: '.3rem .75rem' }}>
               {sc.emoji} {statusLabel}
             </span>
           </div>
@@ -536,11 +481,7 @@ function PrescriptionDetailOverlay({
                 <span className="detail-label">{t('vet.prescriptions.detailExpiry')}</span>
                 <span style={{ color: sc.color }}>
                   {fmt(p.expiresAt)}
-                  {daysLeftLabel && (
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}>
-                      ({daysLeftLabel})
-                    </span>
-                  )}
+                  {daysLeftLabel && <span style={{ marginLeft: '.5rem', fontSize: '.8rem' }}>({daysLeftLabel})</span>}
                 </span>
               </div>
             )}
@@ -564,7 +505,7 @@ function PrescriptionDetailOverlay({
             )}
           </div>
 
-          {confirmDeleteId === p.id ? (
+          {confirmDeleteId === p.id && (
             <div className="confirm-delete-bar">
               <span>{t('vet.prescriptions.confirmDeleteTitle')}</span>
               <button className="btn btn-danger btn-sm" onClick={() => onConfirmDelete(p.id)}>
@@ -574,8 +515,12 @@ function PrescriptionDetailOverlay({
                 {t('btn.cancel')}
               </button>
             </div>
-          ) : (
-            <div className="modal-footer">
+          )}
+        </div>
+
+        <div className="detail-footer">
+          {confirmDeleteId !== p.id ? (
+            <>
               {p.status !== 'used' && (
                 <button className="btn btn-success btn-sm" onClick={onMarkUsed}>
                   {t('vet.prescriptions.markUsed')}
@@ -586,13 +531,17 @@ function PrescriptionDetailOverlay({
                   {t('vet.prescriptions.reactivate')}
                 </button>
               )}
-              <button className="btn btn-secondary btn-sm" onClick={onEdit}>
+              <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onEdit}>
                 ✏️ {t('btn.edit')}
               </button>
-              <button className="btn btn-danger btn-sm" onClick={onRequestDelete}>
+              <button className="btn btn-warn btn-sm" onClick={onRequestDelete}>
                 🗑 {t('btn.delete')}
               </button>
-            </div>
+            </>
+          ) : (
+            <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={onClose}>
+              {t('btn.close')}
+            </button>
           )}
         </div>
       </div>
