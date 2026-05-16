@@ -758,11 +758,11 @@ export default function PetDetailPage() {
             {petData.breed ?? t('pet.unknownBreed')} · 4 {t('pet.years')}
           </p>
           <div style={{ display: 'flex', gap: '.375rem', flexWrap: 'wrap', marginTop: '.5rem' }}>
-            {(petData.alerts ?? []).map((a, i) => (
-              <span key={i} className={`badge ${a.type === 'err' ? 'badge-red' : 'badge-yellow'}`}>
-                {a.type === 'warn' ? '⚠️' : '🔴'} {a.text.slice(0, 28)}…
-              </span>
-            ))}
+{((petData.alerts ?? []) as unknown as import('../types').PetAlert[]).map((a, i) => (
+  <span key={i} className={`badge ${a.type === 'err' ? 'badge-red' : 'badge-yellow'}`}>
+    {a.type === 'warn' ? '⚠️' : '🔴'} {a.text.slice(0, 28)}…
+  </span>
+))}
             <span className="badge badge-blue">💊 {t('pet.activeMed')}</span>
           </div>
         </div>

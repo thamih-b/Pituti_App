@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import type { ButtonVariant, ButtonSize } from '../types'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -7,6 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean
   fullWidth?: boolean
   ariaLabel?: string
+  children?: ReactNode
 }
 
 const variantClasses: Record<ButtonVariant, string> = {

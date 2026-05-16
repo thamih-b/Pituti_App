@@ -1,12 +1,14 @@
-// Hook de mascotas — sin mocks, datos reales via PitutiContext
+// src/hooks/usePets.ts — sem mocks, dados reais via PitutiContext
 import { usePituti } from '../context/PitutiContext';
 import type { Pet } from '../context/PetsContext';
+import type { PetAlert } from '../types';
 
-// PetWithAlerts: campos opcionais até o backend os fornecer
+// PetWithAlerts: alerts viene del hook local; algunos campos son opcionales hasta que el backend los provea
 export interface PetWithAlerts extends Pet {
   createdAt: any;
   healthScore?: number;
-  alerts?: string[];
+  // ✅ Tipado correcto — PetDetailPage usa a.type y a.text sobre cada alerta
+  alerts?: PetAlert[];
   vaccCoverage?: number;
 }
 
@@ -20,7 +22,7 @@ export const SPECIES_EMOJI: Record<string, string> = {
   other: '🐾',
 };
 
-// Mantido como alias para compatibilidade com importações existentes
+// Alias de compatibilidad con importaciones existentes
 export const SPECIESEMOJI = SPECIES_EMOJI;
 
 export type { VaccineRecord } from '../utils/vaccUtils'
