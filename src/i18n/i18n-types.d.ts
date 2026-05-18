@@ -1,14 +1,16 @@
 /**
- * i18n type augmentation — tipagem relaxada para resources.
+ * i18next augmentation — DEVE ter export {} para ser tratado como
+ * module augmentation e não como module re-declaration.
  *
- * Com `resources: typeof es`, o i18next v23 gera um union de chaves somente
- * na forma prefixada "translation:cares.add.recDaily", recusando as chamadas
- * t('cares.add.recDaily') usadas em toda a aplicação (TS2345).
+ * Sem o export {}, TypeScript SUBSTITUI toda a declaração do módulo
+ * i18next, apagando TFunction, .use(), .changeLanguage e outros exports.
  *
- * Solução: manter o augmentation correto do módulo mas usar
- * Record<string, unknown> para resources, o que deixa t() aceitar qualquer
- * string sem quebrar os exports reais de i18next (use, TFunction, etc).
+ * Com resources: { translation: Record<string, unknown> }, o t() aceita
+ * qualquer string sem o union estrito "translation:key.path" gerado pelo
+ * typeof es, resolvendo todos os TS2345 nos componentes.
  */
+export {}
+
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: 'translation'

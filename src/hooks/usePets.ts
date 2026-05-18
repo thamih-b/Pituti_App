@@ -1,17 +1,17 @@
 // src/hooks/usePets.ts — sem mocks, dados reais via PitutiContext
 import { usePituti } from '../context/PitutiContext';
 import type { Pet } from '../context/PetsContext';
-import type { PetAlert } from '../types';
-
-// PetWithAlerts: alerts viene del hook local; algunos campos son opcionales hasta que el backend los provea
+ 
+// PetWithAlerts: alerts permanece string[] para compatibilidade com
+// DashboardPage e PetListPage que o tratam como texto simples.
+// PetDetailPage faz o cast para PetAlert[] inline onde precisar de .type/.text.
 export interface PetWithAlerts extends Pet {
   createdAt: any;
   healthScore?: number;
-  // ✅ Tipado correcto — PetDetailPage usa a.type y a.text sobre cada alerta
-  alerts?: PetAlert[];
+  alerts?: string[];
   vaccCoverage?: number;
 }
-
+ 
 export const SPECIES_EMOJI: Record<string, string> = {
   cat: '🐱',
   dog: '🐶',
@@ -21,12 +21,13 @@ export const SPECIES_EMOJI: Record<string, string> = {
   fish: '🐟',
   other: '🐾',
 };
-
-// Alias de compatibilidad con importaciones existentes
+ 
+// Alias de compatibilidade com importações existentes
 export const SPECIESEMOJI = SPECIES_EMOJI;
 
-export type { VaccineRecord } from '../utils/vaccUtils'
-export { getVaccStatus }      from '../utils/vaccUtils'
+
+// export type { VaccineRecord } from '../utils/vaccUtils'
+// export { getVaccStatus }      from '../utils/vaccUtils'
 
 export function usePets() {
   const { state, refetchPets } = usePituti();
