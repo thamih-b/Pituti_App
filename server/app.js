@@ -87,11 +87,17 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// Adicionar ao server/app.js
+
+// Rota raiz para saber que a API está online
 app.get('/', (req, res) => {
-  res.redirect('/api/health');
+  res.json({ message: 'PITUTI API is running. Go to /api/health for details.' });
 });
 
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Ignorar pedidos ao favicon para evitar o aviso do browser
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // 204 No Content
+});
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/users',                           usersRouter);
