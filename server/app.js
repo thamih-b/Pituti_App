@@ -87,6 +87,12 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+app.get('/', (req, res) => {
+  res.redirect('/api/health');
+});
+
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api/users',                           usersRouter);
 app.use('/api/pets',                            petsRouter);
