@@ -344,8 +344,8 @@ const handleVaccineApplied = (vaccKey: string, appliedDate: string) => {
   const handleSaveEdit   = (updated: CareEditData) => { updateCare(updated); setEditCareOpen(false); setCareExpandIdx(null) }
   const handleDeleteCare = (id: string)             => { deleteCare(id);     setEditCareOpen(false); setCareExpandIdx(null) }
 
-  const weekdaysShort: string[] = t('dates.weekdaysShort', { returnObjects: true })
-  const monthNames:    string[] = t('dates.months',        { returnObjects: true })
+const weekdaysShort = (t('dates.weekdaysShort', { returnObjects: true }) as unknown) as string[];
+const monthNames = (t('dates.months', { returnObjects: true }) as unknown) as string[];
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
