@@ -17,18 +17,33 @@ export type UpdateUserDto  = Partial<CreateUserDto>;
 
 // ── Pets ──────────────────────────────────────────────────────────────────────
 export type ApiSpecies = 'cat' | 'dog' | 'bird' | 'rabbit' | 'reptile' | 'fish' | 'other';
+
 export interface ApiPet {
   id: string;
   name: string;
   species: ApiSpecies;
-  breed?: string;
-  birthDate?: string;
+  breed?: string | null;
+  birthDate?: string | null;
   photoUrl: string | null;
   ownerId: string;
   createdAt: string;
 }
-export type CreatePetDto = Omit<ApiPet, 'id' | 'createdAt'>;
-export type UpdatePetDto = Partial<Omit<CreatePetDto, 'ownerId'>>;
+
+export interface CreatePetDto {
+  name: string;
+  species: ApiSpecies;
+  breed?: string;
+  birthDate?: string | null;
+  photoUrl?: string | null;
+}
+
+export interface UpdatePetDto {
+  name?: string;
+  species?: ApiSpecies;
+  breed?: string;
+  birthDate?: string | null;
+  photoUrl?: string | null;
+}
 
 // ── Vaccines ──────────────────────────────────────────────────────────────────
 export interface ApiVaccine {

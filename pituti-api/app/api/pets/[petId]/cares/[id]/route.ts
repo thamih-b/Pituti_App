@@ -1,60 +1,170 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
+
+import { requireAuth } from '@/lib/auth';
+import { findOwnedPetById } from '@/lib/pets';
+import { mapCare } from '@/lib/mappers/care';
 
 const UpdateCareSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   type: z.string().max(50).optional(),
   frequency: z.number().int().positive().optional(),
-  period_type: z.enum(['day', 'week', 'month']).optional(),
-  time: z.string().optional().nullable(),
-  notes: z.string().max(500).optional().nullable(),
+  periodType: z.enum(['day', 'week', 'month']).optional(),
+  time: z.string().nullish(),
+  notes: z.string().max(500).nullish(),
   status: z.enum(['pending', 'done', 'skipped']).optional(),
 });
 
-export async function GET(_: Request, { params }: { params: Promise<{ petId: string; id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ petId: string; id: string }> }
+) {
   try {
+    const auth = await requireAuth(request);
     const { petId, id } = await params;
-    const [row] = await query('SELECT * FROM cares WHERE id = $1 AND pet_id = $2', [id, petId]);
-    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
-    return NextResponse.json({ data: row });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+
+    const pet = await findOwnedPetById(petId, auth.userId);
+    if (!pet) {
+      return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
+    }
+
+    const [row] = await query(
+      `SELECT
+         id,
+         pet_id,
+         name,
+         type,
+         frequency,
+         period_type,
+         time,
+         notes,
+         status,
+         created_at
+       FROM cares
+       WHERE id = $1 AND pet_id = $2`,
+      [id, petId]
+    );
+
+    if (!row) {
+      return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: mapCare(row) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json(
+      { error: error?.message ?? 'Erro interno' },
+      { status }
+    );
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ petId: string; id: string }> }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ petId: string; id: string }> }
+) {
   try {
+    const auth = await requireAuth(request);
     const { petId, id } = await params;
+
+    const pet = await findOwnedPetById(petId, auth.userId);
+    if (!pet) {
+      return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
+    }
+
     const body = await request.json();
     const result = UpdateCareSchema.safeParse(body);
+
     if (!result.success) {
       return NextResponse.json({ errors: result.error.issues }, { status: 400 });
     }
-    const fields = Object.entries(result.data).filter(([, v]) => v !== undefined);
+
+    const fields = Object.entries(result.data).filter(([, value]) => value !== undefined);
+
     if (fields.length === 0) {
-      return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Nenhum campo para actualizar' },
+        { status: 400 }
+      );
     }
-    const setClause = fields.map(([k], i) => `${k} = $${i + 1}`).join(', ');
-    const values = fields.map(([, v]) => v);
+
+    const columnMap: Record<string, string> = {
+      name: 'name',
+      type: 'type',
+      frequency: 'frequency',
+      periodType: 'period_type',
+      time: 'time',
+      notes: 'notes',
+      status: 'status',
+    };
+
+    const setClause = fields
+      .map(([key], index) => `${columnMap[key]} = $${index + 1}`)
+      .join(', ');
+
+    const values = fields.map(([, value]) => value);
+
     const [row] = await query(
-      `UPDATE cares SET ${setClause} WHERE id = $${fields.length + 1} AND pet_id = $${fields.length + 2} RETURNING *`,
+      `UPDATE cares
+       SET ${setClause}
+       WHERE id = $${fields.length + 1} AND pet_id = $${fields.length + 2}
+       RETURNING
+         id,
+         pet_id,
+         name,
+         type,
+         frequency,
+         period_type,
+         time,
+         notes,
+         status,
+         created_at`,
       [...values, id, petId]
     );
-    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
-    return NextResponse.json({ data: row });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+
+    if (!row) {
+      return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: mapCare(row) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json(
+      { error: error?.message ?? 'Erro interno' },
+      { status }
+    );
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ petId: string; id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ petId: string; id: string }> }
+) {
   try {
+    const auth = await requireAuth(request);
     const { petId, id } = await params;
-    const [row] = await query('DELETE FROM cares WHERE id = $1 AND pet_id = $2 RETURNING id', [id, petId]);
-    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+
+    const pet = await findOwnedPetById(petId, auth.userId);
+    if (!pet) {
+      return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
+    }
+
+    const [row] = await query(
+      'DELETE FROM cares WHERE id = $1 AND pet_id = $2 RETURNING id',
+      [id, petId]
+    );
+
+    if (!row) {
+      return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    }
+
     return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json(
+      { error: error?.message ?? 'Erro interno' },
+      { status }
+    );
   }
 }
