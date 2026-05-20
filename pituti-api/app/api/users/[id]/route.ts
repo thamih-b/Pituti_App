@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
 
-const UpdateUserSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-email: z.string().check(z.email()),
-photo_url: z.string().check(z.url()).optional().nullable(),
+export const CreateUserSchema = z.object({
+  name: z.string().min(1, "El nombre es obligatorio").max(100),
+  email: z.string().email("Email inválido"),
+  photoUrl: z.string().url().optional().nullable(),
 });
+
+export const UpdateUserSchema = CreateUserSchema.partial();
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
