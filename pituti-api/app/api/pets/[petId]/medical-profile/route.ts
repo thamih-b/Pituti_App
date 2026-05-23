@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
 
 const MedicalProfileSchema = z.object({
@@ -22,21 +23,24 @@ const MedicalProfileSchema = z.object({
   vet_questions: z.string().max(1000).optional().nullable(),
 });
 
-export async function GET(_: Request, { params }: { params: Promise<{ petId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ petId: string }> }) {
   try {
+    await requireAuth(request);
     const { petId } = await params;
     const [profile] = await query(
       'SELECT * FROM medical_profiles WHERE pet_id = $1',
       [petId]
     );
     return NextResponse.json({ data: profile ?? null });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ petId: string }> }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ petId: string }> }) {
   try {
+    await requireAuth(request);
     const { petId } = await params;
     const body = await request.json();
     const result = MedicalProfileSchema.safeParse(body);
@@ -100,8 +104,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ petI
     );
 
     return NextResponse.json({ data: profile });
-  } catch (e) {
-    console.error('PUT /medical-profile error:', e);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }

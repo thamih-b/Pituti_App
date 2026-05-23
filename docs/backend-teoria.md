@@ -55,3 +55,4 @@ pets  (1) ──── (1) medical_profiles
 Todas as relações têm ON DELETE CASCADE:
 ao apagar um user, apagam-se todos os seus pets e dados.
 Ao apagar um pet, apagam-se todas as suas vacinas, consultas, etc.
+

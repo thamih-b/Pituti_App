@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { mapVet } from '@/lib/mappers/vet';
 
 const CreateVetSchema = z.object({
-  owner_id: z.string().min(1, { message: 'owner_id obrigatório' }),
   name: z.string().min(1, { message: 'Nome obrigatório' }).max(100),
   clinic: z.string().min(1, { message: 'Clínica obrigatória' }).max(100),
   phone: z.string().min(1, { message: 'Telefone obrigatório' }).max(30),
@@ -29,74 +30,42 @@ type VetRow = {
   created_at: string;
 };
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const ownerId = searchParams.get('ownerId');
-    const rows = ownerId
-      ? await query<VetRow>('SELECT * FROM vets WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId])
-      : await query<VetRow>('SELECT * FROM vets ORDER BY created_at DESC');
-    return NextResponse.json({ data: rows, total: rows.length });
-  } catch (error) {
-    console.error('GET /api/vets error:', error);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    const auth = await requireAuth(request);
+    const rows = await query<VetRow>('SELECT * FROM vets WHERE owner_id = $1 ORDER BY created_at DESC', [auth.userId]);
+    return NextResponse.json({ data: rows.map(mapVet), total: rows.length });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth(request);
     const body = await request.json();
     const result = CreateVetSchema.safeParse(body);
+    if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
 
-    if (!result.success) {
-      return NextResponse.json({ errors: result.error.issues }, { status: 400 });
-    }
-
-    const {
-      owner_id,
-      name,
-      clinic,
-      phone,
-      type,
-      specialty,
-      phone2,
-      address,
-      notes,
-      petIds,
-    } = result.data;
-
+    const { name, clinic, phone, type, specialty, phone2, address, notes, petIds } = result.data;
     const [vet] = await query<VetRow>(
-      `INSERT INTO vets (
-        owner_id, name, clinic, phone, type, specialty, phone2, address, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *`,
-      [
-        owner_id,
-        name,
-        clinic,
-        phone,
-        type,
-        specialty ?? null,
-        phone2 ?? null,
-        address ?? null,
-        notes ?? null,
-      ]
+      `INSERT INTO vets (owner_id, name, clinic, phone, type, specialty, phone2, address, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [auth.userId, name, clinic, phone, type, specialty ?? null, phone2 ?? null, address ?? null, notes ?? null]
     );
 
     if (petIds.length > 0) {
       for (const petId of petIds) {
-        await query(
-          `INSERT INTO vet_pets (vet_id, pet_id)
-           VALUES ($1, $2)
-           ON CONFLICT DO NOTHING`,
-          [vet.id, petId]
-        );
+        await query('INSERT INTO vet_pets (vet_id, pet_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [vet.id, petId]);
       }
     }
 
-    return NextResponse.json({ data: { ...vet, petIds } }, { status: 201 });
-  } catch (error) {
-    console.error('POST /api/vets error:', error);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    const petRows = await query<{ pet_id: string }>('SELECT pet_id FROM vet_pets WHERE vet_id = $1', [vet.id]);
+    return NextResponse.json({ data: { ...mapVet(vet), pet_ids: petRows.map(r => r.pet_id) } }, { status: 201 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }

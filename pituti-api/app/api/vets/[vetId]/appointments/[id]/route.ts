@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { mapAppointment } from '@/lib/mappers/appointment';
 
 const UpdateAppointmentSchema = z.object({
   vet_name: z.string().min(1).max(100).optional(),
@@ -17,32 +19,36 @@ const UpdateAppointmentSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 });
 
-export async function GET(_: Request, { params }: { params: Promise<{ vetId: string; id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ vetId: string; id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { vetId, id } = await params;
-    const [row] = await query(
-      'SELECT * FROM appointments WHERE id = $1 AND vet_id = $2',
-      [id, vetId]
-    );
+    const vetRows = await query('SELECT id FROM vets WHERE id = $1 AND owner_id = $2', [vetId, auth.userId]);
+    if (vetRows.length === 0) return NextResponse.json({ error: 'Veterinário não encontrado' }, { status: 404 });
+
+    const [row] = await query('SELECT * FROM appointments WHERE id = $1 AND vet_id = $2', [id, vetId]);
     if (!row) return NextResponse.json({ error: 'Consulta não encontrada' }, { status: 404 });
-    return NextResponse.json({ data: row });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ data: mapAppointment(row) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ vetId: string; id: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ vetId: string; id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { vetId, id } = await params;
+    const vetRows = await query('SELECT id FROM vets WHERE id = $1 AND owner_id = $2', [vetId, auth.userId]);
+    if (vetRows.length === 0) return NextResponse.json({ error: 'Veterinário não encontrado' }, { status: 404 });
+
     const body = await request.json();
     const result = UpdateAppointmentSchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json({ errors: result.error.issues }, { status: 400 });
-    }
+    if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
+
     const fields = Object.entries(result.data).filter(([, v]) => v !== undefined);
-    if (fields.length === 0) {
-      return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
-    }
+    if (fields.length === 0) return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
+
     const setClause = fields.map(([k], i) => `${k} = $${i + 1}`).join(', ');
     const values = fields.map(([, v]) => v);
     const [row] = await query(
@@ -50,22 +56,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ve
       [...values, id, vetId]
     );
     if (!row) return NextResponse.json({ error: 'Consulta não encontrada' }, { status: 404 });
-    return NextResponse.json({ data: row });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ data: mapAppointment(row) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ vetId: string; id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ vetId: string; id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { vetId, id } = await params;
-    const [row] = await query(
-      'DELETE FROM appointments WHERE id = $1 AND vet_id = $2 RETURNING id',
-      [id, vetId]
-    );
+    const vetRows = await query('SELECT id FROM vets WHERE id = $1 AND owner_id = $2', [vetId, auth.userId]);
+    if (vetRows.length === 0) return NextResponse.json({ error: 'Veterinário não encontrado' }, { status: 404 });
+
+    const [row] = await query('DELETE FROM appointments WHERE id = $1 AND vet_id = $2 RETURNING id', [id, vetId]);
     if (!row) return NextResponse.json({ error: 'Consulta não encontrada' }, { status: 404 });
     return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }

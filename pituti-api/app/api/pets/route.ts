@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { mapPet } from '@/lib/mappers/pet';
 import { z } from 'zod';
 
 const CreatePetSchema = z.object({
@@ -17,25 +18,14 @@ const CreatePetSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
-
     const pets = await query(
-      `SELECT *
-       FROM pets
-       WHERE owner_id = $1
-       ORDER BY created_at DESC`,
+      `SELECT * FROM pets WHERE owner_id = $1 ORDER BY created_at DESC`,
       [auth.userId]
     );
-
-    return NextResponse.json({
-      data: pets,
-      total: pets.length,
-    });
+    return NextResponse.json({ data: pets.map(mapPet), total: pets.length });
   } catch (error: any) {
     const status = error?.status ?? 500;
-    return NextResponse.json(
-      { error: error?.message ?? 'Erro interno' },
-      { status }
-    );
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
@@ -50,20 +40,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, species, breed, birth_date, photo_url, color, microchip, passport } = result.data;
-
     const [pet] = await query(
       `INSERT INTO pets (
-        name,
-        species,
-        breed,
-        birth_date,
-        photo_url,
-        color,
-        microchip,
-        passport,
-        owner_id
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        name, species, breed, birth_date, photo_url, color, microchip, passport, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         name,
@@ -78,12 +58,9 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    return NextResponse.json({ data: pet }, { status: 201 });
+    return NextResponse.json({ data: mapPet(pet) }, { status: 201 });
   } catch (error: any) {
     const status = error?.status ?? 500;
-    return NextResponse.json(
-      { error: error?.message ?? 'Erro interno' },
-      { status }
-    );
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }

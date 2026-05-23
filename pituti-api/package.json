@@ -1,5 +1,5 @@
 {
-  "name": "noteflow-api",
+  "name": "pituti-api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
     "next": "^16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {

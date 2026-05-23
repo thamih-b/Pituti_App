@@ -1,131 +1,92 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
-
 import { requireAuth } from '@/lib/auth';
 import { findOwnedPetById } from '@/lib/pets';
 import { mapCare } from '@/lib/mappers/care';
 
-const CreateCareSchema = z.object({
-  name: z.string().min(1).max(100),
-  type: z.string().min(1).max(50),
+const UpdateCareSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  type: z.string().max(50).optional(),
   frequency: z.number().int().positive().optional(),
   periodType: z.enum(['day', 'week', 'month']).optional(),
   time: z.string().nullish(),
   notes: z.string().max(500).nullish(),
-  status: z.enum(['pending', 'done', 'skipped']).default('pending'),
+  status: z.enum(['pending', 'done', 'skipped']).optional(),
 });
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ petId: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ petId: string; id: string }> }) {
   try {
     const auth = await requireAuth(request);
-    const { petId } = await params;
-
+    const { petId, id } = await params;
     const pet = await findOwnedPetById(petId, auth.userId);
-    if (!pet) {
-      return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
-    }
-
-    const rows = await query(
-      `SELECT
-         id,
-         pet_id,
-         name,
-         type,
-         frequency,
-         period_type,
-         time,
-         notes,
-         status,
-         created_at
+    if (!pet) return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
+    const [row] = await query(
+      `SELECT id, pet_id, name, type, frequency, period_type, time, notes, status, created_at
        FROM cares
-       WHERE pet_id = $1
-       ORDER BY created_at DESC`,
-      [petId]
+       WHERE id = $1 AND pet_id = $2`,
+      [id, petId]
     );
-
-    return NextResponse.json({
-      data: rows.map(mapCare),
-      total: rows.length,
-    });
+    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    return NextResponse.json({ data: mapCare(row) });
   } catch (error: any) {
     const status = error?.status ?? 500;
-    return NextResponse.json(
-      { error: error?.message ?? 'Erro interno' },
-      { status }
-    );
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ petId: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ petId: string; id: string }> }) {
   try {
     const auth = await requireAuth(request);
-    const { petId } = await params;
-
+    const { petId, id } = await params;
     const pet = await findOwnedPetById(petId, auth.userId);
-    if (!pet) {
-      return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
-    }
+    if (!pet) return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
 
     const body = await request.json();
-    const result = CreateCareSchema.safeParse(body);
+    const result = UpdateCareSchema.safeParse(body);
+    if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
 
-    if (!result.success) {
-      return NextResponse.json({ errors: result.error.issues }, { status: 400 });
-    }
+    const fields = Object.entries(result.data).filter(([, value]) => value !== undefined);
+    if (fields.length === 0) return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
 
-    const { name, type, frequency, periodType, time, notes, status } = result.data;
+    const columnMap: Record<string, string> = {
+      name: 'name',
+      type: 'type',
+      frequency: 'frequency',
+      periodType: 'period_type',
+      time: 'time',
+      notes: 'notes',
+      status: 'status',
+    };
 
+    const setClause = fields.map(([key], index) => `${columnMap[key]} = $${index + 1}`).join(', ');
+    const values = fields.map(([, value]) => value);
     const [row] = await query(
-      `INSERT INTO cares (
-         pet_id,
-         name,
-         type,
-         frequency,
-         period_type,
-         time,
-         notes,
-         status
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING
-         id,
-         pet_id,
-         name,
-         type,
-         frequency,
-         period_type,
-         time,
-         notes,
-         status,
-         created_at`,
-      [
-        petId,
-        name,
-        type,
-        frequency ?? null,
-        periodType ?? null,
-        time ?? null,
-        notes ?? null,
-        status,
-      ]
+      `UPDATE cares
+       SET ${setClause}
+       WHERE id = $${fields.length + 1} AND pet_id = $${fields.length + 2}
+       RETURNING id, pet_id, name, type, frequency, period_type, time, notes, status, created_at`,
+      [...values, id, petId]
     );
-
-    return NextResponse.json(
-      { data: mapCare(row) },
-      { status: 201 }
-    );
+    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    return NextResponse.json({ data: mapCare(row) });
   } catch (error: any) {
     const status = error?.status ?? 500;
-    return NextResponse.json(
-      { error: error?.message ?? 'Erro interno' },
-      { status }
-    );
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ petId: string; id: string }> }) {
+  try {
+    const auth = await requireAuth(request);
+    const { petId, id } = await params;
+    const pet = await findOwnedPetById(petId, auth.userId);
+    if (!pet) return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
+    const [row] = await query('DELETE FROM cares WHERE id = $1 AND pet_id = $2 RETURNING id', [id, petId]);
+    if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
+    return new NextResponse(null, { status: 204 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }

@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
+import { mapVaccine } from '@/lib/mappers/vaccine';
 import { z } from 'zod';
 
 const CreateVaccineSchema = z.object({
@@ -10,34 +12,39 @@ const CreateVaccineSchema = z.object({
   notes: z.string().max(500).optional().nullable(),
 });
 
-export async function GET(_: Request, { params }: { params: Promise<{ petId: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ petId: string }> }) {
   try {
+    await requireAuth(request);
     const { petId } = await params;
     const rows = await query('SELECT * FROM vaccines WHERE pet_id = $1 ORDER BY date DESC', [petId]);
-    return NextResponse.json({ data: rows, total: rows.length });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ data: rows.map(mapVaccine), total: rows.length });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ petId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ petId: string }> }) {
   try {
+    await requireAuth(request);
     const { petId } = await params;
     const body = await request.json();
     const result = CreateVaccineSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json({ errors: result.error.issues }, { status: 400 });
     }
+
     const { name, date, next_due_date, veterinary, notes } = result.data;
-const [row] = await query(
-  `INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
-   VALUES ($1, $2, $3, $4, $5, $6)
-   RETURNING *`,
-  [petId, name, date, next_due_date, veterinary, notes]
-);
-    return NextResponse.json({ data: row }, { status: 201 });
-} catch (e) {
-  console.error('POST /api/pets/[petId]/vaccines error:', e);
-  return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
-}
+    const [row] = await query(
+      `INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [petId, name, date, next_due_date, veterinary, notes]
+    );
+
+    return NextResponse.json({ data: mapVaccine(row) }, { status: 201 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
+  }
 }

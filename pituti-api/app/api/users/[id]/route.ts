@@ -1,41 +1,43 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import { z } from 'zod';
+import { mapUser } from '@/lib/mappers/user';
 
-export const CreateUserSchema = z.object({
-  name: z.string().min(1, "El nombre es obligatorio").max(100),
-  email: z.string().email("Email inválido"),
-  photoUrl: z.string().url().optional().nullable(),
+const UpdateUserSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+  photo_url: z.string().url().optional().nullable(),
 });
 
-export const UpdateUserSchema = CreateUserSchema.partial();
-
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { id } = await params;
-    const [user] = await query(
-      'SELECT id, name, email, photo_url, created_at FROM users WHERE id = $1',
-      [id]
-    );
+    if (id !== auth.userId) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+
+    const [user] = await query('SELECT id, name, email, photo_url, created_at FROM users WHERE id = $1', [id]);
     if (!user) return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
-    return NextResponse.json({ data: user });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ data: mapUser(user) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { id } = await params;
+    if (id !== auth.userId) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+
     const body = await request.json();
     const result = UpdateUserSchema.safeParse(body);
-    if (!result.success) {
-      return NextResponse.json({ errors: result.error.issues }, { status: 400 });
-    }
+    if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
+
     const fields = Object.entries(result.data).filter(([, v]) => v !== undefined);
-    if (fields.length === 0) {
-      return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
-    }
+    if (fields.length === 0) return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
+
     const setClause = fields.map(([k], i) => `${k} = $${i + 1}`).join(', ');
     const values = fields.map(([, v]) => v);
     const [user] = await query(
@@ -43,19 +45,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       [...values, id]
     );
     if (!user) return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
-    return NextResponse.json({ data: user });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    return NextResponse.json({ data: mapUser(user) });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const auth = await requireAuth(request);
     const { id } = await params;
+    if (id !== auth.userId) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+
     const [user] = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
     if (!user) return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 });
     return new NextResponse(null, { status: 204 });
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+  } catch (error: any) {
+    const status = error?.status ?? 500;
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
   }
 }
