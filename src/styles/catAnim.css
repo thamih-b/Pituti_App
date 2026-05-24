@@ -12,7 +12,12 @@
 .topbar { overflow: visible !important; }
 
 /* ── Pituti title letter-by-letter reveal ─────────────────────── */
-export const ANIM_CSS = `
+/*export const ANIM_CSS = `
+.pituti-anim-wrap {
+  display: flex;
+  font-style: italic;
+}*/
+
 .pituti-anim-wrap {
   display: flex;
   font-style: italic;

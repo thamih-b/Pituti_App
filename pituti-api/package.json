@@ -1,12 +1,17 @@
 {
   "name": "pituti-api",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Pituti Pet Care API - Backend REST com Next.js e PostgreSQL",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"No tests yet\" && exit 0",
+    "db:push": "echo \"Execute schema.sql no Neon SQL Editor\"",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -18,11 +23,25 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "typescript": "^5"
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "pet-care",
+    "veterinary",
+    "api",
+    "nextjs",
+    "postgresql"
+  ],
+  "author": "Pituti Team",
+  "license": "PRIVATE"
 }

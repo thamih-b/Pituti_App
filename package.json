@@ -1,40 +1,54 @@
 {
-  "name": "pituti-app",
+  "name": "pituti-api",
+  "version": "1.0.0",
+  "description": "Pituti Pet Care API - Backend REST com Next.js e PostgreSQL",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "@vercel/node": "latest",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.build.json --noEmit && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"No tests yet\" && exit 0",
+    "db:push": "echo \"Execute schema.sql no Neon SQL Editor\"",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
-    "i18next": "^26.0.9",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-i18next": "^17.0.6",
-    "react-router-dom": "^7.14.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "bcryptjs": "^3.0.3",
+    "i18next": "^26.2.0",
+    "jose": "^6.2.3",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-i18next": "^17.0.8",
+    "react-router-dom": "^7.15.1",
+    "tailwindcss": "^4.3.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
-    "@tailwindcss/vite": "^4.2.2",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "autoprefixer": "^10.4.27",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "postcss": "^8.5.9",
-    "tailwindcss": "^4.2.2",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
-  }
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "typescript": "^5",
+    "vite": "^8.0.14"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "pet-care",
+    "veterinary",
+    "api",
+    "nextjs",
+    "postgresql"
+  ],
+  "author": "Pituti Team",
+  "license": "PRIVATE"
 }

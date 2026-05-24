@@ -1,296 +1,242 @@
 # Pituti API
 
-API backend em Next.js para o projeto Pituti, responsável por autenticação, gestão de pets, veterinários, consultas, vacinas, medicamentos, sintomas, rotinas e perfis médicos.
+API backend em Next.js para o projeto Pituti - gestão completa de pets, veterinários, consultas, vacinas, medicamentos e muito mais.
 
-## Stack
+## Stack Tecnológica
 
-- Next.js 16 (App Router).
-- PostgreSQL / Neon.
-- JWT para autenticação.
-- Zod para validação.
-- bcryptjs para hash de passwords.
+- **Framework:** Next.js 16 (App Router)
+- **Database:** PostgreSQL (Neon)
+- **Autenticação:** JWT com jose + bcryptjs
+- **Validação:** Zod
+- **Runtime:** Node.js 20+
 
 ## Funcionalidades
 
-- Registo e login de utilizadores.
-- Autenticação por token JWT no header `Authorization: Bearer <token>`.
-- CRUD de pets, veterinários, consultas, vacinas, medicamentos, sintomas, rotinas e notas.
-- Perfil médico por pet.
-- Health check para deploy.
+✅ Sistema completo de autenticação (register/login)  
+✅ Gestão de pets e perfis médicos  
+✅ Veterinários e consultas  
+✅ Vacinas, medicamentos, sintomas  
+✅ Rotinas de cuidados e notas  
+✅ Health check endpoint  
+✅ Proteção JWT em todos os endpoints  
 
-## Requisitos
+## Setup Local
 
-- Node.js 20+.
-- npm, pnpm ou yarn.
-- Base de dados PostgreSQL acessível pela internet.
-
-## Variáveis de ambiente
-
-Cria um ficheiro `.env.local` com:
-
-```env
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB
-JWT_SECRET=uma_chave_forte_e_longa
-```
-
-### Observações
-
-- `DATABASE_URL` é usada para ligar ao PostgreSQL.
-- `JWT_SECRET` assina e valida os tokens JWT.
-- Em produção, estas variáveis devem ser definidas no painel da Vercel.
-
-## Setup local
-
-1. Instala as dependências.
+### 1. Instalar dependências
 
 ```bash
 npm install
 ```
 
-2. Configura as variáveis de ambiente em `.env.local`.
+### 2. Configurar variáveis de ambiente
 
-3. Executa o projeto em modo desenvolvimento.
+Crie um ficheiro `.env.local` na raiz:
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/pituti
+JWT_SECRET=your-super-secure-secret-key-min-32-chars
+```
+
+### 3. Executar em desenvolvimento
 
 ```bash
 npm run dev
 ```
 
-4. Abre a API em `http://localhost:3000`.
+A API estará disponível em `http://localhost:3000`
 
 ## Deploy na Vercel
 
-1. Faz push do repositório para GitHub.
-2. Importa o projeto na Vercel.
-3. Define `DATABASE_URL` e `JWT_SECRET` nas Environment Variables.
-4. Faz o deploy.
-5. Verifica o endpoint de health em produção.
+### Passo 1: Preparar a base de dados
 
-## Autenticação
+1. Crie uma conta em [Neon](https://neon.tech) (gratuito)
+2. Crie um novo projeto e base de dados
+3. Execute o schema SQL (ficheiro `sql/schema.sql`)
+4. Copie a `DATABASE_URL` fornecida
 
-Depois do login ou registo, o cliente recebe um `token` JWT.
+### Passo 2: Deploy na Vercel
 
-Envia esse token em todas as rotas protegidas:
+1. Faça push do código para GitHub
+2. Aceda a [vercel.com](https://vercel.com)
+3. Clique em "Import Project"
+4. Selecione o seu repositório
+5. Configure as variáveis de ambiente:
+   - `DATABASE_URL`: A connection string do Neon
+   - `JWT_SECRET`: Gere uma chave forte (32+ caracteres)
+6. Clique em "Deploy"
 
-```http
-Authorization: Bearer <token>
+### Passo 3: Verificar deployment
+
+```bash
+curl https://seu-projeto.vercel.app/api/health
 ```
 
-### Registo
-
-`POST /api/auth/register`
-
-Body esperado:
-
-```json
-{
-  "name": "Thami",
-  "email": "thami@email.com",
-  "password": "senha_forte_123"
-}
-```
-
-Resposta 201:
-
-```json
-{
-  "data": {
-    "user": {
-      "id": "uuid",
-      "name": "Thami",
-      "email": "thami@email.com"
-    },
-    "token": "jwt"
-  }
-}
-```
-
-### Login
-
-`POST /api/auth/login`
-
-Body esperado:
-
-```json
-{
-  "email": "thami@email.com",
-  "password": "senha_forte_123"
-}
-```
-
-Resposta 200:
-
-```json
-{
-  "data": {
-    "user": {
-      "id": "uuid",
-      "name": "Thami",
-      "email": "thami@email.com"
-    },
-    "token": "jwt"
-  }
-}
-```
-
-## Endpoints
-
-### Health
-
-- `GET /api/health`
-
-Resposta:
-
+Resposta esperada:
 ```json
 {
   "status": "ok",
   "service": "Pituti API",
   "version": "1.0.0",
-  "timestamp": "2026-05-23T00:00:00.000Z"
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### Users
+## Estrutura de Endpoints
 
-- `GET /api/users/me` ou equivalente no projeto atual para obter o utilizador autenticado.
-- `POST /api/users` cria um utilizador.
-- `GET /api/users/:id` obtém um utilizador autenticado.
-- `PATCH /api/users/:id` atualiza um utilizador autenticado.
+### Autenticação
+- `POST /api/auth/register` - Criar conta
+- `POST /api/auth/login` - Login
 
-Body `POST /api/users`:
+### Recursos protegidos (requerem `Authorization: Bearer <token>`)
+
+**Users:**
+- `GET /api/users` - Lista utilizadores
+- `GET /api/users/:id` - Detalhes do utilizador
+- `PUT /api/users/:id` - Atualizar utilizador
+
+**Pets:**
+- `GET /api/pets` - Lista pets do utilizador
+- `POST /api/pets` - Criar pet
+- `GET /api/pets/:petId` - Detalhes do pet
+- `PUT /api/pets/:petId` - Atualizar pet
+- `DELETE /api/pets/:petId` - Eliminar pet
+
+**Perfil Médico:**
+- `GET /api/pets/:petId/medical-profile` - Ver perfil médico
+- `PUT /api/pets/:petId/medical-profile` - Atualizar perfil
+
+**Vacinas:**
+- `GET /api/pets/:petId/vaccines` - Lista vacinas
+- `POST /api/pets/:petId/vaccines` - Adicionar vacina
+- `PUT /api/pets/:petId/vaccines/:id` - Atualizar vacina
+- `DELETE /api/pets/:petId/vaccines/:id` - Eliminar vacina
+
+**Medicamentos:**
+- `GET /api/pets/:petId/medications` - Lista medicamentos
+- `POST /api/pets/:petId/medications` - Adicionar medicamento
+- `PUT /api/pets/:petId/medications/:id` - Atualizar medicamento
+- `DELETE /api/pets/:petId/medications/:id` - Eliminar medicamento
+
+**Sintomas:**
+- `GET /api/pets/:petId/symptoms` - Lista sintomas
+- `POST /api/pets/:petId/symptoms` - Adicionar sintoma
+- `PUT /api/pets/:petId/symptoms/:id` - Atualizar sintoma
+- `DELETE /api/pets/:petId/symptoms/:id` - Eliminar sintoma
+
+**Cuidados:**
+- `GET /api/pets/:petId/cares` - Lista cuidados
+- `POST /api/pets/:petId/cares` - Adicionar cuidado
+- `PUT /api/pets/:petId/cares/:id` - Atualizar cuidado
+- `DELETE /api/pets/:petId/cares/:id` - Eliminar cuidado
+
+**Notas:**
+- `GET /api/pets/:petId/notes` - Lista notas
+- `POST /api/pets/:petId/notes` - Adicionar nota
+- `PUT /api/pets/:petId/notes/:id` - Atualizar nota
+- `DELETE /api/pets/:petId/notes/:id` - Eliminar nota
+
+**Veterinários:**
+- `GET /api/vets` - Lista veterinários
+- `POST /api/vets` - Adicionar veterinário
+- `GET /api/vets/:vetId` - Detalhes do veterinário
+- `PUT /api/vets/:vetId` - Atualizar veterinário
+- `DELETE /api/vets/:vetId` - Eliminar veterinário
+
+**Consultas:**
+- `GET /api/vets/:vetId/appointments` - Lista consultas
+- `POST /api/vets/:vetId/appointments` - Marcar consulta
+- `PUT /api/vets/:vetId/appointments/:id` - Atualizar consulta
+- `DELETE /api/vets/:vetId/appointments/:id` - Cancelar consulta
+
+## Exemplo de Uso
+
+### 1. Registar utilizador
+
+```bash
+curl -X POST https://sua-api.vercel.app/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Maria Silva",
+    "email": "maria@example.com",
+    "password": "senha-segura-123"
+  }'
+```
+
+### 2. Login
+
+```bash
+curl -X POST https://sua-api.vercel.app/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "maria@example.com",
+    "password": "senha-segura-123"
+  }'
+```
+
+### 3. Criar pet (com token)
+
+```bash
+curl -X POST https://sua-api.vercel.app/api/pets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI" \
+  -d '{
+    "name": "Luna",
+    "species": "cat",
+    "breed": "Siamês",
+    "birth_date": "2020-03-15"
+  }'
+```
+
+## Segurança
+
+- Todas as passwords são encriptadas com bcrypt (10 rounds)
+- Tokens JWT expiram em 7 dias
+- Todos os endpoints (exceto auth e health) requerem autenticação
+- Validação de input com Zod em todos os endpoints
+- CORS configurado para produção
+
+## Base de Dados
+
+O schema SQL completo está em `sql/schema.sql`. Tabelas principais:
+
+- `users` - Utilizadores da app
+- `pets` - Pets e seus donos
+- `medical_profiles` - Perfis médicos dos pets
+- `vaccines` - Vacinas administradas
+- `medications` - Medicamentos e tratamentos
+- `symptoms` - Sintomas registados
+- `cares` - Rotinas de cuidados
+- `notes` - Notas gerais
+- `vets` - Veterinários
+- `appointments` - Consultas veterinárias
+
+## Troubleshooting
+
+### Erro de conexão à base de dados
+
+Verifique se a `DATABASE_URL` está correta e se o Neon permite conexões externas.
+
+### Token inválido
+
+Certifique-se que:
+1. O header `Authorization: Bearer <token>` está presente
+2. O token não expirou (7 dias)
+3. A `JWT_SECRET` é a mesma usada para gerar o token
+
+### Erros de validação
+
+Todos os erros de validação retornam status `400` com detalhes:
 
 ```json
 {
-  "name": "Thami",
-  "email": "thami@email.com",
-  "photo_url": "https://..."
+  "errors": [
+    {
+      "path": ["email"],
+      "message": "Invalid email"
+    }
+  ]
 }
 ```
-
-### Pets
-
-- `GET /api/pets`
-- `POST /api/pets`
-- `GET /api/pets/:petId`
-- `PATCH /api/pets/:petId`
-- `DELETE /api/pets/:petId`
-
-Body `POST /api/pets`:
-
-```json
-{
-  "name": "Luna",
-  "species": "cat",
-  "breed": "Siamese",
-  "birth_date": "2024-01-01",
-  "photo_url": "https://...",
-  "color": "white",
-  "microchip": "123456",
-  "passport": "AB123"
-}
-```
-
-### Veterinários
-
-- `GET /api/vets`
-- `POST /api/vets`
-- `GET /api/vets/:vetId`
-- `PATCH /api/vets/:vetId`
-- `DELETE /api/vets/:vetId`
-
-### Consultas
-
-- `GET /api/vets/:vetId/appointments`
-- `POST /api/vets/:vetId/appointments`
-- `GET /api/vets/:vetId/appointments/:id`
-- `PATCH /api/vets/:vetId/appointments/:id`
-- `DELETE /api/vets/:vetId/appointments/:id`
-
-Body exemplo `POST /api/vets/:vetId/appointments`:
-
-```json
-{
-  "pet_id": "uuid",
-  "vet_name": "Dr. João",
-  "clinic": "ClinVet",
-  "type": "routine",
-  "date": "2026-05-23",
-  "reason": "Check-up anual",
-  "diagnosis": null,
-  "treatment": null,
-  "next_appointment_date": null,
-  "next_appointment_note": null,
-  "weight_kg": 4.5,
-  "cost": 35,
-  "notes": "Tudo ok"
-}
-```
-
-### Vacinas
-
-- `GET /api/pets/:petId/vaccines`
-- `POST /api/pets/:petId/vaccines`
-- `GET /api/pets/:petId/vaccines/:id`
-- `PATCH /api/pets/:petId/vaccines/:id`
-- `DELETE /api/pets/:petId/vaccines/:id`
-
-### Medicamentos
-
-- `GET /api/pets/:petId/medications`
-- `POST /api/pets/:petId/medications`
-- `GET /api/pets/:petId/medications/:id`
-- `PATCH /api/pets/:petId/medications/:id`
-- `DELETE /api/pets/:petId/medications/:id`
-
-### Sintomas
-
-- `GET /api/pets/:petId/symptoms`
-- `POST /api/pets/:petId/symptoms`
-- `GET /api/pets/:petId/symptoms/:id`
-- `PATCH /api/pets/:petId/symptoms/:id`
-- `DELETE /api/pets/:petId/symptoms/:id`
-
-### Rotinas
-
-- `GET /api/pets/:petId/cares`
-- `POST /api/pets/:petId/cares`
-- `GET /api/pets/:petId/cares/:id`
-- `PATCH /api/pets/:petId/cares/:id`
-- `DELETE /api/pets/:petId/cares/:id`
-
-### Notas
-
-- `GET /api/pets/:petId/notes`
-- `POST /api/pets/:petId/notes`
-- `GET /api/pets/:petId/notes/:id`
-- `PATCH /api/pets/:petId/notes/:id`
-- `DELETE /api/pets/:petId/notes/:id`
-
-### Perfil médico
-
-- `GET /api/pets/:petId/medical-profile`
-- `PUT /api/pets/:petId/medical-profile`
-
-## Respostas e erros
-
-- `200` quando a leitura ou atualização é bem-sucedida.
-- `201` quando um recurso é criado.
-- `204` quando um recurso é removido com sucesso.
-- `400` quando a validação falha.
-- `401` quando o token está ausente ou inválido.
-- `403` quando o utilizador não tem permissão.
-- `404` quando o recurso não existe.
-- `409` quando há conflito, como email duplicado.
-- `500` para erro inesperado.
-
-## Integração com frontend
-
-- Após registo ou login, guarda o `token` e envia-o em chamadas autenticadas.
-- Se a app falhar com `401`, força novo login.
-- Em mobile com Capacitor, guarda o token no armazenamento seguro da plataforma.
-
-## SQL e schema
-
-O schema está em `sql/` e contém as tabelas principais do projeto.
 
 ## Licença
 

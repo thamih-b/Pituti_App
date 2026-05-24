@@ -1,148 +1,222 @@
--- ============================================================
--- PITUTI DB — Schema
--- ============================================================
+-- Pituti Database Schema
+-- PostgreSQL 14+
 
--- USERS
-CREATE TABLE users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        VARCHAR(100) NOT NULL,
-  email       VARCHAR(255) NOT NULL UNIQUE,
-  password_hash VARCHAR(255),          -- NULL enquanto não há auth
-  photo_url   TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Extensões
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Tabela de utilizadores
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  photo_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- PETS
-CREATE TABLE pets (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name        VARCHAR(60) NOT NULL,
-  species     VARCHAR(20) NOT NULL CHECK (species IN ('cat','dog','bird','rabbit','reptile','fish','other')),
-  breed       VARCHAR(80),
-  birth_date  DATE,
-  photo_url   TEXT,
-  color       VARCHAR(60),
-  microchip   VARCHAR(20),
-  passport    VARCHAR(60),
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de pets
+CREATE TABLE IF NOT EXISTS pets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(60) NOT NULL,
+  species VARCHAR(20) NOT NULL CHECK (species IN ('cat', 'dog', 'bird', 'rabbit', 'reptile', 'fish', 'other')),
+  breed VARCHAR(80),
+  birth_date DATE,
+  photo_url TEXT,
+  color VARCHAR(60),
+  microchip VARCHAR(20),
+  passport VARCHAR(60),
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- VACCINES
-CREATE TABLE vaccines (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id       UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  name         VARCHAR(100) NOT NULL,
-  date         DATE NOT NULL,
-  next_due_date DATE,
-  veterinary   VARCHAR(100),
-  notes        TEXT,
-  created_at   TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de perfis médicos
+CREATE TABLE IF NOT EXISTS medical_profiles (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL UNIQUE REFERENCES pets(id) ON DELETE CASCADE,
+  weight_kg DECIMAL(6, 2),
+  blood_type VARCHAR(10),
+  allergies TEXT,
+  chronic_conditions TEXT,
+  special_diet TEXT,
+  veterinarian_name VARCHAR(100),
+  veterinarian_phone VARCHAR(20),
+  veterinarian_clinic VARCHAR(150),
+  insurance_number VARCHAR(100),
+  insurance_provider VARCHAR(100),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- MEDICATIONS
-CREATE TABLE medications (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id      UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  name        VARCHAR(100) NOT NULL,
-  dosage      VARCHAR(100) NOT NULL,
-  frequency   VARCHAR(100) NOT NULL,
-  start_date  DATE,
-  end_date    DATE,
-  notes       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de vacinas
+CREATE TABLE IF NOT EXISTS vaccines (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  vaccine_date DATE NOT NULL,
+  next_dose_date DATE,
+  batch_number VARCHAR(50),
+  veterinarian VARCHAR(100),
+  clinic VARCHAR(150),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- SYMPTOMS
-CREATE TABLE symptoms (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id      UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  description VARCHAR(300) NOT NULL,
-  severity    VARCHAR(20) NOT NULL CHECK (severity IN ('mild','moderate','severe')),
-  date        DATE NOT NULL,
-  notes       TEXT,
-  resolved    BOOLEAN DEFAULT FALSE,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de medicamentos
+CREATE TABLE IF NOT EXISTS medications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  dosage VARCHAR(50),
+  frequency VARCHAR(100),
+  start_date DATE NOT NULL,
+  end_date DATE,
+  prescribed_by VARCHAR(100),
+  reason TEXT,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- CARES (rotinas diárias)
-CREATE TABLE cares (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id      UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  name        VARCHAR(100) NOT NULL,
-  type        VARCHAR(50) NOT NULL,
-  frequency   INTEGER,
-  period_type VARCHAR(10) CHECK (period_type IN ('day','week','month')),
-  time        VARCHAR(5),
-  notes       TEXT,
-  status      VARCHAR(10) DEFAULT 'pending' CHECK (status IN ('pending','done','skipped')),
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de sintomas
+CREATE TABLE IF NOT EXISTS symptoms (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  symptom VARCHAR(100) NOT NULL,
+  severity VARCHAR(20) CHECK (severity IN ('mild', 'moderate', 'severe')),
+  description TEXT,
+  observed_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  resolved BOOLEAN DEFAULT FALSE,
+  resolved_date TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- VETS
-CREATE TABLE vets (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name        VARCHAR(100) NOT NULL,
-  clinic      VARCHAR(100) NOT NULL,
-  type        VARCHAR(20) DEFAULT 'primary' CHECK (type IN ('primary','specialist','emergency','other')),
-  specialty   VARCHAR(100),
-  phone       VARCHAR(30) NOT NULL,
-  phone2      VARCHAR(30),
-  address     VARCHAR(200),
-  notes       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+-- Tabela de cuidados/rotinas
+CREATE TABLE IF NOT EXISTS cares (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  frequency VARCHAR(50),
+  period_type VARCHAR(20) CHECK (period_type IN ('daily', 'weekly', 'monthly', 'yearly')),
+  last_done TIMESTAMP WITH TIME ZONE,
+  next_due TIMESTAMP WITH TIME ZONE,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- VET_PETS (relação N:N entre vets e pets)
-CREATE TABLE vet_pets (
-  vet_id  UUID NOT NULL REFERENCES vets(id) ON DELETE CASCADE,
-  pet_id  UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  PRIMARY KEY (vet_id, pet_id)
+-- Tabela de notas
+CREATE TABLE IF NOT EXISTS notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  title VARCHAR(150),
+  content TEXT NOT NULL,
+  note_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- APPOINTMENTS
-CREATE TABLE appointments (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id               UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  vet_id               UUID REFERENCES vets(id) ON DELETE SET NULL,
-  vet_name             VARCHAR(100) NOT NULL,
-  clinic               VARCHAR(100),
-  type                 VARCHAR(20) DEFAULT 'routine' CHECK (type IN ('routine','emergency','specialist','followup','exam','vaccine','other')),
-  date                 DATE NOT NULL,
-  reason               VARCHAR(300) NOT NULL,
-  diagnosis            TEXT,
-  treatment            TEXT,
+-- Tabela de veterinários
+CREATE TABLE IF NOT EXISTS vets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(100) NOT NULL,
+  clinic VARCHAR(150),
+  phone VARCHAR(20),
+  email VARCHAR(255),
+  address TEXT,
+  specialization VARCHAR(100),
+  notes TEXT,
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de consultas
+CREATE TABLE IF NOT EXISTS appointments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pet_id UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+  vet_id UUID NOT NULL REFERENCES vets(id) ON DELETE CASCADE,
+  vet_name VARCHAR(100),
+  clinic VARCHAR(150),
+  type VARCHAR(50),
+  date TIMESTAMP WITH TIME ZONE NOT NULL,
+  reason TEXT,
+  diagnosis TEXT,
+  treatment TEXT,
   next_appointment_date DATE,
-  next_appointment_note VARCHAR(300),
-  weight_kg            NUMERIC(5,2),
-  cost                 NUMERIC(8,2),
-  notes                TEXT,
-  created_at           TIMESTAMPTZ DEFAULT NOW()
+  next_appointment_note TEXT,
+  weight_kg DECIMAL(6, 2),
+  cost DECIMAL(10, 2),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- NOTES (notas clínicas por pet)
-CREATE TABLE notes (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pet_id     UUID NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
-  content    TEXT NOT NULL,
-  veterinary VARCHAR(100),
-  type       VARCHAR(20) DEFAULT 'observacao' CHECK (type IN ('control','observacao','emergencia','vacuna','cirugia','otro')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Índices para melhor performance
+CREATE INDEX IF NOT EXISTS idx_pets_owner ON pets(owner_id);
+CREATE INDEX IF NOT EXISTS idx_vaccines_pet ON vaccines(pet_id);
+CREATE INDEX IF NOT EXISTS idx_medications_pet ON medications(pet_id);
+CREATE INDEX IF NOT EXISTS idx_symptoms_pet ON symptoms(pet_id);
+CREATE INDEX IF NOT EXISTS idx_cares_pet ON cares(pet_id);
+CREATE INDEX IF NOT EXISTS idx_notes_pet ON notes(pet_id);
+CREATE INDEX IF NOT EXISTS idx_vets_owner ON vets(owner_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_pet ON appointments(pet_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_vet ON appointments(vet_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
--- MEDICAL PROFILES (1:1 com pets)
-CREATE TABLE medical_profiles (
-  pet_id              UUID PRIMARY KEY REFERENCES pets(id) ON DELETE CASCADE,
-  sex                 VARCHAR(10) CHECK (sex IN ('male','female','unknown')),
-  neutered            BOOLEAN,
-  neutered_age        VARCHAR(30),
-  blood_type          VARCHAR(10),
-  allergies           TEXT[] DEFAULT '{}',
-  conditions          JSONB DEFAULT '[]',
-  surgeries           JSONB DEFAULT '[]',
-  environment         VARCHAR(10) CHECK (environment IN ('apartment','house','both')),
-  living_with_animals BOOLEAN,
-  behavioral_notes    TEXT,
-  vet_questions       TEXT,
-  updated_at          TIMESTAMPTZ
-);
+-- Triggers para atualizar updated_at automaticamente
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_pets_updated_at BEFORE UPDATE ON pets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_medical_profiles_updated_at BEFORE UPDATE ON medical_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_vaccines_updated_at BEFORE UPDATE ON vaccines
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_medications_updated_at BEFORE UPDATE ON medications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_symptoms_updated_at BEFORE UPDATE ON symptoms
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_cares_updated_at BEFORE UPDATE ON cares
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_vets_updated_at BEFORE UPDATE ON vets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Comentários nas tabelas
+COMMENT ON TABLE users IS 'Utilizadores da aplicação';
+COMMENT ON TABLE pets IS 'Pets registados pelos utilizadores';
+COMMENT ON TABLE medical_profiles IS 'Perfis médicos dos pets';
+COMMENT ON TABLE vaccines IS 'Vacinas administradas aos pets';
+COMMENT ON TABLE medications IS 'Medicamentos e tratamentos dos pets';
+COMMENT ON TABLE symptoms IS 'Sintomas observados nos pets';
+COMMENT ON TABLE cares IS 'Rotinas e cuidados recorrentes';
+COMMENT ON TABLE notes IS 'Notas gerais sobre os pets';
+COMMENT ON TABLE vets IS 'Veterinários cadastrados';
+COMMENT ON TABLE appointments IS 'Consultas veterinárias';

@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { PitutiProvider } from './context/PitutiContext'
 import { SymptomsProvider } from './context/SymptomsContext'
-import { LanguageProvider } from './context/LanguageContext'
 import { CaresProvider } from './context/CaresContext'
 import { VetProvider } from './context/VetContext'
 
@@ -23,7 +22,6 @@ import { MedicationsProvider } from './context/MedicationsContext'
 
 export default function App() {
   return (
-    <LanguageProvider>
       <PitutiProvider>
         <SymptomsProvider>
           <CaresProvider>
@@ -55,6 +53,5 @@ export default function App() {
           </CaresProvider>
         </SymptomsProvider>
       </PitutiProvider>
-    </LanguageProvider>
   )
 }
