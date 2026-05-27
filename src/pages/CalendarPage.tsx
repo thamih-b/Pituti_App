@@ -9,7 +9,7 @@ import EditCareModal from '../components/EditCareModal'
 import { useMedications } from '../context/MedicationsContext'
 import type { VaccineRecord } from '../context/PetsContext'
 import { usePetsContext } from '../context/PetsContext'
-import { useVaccines } from '../context/VaccinesContext'
+import { useVaccinesContext } from '../context/VaccinesContext'
 import type { VaccineWithMeta } from '../context/VaccinesContext'
 
 const PET_EMOJI: Record<string, string> = {
@@ -71,7 +71,7 @@ export default function CalendarPage() {
   const { medications }      = useMedications()
   // ✅ pets e vacinas do contexto real
 const { pets }                               = usePetsContext()
-const { allVaccines, addVaccine }            = useVaccines()
+const { allVaccines, addVaccine }            = useVaccinesContext()
 
   type VetEv = (typeof vetCalendarDates)[number]
 

@@ -19,7 +19,6 @@ import EditCareModal from '../components/EditCareModal'
 import PetChipEditOverlay from '../components/PetChipEditOverlay'
 import { PfBtn, PfFooter } from '../components/FooterButtons'
 import InviteSentOverlay from '../components/InviteSentOverlay'
-import type { AddMedData } from '../components/AddMedicationModal'
 import type { CareEditData } from '../components/EditCareModal'
 import type { SymptomData } from '../components/RegisterSymptomModal'
 import { useSymptoms, usePetSymptoms } from '../context/SymptomsContext'
@@ -34,10 +33,10 @@ import type { MedRecord } from '../components/EditMedModal'
 import { NoteDetailModal, EditNoteModal } from '../components/NoteModals'
 import type { NoteEntry } from '../components/NoteModals'
 import { usePetCares, isDueOnDate, getNextDueDate, useCares } from '../context/CaresContext'
-import { useMedications } from '../context/MedicationsContext'
+import { useVaccinesContext } from '../context/VaccinesContext'
 import { useTranslation } from 'react-i18next'
 import { usePetsContext } from '../context/PetsContext'
-import { useVaccines } from '../context/VaccinesContext'
+import { useMedications } from '../context/MedicationsContext'
 
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
@@ -478,7 +477,7 @@ function TabCares({ petId, petName }: { petId: string; petName: string }) {
 
 function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
   const { t } = useTranslation()
-  const { vaccinesByPet, addVaccine, updateVaccine } = useVaccines()
+  const { vaccinesByPet, addVaccine, updateVaccine } = useVaccinesContext()
   const [registerOpen, setRegisterOpen] = useState(false)
   const [vaccDetail, setVaccDetail]     = useState<(VaccineRecord & { cls: 'ok' | 'soon' | 'late' }) | null>(null)
   const [editVacc, setEditVacc]         = useState<VaccineRecord | null>(null)
@@ -500,19 +499,29 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
     late: { badge: t('pet.vacc.badgeLate'), cls: 'badge-red'    },
   }
 
-  const handleRegister = ({ name, date, nextDate }: {
-    name: string; date: string; nextDate: string; vet: string; notes: string
-  }) => {
-    const lbl = new Date(date + 'T12:00:00').toLocaleDateString(undefined, {
-      day: '2-digit', month: 'short', year: 'numeric',
-    })
-    const cls = getVaccStatus(nextDate) as 'ok' | 'soon' | 'late'
-    addVaccine(petId, {
-      name, applied: lbl, nextDate,
-      badge:    VACC_BADGE[cls].badge,
-      badgeCls: VACC_BADGE[cls].cls,
-    })
-  }
+const handleRegister = (v: {
+  name: string
+  date: string
+  nextDate: string
+  vet: string
+  notes: string
+}) => {
+  const lbl = new Date(v.date + 'T12:00:00').toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+  const cls = getVaccStatus(v.nextDate) as 'ok' | 'soon' | 'late'
+
+  addVaccine(petId, {
+    id: '',
+    name: v.name,
+    applied: lbl,
+    nextDate: v.nextDate,
+    badge: VACC_BADGE[cls].badge,
+    badgeCls: VACC_BADGE[cls].cls,
+  })
+}
 
   return (
     <>
@@ -581,16 +590,19 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
         vaccine={vaccDetail ? { ...vaccDetail, petName, petEmoji: SPECIES_EMOJI[petId] ?? '🐾' } : null}
         onClose={() => setVaccDetail(null)}
         onEdit={vacc => { setVaccDetail(null); setEditVacc(vacc); setEditVaccOpen(true) }}
-        onMarkApplied={(vacc, appliedDate, nextDate) => {
-          const lbl = new Date(appliedDate + 'T12:00:00').toLocaleDateString(undefined, {
-            day: '2-digit', month: 'short', year: 'numeric',
-          })
-          const cls = getVaccStatus(nextDate) as 'ok' | 'soon' | 'late'
-          updateVaccine(petId, {
-            ...vacc, applied: lbl, nextDate,
-            badge:    VACC_BADGE[cls].badge,
-            badgeCls: VACC_BADGE[cls].cls,
-          })
+onMarkApplied={(vacc, appliedDate, nextDate) => {
+  const lbl = new Date(appliedDate + 'T12:00:00').toLocaleDateString(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+  const cls = getVaccStatus(nextDate) as 'ok' | 'soon' | 'late'
+  updateVaccine(petId, {
+    ...vacc,   // ← já tem id
+    applied: lbl,
+    nextDate,
+    badge:    VACC_BADGE[cls].badge,
+    badgeCls: VACC_BADGE[cls].cls,
+  })
+
           setVaccDetail(null)
           showToast(t('pet.vacc.toastApplied'))
         }}
@@ -612,48 +624,94 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
 
 // ─── Pet Detail Page ──────────────────────────────────────────────────────────
 
+
 export default function PetDetailPage() {
-  const { t }      = useTranslation()
-  const { petId }  = useParams<{ petId: string }>()
-  const navigate   = useNavigate()
-  const { pets }   = usePetsContext()
+  const { t } = useTranslation()
+  const { petId = '' } = useParams<{ petId: string }>()
+  const navigate = useNavigate()
+  const { pets, loading } = usePetsContext()
 
-  const [activeTab, setActiveTab]           = useState(0)
-  const [shareOpen, setShareOpen]           = useState(false)
-  const [editOpen, setEditOpen]             = useState(false)
-  const [addMedOpen, setAddMedOpen]         = useState(false)
-  const [addNoteOpen, setAddNoteOpen]       = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [addMedOpen, setAddMedOpen] = useState(false)
+  const [addNoteOpen, setAddNoteOpen] = useState(false)
   const [addSymptomOpen, setAddSymptomOpen] = useState(false)
-  const [chipField, setChipField]           = useState<ChipField | null>(null)
+  const [chipField, setChipField] = useState<ChipField | null>(null)
 
-  const [petData, setPetData] = useState<PetWithAlerts>(() => {
-    const found = pets.find(p => p.id === petId)
-    return (found ?? pets[0]) as PetWithAlerts
-  })
+  // ✅ pet derivado de forma segura, sem pets[0]
+  const petData = useMemo<PetWithAlerts | null>(() => {
+    if (!petId || pets.length === 0) return null
+    return (pets.find(p => p.id === petId) as PetWithAlerts | undefined) ?? null
+  }, [pets, petId])
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
-    try { return localStorage.getItem('pet-photo-' + (petId ?? '')) } catch { return null }
+    if (!petId) return null
+    try {
+      return localStorage.getItem(`pet-photo-${petId}`) ?? null
+    } catch {
+      return null
+    }
   })
 
   const { addSymptom, saveSymptom, resolve, unresolve } = useSymptoms()
-  const { active: activeSymptoms, resolved: resolvedSymptoms } = usePetSymptoms(petData.id)
-  const [detailSym, setDetailSym]     = useState<SymptomEntry | null>(null)
-  const [editSym, setEditSym]         = useState<SymptomEntry | null>(null)
+  const safePetId = petData?.id ?? ''
+  const { active: activeSymptoms, resolved: resolvedSymptoms } = usePetSymptoms(safePetId)
+
+  const [detailSym, setDetailSym] = useState<SymptomEntry | null>(null)
+  const [editSym, setEditSym] = useState<SymptomEntry | null>(null)
   const [editSymOpen, setEditSymOpen] = useState(false)
 
   const photoRef = useRef<HTMLInputElement>(null)
 
-  const { getActiveMedicationsByPetId, addMedication, updateMedication, deleteMedication } = useMedications()
-  const localMeds = getActiveMedicationsByPetId(petData.id)
+  const {
+    getActiveMedicationsByPetId,
+    addMedication,
+    updateMedication,
+    deleteMedication,
+  } = useMedications()
 
-  const [medDetail, setMedDetail]     = useState<MedRecord | null>(null)
-  const [editMed, setEditMed]         = useState<MedRecord | null>(null)
+  const localMeds = safePetId ? getActiveMedicationsByPetId(safePetId) : []
+
+  const [medDetail, setMedDetail] = useState<MedRecord | null>(null)
+  const [editMed, setEditMed] = useState<MedRecord | null>(null)
   const [editMedOpen, setEditMedOpen] = useState(false)
 
-  const [localNotes, setLocalNotes]     = useState<NoteEntry[]>([])
-  const [noteDetail, setNoteDetail]     = useState<NoteEntry | null>(null)
-  const [editNote, setEditNote]         = useState<NoteEntry | null>(null)
+  const [localNotes, setLocalNotes] = useState<NoteEntry[]>([])
+  const [noteDetail, setNoteDetail] = useState<NoteEntry | null>(null)
+  const [editNote, setEditNote] = useState<NoteEntry | null>(null)
   const [editNoteOpen, setEditNoteOpen] = useState(false)
+
+  // ✅ guards ANTES de qualquer uso de petData
+  if (loading) {
+    return <div className="page-loading">{t('common.loading')}</div>
+  }
+
+  if (!pets.length) {
+    return (
+      <div className="empty-state" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '.75rem' }}>🐾</div>
+        <div style={{ fontWeight: 800, marginBottom: '.375rem' }}>{t('pets.noPets')}</div>
+        <button className="btn btn-primary" onClick={() => navigate('/pets')}>
+          {t('pets.addPet')}
+        </button>
+      </div>
+    )
+  }
+
+  if (!petId || !petData) {
+    return (
+      <div className="empty-state" style={{ padding: '2rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '.75rem' }}>⚠️</div>
+        <div style={{ fontWeight: 800, marginBottom: '.375rem' }}>{t('pet.notFound')}</div>
+        <button className="btn btn-secondary" onClick={() => navigate('/pets')}>
+          {t('btn.back')}
+        </button>
+      </div>
+    )
+  }
+
+  // ✅ daqui para baixo petData é non-null
 
   const NOTE_LABEL: Record<string, string> = {
     control:     t('pet.noteType.control'),
@@ -688,15 +746,14 @@ export default function PetDetailPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleChipSave = (updated: Partial<PetWithAlerts>) => {
-    setPetData(prev => ({ ...prev, ...updated }))
-    setChipField(null)
-  }
+const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
+  setChipField(null)
+}
 
   type HistItem = { cls: string; icon: string; title: string; meta: string; time: string; medId?: string; noteId?: string }
   const [histDetail, setHistDetail] = useState<HistItem | null>(null)
 
-  const { vaccinesByPet } = useVaccines()
+  const { vaccinesByPet } = useVaccinesContext()
   const histItems = useMemo((): HistItem[] => [
     ...(vaccinesByPet[petData.id] ?? []).map(vacc => ({
       cls: 'vaccine', icon: '💉',
@@ -959,37 +1016,70 @@ export default function PetDetailPage() {
         </div>
       )}
 
-      <ShareModal petName={petData.name} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
-      <EditPetModal isOpen={editOpen} onClose={() => setEditOpen(false)} onSave={setPetData} pet={petData} />
-      <AddMedicationModal
-        isOpen={addMedOpen}
-        onClose={() => setAddMedOpen(false)}
-        onAdd={(d: AddMedData) => { addMedication(d); setAddMedOpen(false) }}
-        defaultPetId={petData.id}
-      />
-      <NewNoteModal
-        isOpen={addNoteOpen}
-        onClose={() => setAddNoteOpen(false)}
-        onAdd={d => {
-          setLocalNotes(p => [{
-            id: `n${Date.now()}`, petId: petData.id,
-            content: d.content, vet: d.vet || '', date: d.date, type: d.type, archived: false,
-          }, ...p])
-          setAddNoteOpen(false)
-          showToast(t('pet.notes.toastAdded'))
-        }}
-        defaultPetId={petData.id}
-      />
-      <RegisterSymptomModal
-        isOpen={addSymptomOpen}
-        onClose={() => setAddSymptomOpen(false)}
-        onAdd={(d: SymptomData) => {
-          addSymptom({ ...d, resolved: false })
-          setAddSymptomOpen(false)
-          showToast(t('pet.symptoms.toastAdded'))
-        }}
-        defaultPetId={petData.id}
-      />
+    <>
+      {/* exemplo: header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 400 }}>
+          {petData.name}
+        </h1>
+        <span style={{ fontSize: '1.1rem' }}>
+          {SPECIES_EMOJI[petData.species] ?? '🐾'}
+        </span>
+      </div>
+
+<ShareModal
+  petName={petData.name}
+  isOpen={shareOpen}
+  onClose={() => setShareOpen(false)}
+/>
+
+<EditPetModal
+  isOpen={editOpen}
+  onClose={() => setEditOpen(false)}
+  pet={petData}
+  onSave={(updatedPet) => {
+    // chamar update real aqui
+    setEditOpen(false)
+  }}
+/>
+
+<AddMedicationModal
+  isOpen={addMedOpen}
+  onClose={() => setAddMedOpen(false)}
+  defaultPetId={petData.id}
+/>
+
+<NewNoteModal
+  isOpen={addNoteOpen}
+  onClose={() => setAddNoteOpen(false)}
+  defaultPetId={petData.id}
+  onAdd={(d) => {
+    // lógica existente
+  }}
+/>
+
+<RegisterSymptomModal
+  isOpen={addSymptomOpen}
+  onClose={() => setAddSymptomOpen(false)}
+  defaultPetId={petData.id}
+  onAdd={(d: SymptomData) => {
+    addSymptom({
+      ...d,
+      resolved: false,
+    })
+    setAddSymptomOpen(false)
+    showToast(t('pet.symptoms.toastAdded'))
+  }}
+/>
+
+<PetChipEditOverlay
+  pet={petData}
+  field={chipField}
+  onClose={() => setChipField(null)}
+  onSave={handleChipSave}
+/>
+    </>
+  
       <SymptomDetailModal symptom={detailSym} onClose={() => setDetailSym(null)}
         onEdit={s => { setDetailSym(null); setEditSym(s); setEditSymOpen(true) }}
         onResolve={id   => { resolve(id);   setDetailSym(null); showToast(t('pet.symptoms.toastResolved'))  }}

@@ -1,10 +1,28 @@
 import { api } from './client';
 import type { ApiVaccine, CreateVaccineDto, UpdateVaccineDto } from './types';
 
-export const vaccinesApi = {
-  getAll:  (petId: string)                             => api.get<ApiVaccine[]>(`/pets/${petId}/vaccines`),
-  getById: (petId: string, id: string)                 => api.get<ApiVaccine>(`/pets/${petId}/vaccines/${id}`),
-  create:  (petId: string, dto: CreateVaccineDto)      => api.post<ApiVaccine>(`/pets/${petId}/vaccines`, dto),
-  update:  (petId: string, id: string, dto: UpdateVaccineDto) => api.patch<ApiVaccine>(`/pets/${petId}/vaccines/${id}`, dto),
-  delete:  (petId: string, id: string)                 => api.delete<void>(`/pets/${petId}/vaccines/${id}`),
-};
+
+const vaccinesApi = {
+  getAll: (petId: string) => api.get(`/pets/${petId}/vaccines`),
+
+  create: (petId: string, data: {
+    name: string
+    date: string
+    nextduedate?: string | null
+    veterinary?: string | null
+    notes?: string | null
+  }) => api.post(`/pets/${petId}/vaccines`, data),
+
+  update: (petId: string, vaccineId: string, data: {
+    name?: string
+    date?: string
+    nextDueDate?: string | null
+    veterinary?: string | null
+    notes?: string | null
+  }) => api.patch(`/pets/${petId}/vaccines/${vaccineId}`, data),
+
+  delete: (petId: string, vaccineId: string) =>
+    api.delete(`/pets/${petId}/vaccines/${vaccineId}`),
+}
+
+export default vaccinesApi

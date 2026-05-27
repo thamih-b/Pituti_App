@@ -31,31 +31,36 @@ const BADGE_MAP: Record<VaccStatus, { badge: string; badgeCls: string }> = {
 }
 
 function toVaccineRecord(api: Record<string, unknown>): VaccineRecord {
-  const nextDate = String(api.next_due   ?? api.nextDate  ?? api.next_date ?? '')
-  const name     = String(api.vaccine_name ?? api.name    ?? '')
-  const applied  = String(api.date_applied ?? api.applied ?? api.date      ?? '')
-  const cls      = getVaccStatus(nextDate) as VaccStatus
+  const nextDate = String(api.next_due ?? api.nextDate ?? api.next_date ?? '')
+  const name = String(api.vaccine_name ?? api.name ?? '')
+  const applied = String(api.date_applied ?? api.applied ?? api.date ?? '')
+  const cls = getVaccStatus(nextDate) as VaccStatus
+
   return {
+    id: String(api.id ?? ''),
     name,
     applied: applied
       ? new Date(applied + 'T12:00:00').toLocaleDateString(undefined, {
-          day: '2-digit', month: 'short', year: 'numeric',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
         })
       : '',
     nextDate,
-    badge:    BADGE_MAP[cls].badge,
+    badge: BADGE_MAP[cls].badge,
     badgeCls: BADGE_MAP[cls].badgeCls,
   }
 }
 
 interface VaccinesContextValue {
   vaccinesByPet: Record<string, VaccineRecord[]>
-  allVaccines:   VaccineWithMeta[]
-  loading:       boolean
-  error:         string | null
-  addVaccine:    (petId: string, v: VaccineRecord) => void
+  allVaccines: VaccineWithMeta[]
+  loading: boolean
+  error: string | null
+  addVaccine: (petId: string, v: VaccineRecord) => void
   updateVaccine: (petId: string, v: VaccineRecord) => void
-  refetch:       () => void
+  deleteVaccine: (petId: string, vaccineId: string) => Promise<void>
+  refetch: () => void
 }
 
 const VaccinesContext = createContext<VaccinesContextValue | null>(null)
@@ -107,24 +112,40 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
       [petId]: [...(prev[petId] ?? []), v],
     })), [])
 
+const deleteVaccine = useCallback(async (petId: string, vaccineId: string) => {
+  await vaccinesApi.delete(petId, vaccineId)
+  setVaccinesByPet((prev) => ({
+    ...prev,
+    [petId]: (prev[petId] ?? []).filter((v) => v.id !== vaccineId),
+  }))
+}, [])
+
   const updateVaccine = useCallback((petId: string, v: VaccineRecord) =>
     setVaccinesByPet(prev => ({
       ...prev,
-      [petId]: (prev[petId] ?? []).map(x => x.name === v.name ? v : x),
+      [petId]: (prev[petId] ?? []).map(x => x.id === v.id ? v : x),
     })), [])
 
   return (
-    <VaccinesContext.Provider value={{
-      vaccinesByPet, allVaccines, loading, error,
-      addVaccine, updateVaccine, refetch: load,
-    }}>
-      {children}
-    </VaccinesContext.Provider>
+<VaccinesContext.Provider
+  value={{
+    vaccinesByPet,
+    allVaccines,
+    loading,
+    error,
+    addVaccine,
+    updateVaccine,
+    deleteVaccine,
+    refetch: load,
+  }}
+>
+  {children}
+</VaccinesContext.Provider>
   )
 }
 
-export function useVaccines() {
+export function useVaccinesContext () {
   const ctx = useContext(VaccinesContext)
-  if (!ctx) throw new Error('useVaccines must be used inside <VaccinesProvider>')
+  if (!ctx) throw new Error('useVaccinesContext must be used inside <VaccinesProvider>')
   return ctx
 }

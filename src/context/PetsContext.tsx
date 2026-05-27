@@ -19,6 +19,7 @@ export interface Pet {
 
 // Mantido aqui — usado como tipo en VaccineDetailModal, EditVaccineModal, RegisterVaccineModal
 export interface VaccineRecord {
+  id:      string
   name:     string
   applied:  string
   nextDate: string

@@ -94,7 +94,7 @@ La aplicación usa tres niveles de estado, cada uno con una responsabilidad clar
 |---|---|---|
 | **Estado local** | `useState` | UI: modales abiertos, valores de formularios, pestañas activas |
 | **Estado global** | Context API (`AuthContext`, `PetContext`) | Usuario autenticado, mascota seleccionada actualmente |
-| **Estado del servidor** | Custom hooks (`usePets`, `useVaccines`, etc.) | Datos cargados desde la API, con loading, data y error |
+| **Estado del servidor** | Custom hooks (`usePets`, `useVaccinesContext`, etc.) | Datos cargados desde la API, con loading, data y error |
 
 ### AuthContext
 Guarda el usuario autenticado y expone `login`, `logout` y `useAuth`. El token de sesión se almacena en memoria (variable de módulo) durante la sesión activa para evitar exposición en LocalStorage en entornos no seguros.
@@ -337,7 +337,7 @@ interface ActivityLog {
 │                   FRONTEND (React)                   │
 │                                                      │
 │  Page                                                │
-│   └── custom hook (usePets, useVaccines...)          │
+│   └── custom hook (usePets, useVaccinesContext...)          │
 │         └── src/api/client.ts  (fetch tipado)        │
 │               └── HTTP Request (Bearer token)        │
 └──────────────────────┬──────────────────────────────┘
@@ -376,7 +376,7 @@ La separación en `routes → controllers → services` permite cambiar la fuent
 La aplicación tiene dos estados globales simples: usuario autenticado y mascota seleccionada. Redux añadiría boilerplate innecesario para este nivel de complejidad. Context API con hooks customizados es suficiente y más fácil de mantener.
 
 ### Por qué custom hooks para el estado del servidor
-Encapsular `fetch + loading + error` en hooks reutilizables (`usePets`, `useVaccines`) permite que varias páginas compartan la misma lógica de carga sin duplicación. Si en el futuro se migra a React Query o SWR, el cambio se hace solo dentro del hook.
+Encapsular `fetch + loading + error` en hooks reutilizables (`usePets`, `useVaccinesContext`) permite que varias páginas compartan la misma lógica de carga sin duplicación. Si en el futuro se migra a React Query o SWR, el cambio se hace solo dentro del hook.
 
 ### Por qué el token en memoria y no en LocalStorage
 LocalStorage es vulnerable a ataques XSS. Guardar el token en una variable de módulo (memoria JS) reduce la superficie de ataque. La contrapartida es que el usuario pierde la sesión al recargar la página, lo que se puede resolver en el futuro con cookies HttpOnly.

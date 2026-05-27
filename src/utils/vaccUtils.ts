@@ -1,10 +1,11 @@
 // Tipos e utilitários de vacinas — partilhados entre contextos e componentes
-
+// vaccUtils.ts
 export interface VaccineRecord {
-  name:     string
-  applied:  string
+  id: string
+  name: string
+  applied: string
   nextDate: string
-  badge:    string
+  badge: string
   badgeCls: string
 }
 

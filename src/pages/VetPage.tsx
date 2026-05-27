@@ -21,7 +21,7 @@ import { CONDITIONS_CATALOG } from '../context/conditionsCatalog';
 import TabPrescriptions, { type MedicationOption } from '../pages/vet/TabPrescriptions';
 import TabExams                     from './vet/tabExams';
 import TabDocuments                 from './vet/TabDocuments';
-import { useVaccines }              from '../context/VaccinesContext';
+import { useVaccinesContext }              from '../context/VaccinesContext';
 import type { VaccineRecord }       from '../context/PetsContext';
 import { useVetExams }          from '../context/VetExamsContext';
 import { useVetDocuments }      from '../context/VetDocumentsContext';
@@ -65,7 +65,7 @@ export default function VetPage() {
   } = useVet();
 
   const { getActiveMedicationsByPetId, getMedicationsByPetId } = useMedications();
-  const { vaccinesByPet }                                       = useVaccines();
+  const { vaccinesByPet }                                       = useVaccinesContext();
   const { exams,     addExam,     updateExam,     deleteExam }     = useVetExams();
   const { documents, addDocument, updateDocument, deleteDocument } = useVetDocuments();
   const {
