@@ -157,22 +157,25 @@ export interface ApiMedicalProfile {
 
 // ── Gestão de Token ───────────────────────────────────────────────────────────
 
-export function getToken(): string | null {
-  return localStorage.getItem('pituti-token') || sessionStorage.getItem('pituti-token')
-}
+// CORRIGIDO: chave consistente em todas as funções
+const TOKEN_KEY = 'pituti_token'
+const USER_KEY = 'pituti_user'
 
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+}
 
 export function setToken(token: string, remember: boolean = true): void {
   clearToken()
   const storage = remember ? localStorage : sessionStorage
-  storage.setItem('pituti_token', token)
+  storage.setItem(TOKEN_KEY, token)
 }
 
 export function clearToken(): void {
-  localStorage.removeItem('pituti_token')
-  sessionStorage.removeItem('pituti_token')
-  localStorage.removeItem('pituti_user')
-  sessionStorage.removeItem('pituti_user')
+  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(USER_KEY)
+  sessionStorage.removeItem(USER_KEY)
 }
 
 // ── Cliente HTTP ──────────────────────────────────────────────────────────────
@@ -242,96 +245,3 @@ class ApiClient {
 }
 
 export const api = new ApiClient(BASE_URL)
-
-// ── Recursos ──────────────────────────────────────────────────────────────────
-
-export const petsApi = {
-  getAll: (ownerId?: string) =>
-    api.get<ApiPet[]>(ownerId ? `/pets?ownerId=${encodeURIComponent(ownerId)}` : '/pets'),
-
-  getById: (id: string) =>
-    api.get<ApiPet>(`/pets/${id}`),
-
-  create: (dto: CreatePetDto) =>
-    api.post<ApiPet>('/pets', dto),
-
-  update: (id: string, dto: UpdatePetDto) =>
-    api.patch<ApiPet>(`/pets/${id}`, dto),
-
-  delete: (id: string) =>
-    api.delete<void>(`/pets/${id}`),
-}
-
-export const vetsApi = {
-  getAll: () => api.get<ApiVet[]>('/vets'),
-  getById: (id: string) => api.get<ApiVet>(`/vets/${id}`),
-  create: (dto: Partial<ApiVet>) => api.post<ApiVet>('/vets', dto),
-  update: (id: string, dto: Partial<ApiVet>) => api.patch<ApiVet>(`/vets/${id}`, dto),
-  delete: (id: string) => api.delete<void>(`/vets/${id}`),
-}
-
-export const appointmentsApi = {
-  getAll: (vetId: string) => api.get<ApiAppointment[]>(`/vets/${vetId}/appointments`),
-  create: (vetId: string, dto: Partial<ApiAppointment>) =>
-    api.post<ApiAppointment>(`/vets/${vetId}/appointments`, dto),
-  update: (vetId: string, id: string, dto: Partial<ApiAppointment>) =>
-    api.patch<ApiAppointment>(`/vets/${vetId}/appointments/${id}`, dto),
-  delete: (vetId: string, id: string) =>
-    api.delete<void>(`/vets/${vetId}/appointments/${id}`),
-}
-
-export const medicationsApi = {
-  getAll: (petId: string) => api.get<ApiMedication[]>(`/pets/${petId}/medications`),
-  create: (petId: string, dto: Partial<ApiMedication>) =>
-    api.post<ApiMedication>(`/pets/${petId}/medications`, dto),
-  update: (petId: string, id: string, dto: Partial<ApiMedication>) =>
-    api.patch<ApiMedication>(`/pets/${petId}/medications/${id}`, dto),
-  delete: (petId: string, id: string) =>
-    api.delete<void>(`/pets/${petId}/medications/${id}`),
-}
-
-export const symptomsApi = {
-  getAll: (petId: string) => api.get<ApiSymptom[]>(`/pets/${petId}/symptoms`),
-  create: (petId: string, dto: Partial<ApiSymptom>) =>
-    api.post<ApiSymptom>(`/pets/${petId}/symptoms`, dto),
-  update: (petId: string, id: string, dto: Partial<ApiSymptom>) =>
-    api.patch<ApiSymptom>(`/pets/${petId}/symptoms/${id}`, dto),
-  delete: (petId: string, id: string) =>
-    api.delete<void>(`/pets/${petId}/symptoms/${id}`),
-}
-
-export const caresApi = {
-  getAll: (petId: string) => api.get<ApiCare[]>(`/pets/${petId}/cares`),
-  create: (petId: string, dto: Partial<ApiCare>) =>
-    api.post<ApiCare>(`/pets/${petId}/cares`, dto),
-  update: (petId: string, id: string, dto: Partial<ApiCare>) =>
-    api.patch<ApiCare>(`/pets/${petId}/cares/${id}`, dto),
-  delete: (petId: string, id: string) =>
-    api.delete<void>(`/pets/${petId}/cares/${id}`),
-}
-
-export const vaccinesApi = {
-  getAll: (petId: string) => api.get<ApiVaccine[]>(`/pets/${petId}/vaccines`),
-  create: (petId: string, dto: Partial<ApiVaccine>) =>
-    api.post<ApiVaccine>(`/pets/${petId}/vaccines`, dto),
-  update: (petId: string, id: string, dto: Partial<ApiVaccine>) =>
-    api.patch<ApiVaccine>(`/pets/${petId}/vaccines/${id}`, dto),
-  delete: (petId: string, id: string) =>
-    api.delete<void>(`/pets/${petId}/vaccines/${id}`),
-}
-
-export const notesApi = {
-  getAll: (petId: string) => api.get<ApiNote[]>(`/pets/${petId}/notes`),
-  create: (petId: string, dto: Partial<ApiNote>) =>
-    api.post<ApiNote>(`/pets/${petId}/notes`, dto),
-  update: (petId: string, id: string, dto: Partial<ApiNote>) =>
-    api.patch<ApiNote>(`/pets/${petId}/notes/${id}`, dto),
-  delete: (petId: string, id: string) =>
-    api.delete<void>(`/pets/${petId}/notes/${id}`),
-}
-
-export const medicalProfilesApi = {
-  get: (petId: string) => api.get<ApiMedicalProfile>(`/pets/${petId}/medical-profile`),
-  upsert: (petId: string, dto: Partial<ApiMedicalProfile>) =>
-    api.put<ApiMedicalProfile>(`/pets/${petId}/medical-profile`, dto),
-}
