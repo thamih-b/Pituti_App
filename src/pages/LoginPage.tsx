@@ -270,7 +270,7 @@ export default function LoginPage() {
       return
     }
 
-    const path = mode === 'login' ? '/auth/login' : '/auth/register'
+const path = mode === 'login' ? '/users/login' : '/users/register'
     const payload =
       mode === 'login'
         ? { email, password }
