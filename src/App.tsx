@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { PitutiProvider } from './context/PitutiContext'
 import { SymptomsProvider } from './context/SymptomsContext'
 import { CaresProvider } from './context/CaresContext'
 import { VetProvider } from './context/VetContext'
+import { MedicationsProvider } from './context/MedicationsContext'
+import { getToken } from './api/client'
 
 import AppLayout from './components/AppLayout'
 import DashboardPage from './pages/DashboardPage'
@@ -18,19 +21,47 @@ import SettingsPage from './pages/SettingsPage'
 import VetPage from './pages/VetPage'
 import NotFoundPage from './pages/NotFoundPage'
 import LoginPage from './pages/LoginPage'
-import { MedicationsProvider } from './context/MedicationsContext'
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  return getToken() ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function PublicOnly({ children }: { children: ReactNode }) {
+  return getToken() ? <Navigate to="/dashboard" replace /> : <>{children}</>
+}
+
+function RootRedirect() {
+  return <Navigate to={getToken() ? '/dashboard' : '/login'} replace />
+}
 
 export default function App() {
   return (
-      <PitutiProvider>
-        <SymptomsProvider>
-          <CaresProvider>
-            <MedicationsProvider>
+    <PitutiProvider>
+      <SymptomsProvider>
+        <CaresProvider>
+          <MedicationsProvider>
             <VetProvider>
               <BrowserRouter>
                 <Routes>
-                  <Route path="/" element={<AppLayout />}>
-                    <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/" element={<RootRedirect />} />
+
+                  <Route
+                    path="/login"
+                    element={
+                      <PublicOnly>
+                        <LoginPage />
+                      </PublicOnly>
+                    }
+                  />
+
+                  <Route
+                    path="/"
+                    element={
+                      <RequireAuth>
+                        <AppLayout />
+                      </RequireAuth>
+                    }
+                  >
                     <Route path="dashboard" element={<DashboardPage />} />
                     <Route path="pets" element={<PetListPage />} />
                     <Route path="pets/:petId" element={<PetDetailPage />} />
@@ -44,14 +75,13 @@ export default function App() {
                     <Route path="vet" element={<VetPage />} />
                   </Route>
 
-                  <Route path="/login" element={<LoginPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </BrowserRouter>
             </VetProvider>
-            </MedicationsProvider>
-          </CaresProvider>
-        </SymptomsProvider>
-      </PitutiProvider>
+          </MedicationsProvider>
+        </CaresProvider>
+      </SymptomsProvider>
+    </PitutiProvider>
   )
 }

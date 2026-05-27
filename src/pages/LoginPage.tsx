@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
+import { setToken } from '../api/client'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+const API_BASE = import.meta.env.VITEAPIURL ?? ''
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -98,10 +101,10 @@ interface FormFieldProps {
   value: string
   onChange: (v: string) => void
   placeholder: string
-  icon: React.ReactNode
+  icon: ReactNode
   error?: string
   hint?: string
-  extra?: React.ReactNode
+  extra?: ReactNode
   disabled?: boolean
 }
 
@@ -246,56 +249,62 @@ export default function LoginPage() {
     return e
   }
 
-  const handleSubmit = async () => {
-    const errs =
-      mode === 'login'
-        ? validateLogin()
-        : mode === 'register'
-          ? validateRegister()
-          : validateForgot()
+ const handleSubmit = async () => {
+  const errs =
+    mode === 'login'
+      ? validateLogin()
+      : mode === 'register'
+        ? validateRegister()
+        : validateForgot()
 
-    if (Object.keys(errs).length) {
-      setErrors(errs)
+  if (Object.keys(errs).length) {
+    setErrors(errs)
+    return
+  }
+
+  setLoading(true)
+  setErrors({})
+
+  try {
+    if (mode === 'forgot') {
+      setSuccess(true)
       return
     }
 
-    setLoading(true)
-    setErrors({})
+    const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
+    const payload = mode === 'login'
+      ? { email, password }
+      : { name, email, password }
 
-    try {
-      if (mode === 'forgot') {
-        setSuccess(true)
-        return
-      }
+    const res = await apiPost(path, payload)
 
-      const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
-      const payload = mode === 'login' ? { email, password } : { name, email, password }
-      const res = await apiPost(path, payload)
+    const user = res.data.user
 
-      const user = res.data.user
-      const storage = rememberMe ? localStorage : sessionStorage
-      storage.setItem('pituti_token', res.data.token)
-      storage.setItem('pituti_user', JSON.stringify(user))
+    setToken(res.data.token, rememberMe)
+const storage = rememberMe ? localStorage : sessionStorage
+storage.setItem('pitutiuser', JSON.stringify(user))
 
-      setUser({
-        name: user.name,
-        email: user.email,
-        phone: '',
-        city: '',
-        bio: '',
-        photoUrl: null,
-        avatar: user.name ? user.name.trim().split(/\s+/).slice(0, 2).map((n) => n[0]?.toUpperCase()).join('') || '?' : '?',
-        color: 'var(--primary-hl)',
-        colorFg: 'var(--primary)',
-      })
+    setUser({
+      name: user.name,
+      email: user.email,
+      phone: '',
+      city: '',
+      bio: '',
+      photoUrl: null,
+      avatar: user.name
+        ? user.name.trim().split(' ').slice(0, 2).map((n) => n[0]?.toUpperCase()).join('')
+        : '?',
+      color: 'var(--primary-hl)',
+      colorFg: 'var(--primary)',
+    })
 
-      navigate('/dashboard', { replace: true })
-    } catch (e: any) {
-      setErrors({ form: e.message ?? 'Erro na autenticação' })
-    } finally {
-      setLoading(false)
-    }
+    navigate('/dashboard', { replace: true })
+  } catch (e: any) {
+    setErrors({ form: e.message ?? 'Erro na autenticação' })
+  } finally {
+    setLoading(false)
   }
+}
 
   const switchMode = (m: Mode) => {
     setMode(m)

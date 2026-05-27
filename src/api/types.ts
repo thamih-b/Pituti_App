@@ -1,6 +1,46 @@
 // src/api/types.ts
 // Tipos de DTOs para requests à API
 
+// ── Shared Literal Types ──────────────────────────────────────────────────────
+
+export type Species =
+  | 'cat'
+  | 'dog'
+  | 'bird'
+  | 'rabbit'
+  | 'reptile'
+  | 'fish'
+  | 'other'
+
+export type PetSex = 'male' | 'female' | 'unknown'
+
+export type EnvironmentType = 'apartment' | 'house' | 'both'
+
+export type SymptomSeverity = 'mild' | 'moderate' | 'severe'
+
+export type CarePeriodType = 'day' | 'week' | 'month'
+
+export type CareStatus = 'pending' | 'done' | 'skipped'
+
+export type NoteType =
+  | 'control'
+  | 'observacao'
+  | 'emergencia'
+  | 'vacuna'
+  | 'cirugia'
+  | 'otro'
+
+export type VetType = 'primary' | 'specialist' | 'emergency' | 'other'
+
+export type AppointmentType =
+  | 'routine'
+  | 'emergency'
+  | 'specialist'
+  | 'followup'
+  | 'exam'
+  | 'vaccine'
+  | 'other'
+
 // ── Auth DTOs ─────────────────────────────────────────────────────────────────
 
 export interface LoginDto {
@@ -14,13 +54,15 @@ export interface RegisterDto {
   password: string
 }
 
+export interface AuthUser {
+  id: string
+  name: string
+  email: string
+}
+
 export interface AuthResponse {
   data: {
-    user: {
-      id: string
-      name: string
-      email: string
-    }
+    user: AuthUser
     token: string
   }
 }
@@ -29,62 +71,65 @@ export interface AuthResponse {
 
 export interface CreatePetDto {
   name: string
-  species: 'cat' | 'dog' | 'bird' | 'rabbit' | 'reptile' | 'fish' | 'other'
+  species: Species
   breed?: string
-  birth_date?: string
-  photo_url?: string
-  color?: string
-  microchip?: string
-  passport?: string
+  birthDate?: string
+  photoUrl?: string | null
+  color?: string | null
+  microchip?: string | null
+  passport?: string | null
+  ownerId?: string
 }
 
 export interface UpdatePetDto {
   name?: string
-  species?: 'cat' | 'dog' | 'bird' | 'rabbit' | 'reptile' | 'fish' | 'other'
+  species?: Species
   breed?: string
-  birth_date?: string
-  photo_url?: string
-  color?: string
-  microchip?: string
-  passport?: string
+  birthDate?: string
+  photoUrl?: string | null
+  color?: string | null
+  microchip?: string | null
+  passport?: string | null
 }
 
 // ── Medical Profile DTOs ──────────────────────────────────────────────────────
 
 export interface UpsertMedicalProfileDto {
-  weight_kg?: number
-  blood_type?: string
-  allergies?: string
-  chronic_conditions?: string
-  special_diet?: string
-  veterinarian_name?: string
-  veterinarian_phone?: string
-  veterinarian_clinic?: string
-  insurance_number?: string
-  insurance_provider?: string
-  notes?: string
+  sex?: PetSex
+  neutered?: boolean | null
+  neuteredAge?: string | null
+  bloodType?: string | null
+  allergies?: string[]
+  conditions?: Array<{
+    name: string
+    notes?: string
+  }>
+  surgeries?: Array<{
+    name: string
+    notes?: string
+  }>
+  environment?: EnvironmentType | null
+  livingWithAnimals?: boolean | null
+  behavioralNotes?: string | null
+  vetQuestions?: string | null
 }
 
 // ── Vaccines DTOs ─────────────────────────────────────────────────────────────
 
 export interface CreateVaccineDto {
   name: string
-  vaccine_date: string
-  next_dose_date?: string
-  batch_number?: string
-  veterinarian?: string
-  clinic?: string
-  notes?: string
+  date: string
+  nextDueDate?: string | null
+  veterinary?: string | null
+  notes?: string | null
 }
 
 export interface UpdateVaccineDto {
   name?: string
-  vaccine_date?: string
-  next_dose_date?: string
-  batch_number?: string
-  veterinarian?: string
-  clinic?: string
-  notes?: string
+  date?: string
+  nextDueDate?: string | null
+  veterinary?: string | null
+  notes?: string | null
 }
 
 // ── Medications DTOs ──────────────────────────────────────────────────────────
@@ -93,42 +138,36 @@ export interface CreateMedicationDto {
   name: string
   dosage: string
   frequency: string
-  start_date?: string
-  end_date?: string
-  prescribed_by?: string
-  reason?: string
-  notes?: string
+  startDate?: string | null
+  endDate?: string | null
+  notes?: string | null
 }
 
 export interface UpdateMedicationDto {
   name?: string
   dosage?: string
   frequency?: string
-  start_date?: string
-  end_date?: string
-  prescribed_by?: string
-  reason?: string
-  notes?: string
+  startDate?: string | null
+  endDate?: string | null
+  notes?: string | null
 }
 
 // ── Symptoms DTOs ─────────────────────────────────────────────────────────────
 
 export interface CreateSymptomDto {
-  symptom: string
-  severity: 'mild' | 'moderate' | 'severe'
-  description?: string
-  observed_date: string
+  description: string
+  severity: SymptomSeverity
+  date: string
+  notes?: string | null
   resolved?: boolean
-  resolved_date?: string
 }
 
 export interface UpdateSymptomDto {
-  symptom?: string
-  severity?: 'mild' | 'moderate' | 'severe'
   description?: string
-  observed_date?: string
+  severity?: SymptomSeverity
+  date?: string
+  notes?: string | null
   resolved?: boolean
-  resolved_date?: string
 }
 
 // ── Cares DTOs ────────────────────────────────────────────────────────────────
@@ -136,91 +175,97 @@ export interface UpdateSymptomDto {
 export interface CreateCareDto {
   name: string
   type: string
-  frequency?: string
-  period_type?: 'daily' | 'weekly' | 'monthly' | 'yearly'
-  last_done?: string
-  next_due?: string
-  notes?: string
+  frequency?: number | null
+  periodType?: CarePeriodType | null
+  time?: string | null
+  notes?: string | null
+  status?: CareStatus
 }
 
 export interface UpdateCareDto {
   name?: string
   type?: string
-  frequency?: string
-  period_type?: 'daily' | 'weekly' | 'monthly' | 'yearly'
-  last_done?: string
-  next_due?: string
-  notes?: string
+  frequency?: number | null
+  periodType?: CarePeriodType | null
+  time?: string | null
+  notes?: string | null
+  status?: CareStatus
 }
 
 // ── Notes DTOs ────────────────────────────────────────────────────────────────
 
 export interface CreateNoteDto {
-  title?: string
   content: string
-  note_date?: string
+  veterinary?: string | null
+  type?: NoteType
 }
 
 export interface UpdateNoteDto {
-  title?: string
   content?: string
-  note_date?: string
+  veterinary?: string | null
+  type?: NoteType
 }
 
 // ── Vets DTOs ─────────────────────────────────────────────────────────────────
 
 export interface CreateVetDto {
   name: string
-  clinic?: string
-  phone?: string
-  email?: string
-  address?: string
-  specialization?: string
-  notes?: string
+  clinic: string
+  phone: string
+  type?: VetType
+  specialty?: string | null
+  phone2?: string | null
+  address?: string | null
+  notes?: string | null
+  petIds?: string[]
 }
 
 export interface UpdateVetDto {
   name?: string
   clinic?: string
   phone?: string
-  email?: string
-  address?: string
-  specialization?: string
-  notes?: string
+  type?: VetType
+  specialty?: string | null
+  phone2?: string | null
+  address?: string | null
+  notes?: string | null
+  petIds?: string[]
 }
 
 // ── Appointments DTOs ─────────────────────────────────────────────────────────
 
 export interface CreateAppointmentDto {
-  pet_id: string
-  vet_name: string
-  clinic?: string
+  petId: string
+  type?: AppointmentType
   date: string
-  type?: string
-  reason?: string
-  diagnosis?: string
-  treatment?: string
-  next_appointment_date?: string
-  next_appointment_note?: string
-  weight_kg?: number
-  cost?: number
-  notes?: string
+  vetContactId?: string | null
+  vetName: string
+  clinic?: string | null
+  reason: string
+  diagnosis?: string | null
+  treatment?: string | null
+  nextAppointmentDate?: string | null
+  nextAppointmentNote?: string | null
+  weightKg?: number | null
+  cost?: number | null
+  notes?: string | null
 }
 
 export interface UpdateAppointmentDto {
-  pet_id?: string
-  vet_name?: string
-  clinic?: string
+  petId?: string
+  type?: AppointmentType
   date?: string
-  type?: string
+  vetContactId?: string | null
+  vetName?: string
+  clinic?: string | null
   reason?: string
-  diagnosis?: string
-  treatment?: string
-  next_appointment_date?: string
-  next_appointment_note?: string
-  weight_kg?: number
-  cost?: number
-  notes?: string
+  diagnosis?: string | null
+  treatment?: string | null
+  nextAppointmentDate?: string | null
+  nextAppointmentNote?: string | null
+  weightKg?: number | null
+  cost?: number | null
+  notes?: string | null
 }
 
 // ── API Response Types ────────────────────────────────────────────────────────
@@ -237,144 +282,149 @@ export interface ApiError {
   status?: number
 }
 
+// ── API Entity Types ──────────────────────────────────────────────────────────
+
 export interface ApiPet {
   id: string
   name: string
-  species: 'cat' | 'dog' | 'bird' | 'rabbit' | 'reptile' | 'fish' | 'other'
-  breed?: string
-  birth_date?: string
-  photo_url?: string
-  color?: string
-  microchip?: string
-  passport?: string
-  owner_id: string
-  created_at: string
-  updated_at: string
+  species: Species
+  breed?: string | null
+  birthDate?: string | null
+  photoUrl?: string | null
+  color?: string | null
+  microchip?: string | null
+  passport?: string | null
+  ownerId: string
+  createdAt: string
 }
 
 export interface ApiMedicalProfile {
-  id: string
-  pet_id: string
-  weight_kg?: number
-  blood_type?: string
-  allergies?: string
-  chronic_conditions?: string
-  special_diet?: string
-  veterinarian_name?: string
-  veterinarian_phone?: string
-  veterinarian_clinic?: string
-  insurance_number?: string
-  insurance_provider?: string
-  notes?: string
-  created_at: string
-  updated_at: string
+  petId: string
+  sex?: PetSex
+  neutered?: boolean | null
+  neuteredAge?: string | null
+  bloodType?: string | null
+  allergies?: string[]
+  conditions?: Array<{
+    name: string
+    notes?: string
+  }>
+  surgeries?: Array<{
+    name: string
+    notes?: string
+  }>
+  environment?: EnvironmentType | null
+  livingWithAnimals?: boolean | null
+  behavioralNotes?: string | null
+  vetQuestions?: string | null
+  updatedAt?: string | null
 }
 
 export interface ApiVaccine {
   id: string
-  pet_id: string
+  petId: string
   name: string
-  vaccine_date: string
-  next_dose_date?: string
-  batch_number?: string
-  veterinarian?: string
-  clinic?: string
-  notes?: string
-  created_at: string
-  updated_at: string
+  date: string
+  nextDueDate?: string | null
+  veterinary?: string | null
+  notes?: string | null
+  createdAt: string
 }
 
 export interface ApiMedication {
   id: string
-  pet_id: string
+  petId: string
   name: string
   dosage: string
   frequency: string
-  start_date?: string
-  end_date?: string
-  prescribed_by?: string
-  reason?: string
-  notes?: string
-  created_at: string
-  updated_at: string
+  startDate?: string | null
+  endDate?: string | null
+  notes?: string | null
+  createdAt: string
 }
 
 export interface ApiSymptom {
   id: string
-  pet_id: string
-  symptom: string
-  severity: 'mild' | 'moderate' | 'severe'
-  description?: string
-  observed_date: string
+  petId: string
+  description: string
+  severity: SymptomSeverity
+  date: string
+  notes?: string | null
   resolved: boolean
-  resolved_date?: string
-  created_at: string
-  updated_at: string
+  createdAt: string
 }
 
 export interface ApiCare {
   id: string
-  pet_id: string
+  petId: string
   name: string
   type: string
-  frequency?: string
-  period_type?: 'daily' | 'weekly' | 'monthly' | 'yearly'
-  last_done?: string
-  next_due?: string
-  notes?: string
-  created_at: string
-  updated_at: string
+  frequency?: number | null
+  periodType?: CarePeriodType | null
+  time?: string | null
+  notes?: string | null
+  status?: CareStatus
+  createdAt: string
 }
 
 export interface ApiNote {
   id: string
-  pet_id: string
-  title?: string
+  petId: string
   content: string
-  note_date: string
-  created_at: string
-  updated_at: string
+  veterinary?: string | null
+  type?: NoteType
+  createdAt: string
 }
 
 export interface ApiVet {
   id: string
+  ownerId?: string
   name: string
-  clinic?: string
-  phone?: string
-  email?: string
-  address?: string
-  specialization?: string
-  notes?: string
-  owner_id: string
-  created_at: string
-  updated_at: string
+  clinic: string
+  phone: string
+  type?: VetType
+  specialty?: string | null
+  phone2?: string | null
+  address?: string | null
+  notes?: string | null
+  createdAt: string
 }
 
 export interface ApiAppointment {
   id: string
-  pet_id: string
-  vet_id: string
-  vet_name: string
-  clinic?: string
+  petId: string
+  vetId?: string
+  vetName: string
+  clinic?: string | null
   date: string
-  type?: string
-  reason?: string
-  diagnosis?: string
-  treatment?: string
-  next_appointment_date?: string
-  next_appointment_note?: string
-  weight_kg?: number
-  cost?: number
-  notes?: string
-  created_at: string
-  updated_at: string
+  type: AppointmentType
+  reason: string
+  diagnosis?: string | null
+  treatment?: string | null
+  nextAppointmentDate?: string | null
+  nextAppointmentNote?: string | null
+  weightKg?: number | null
+  cost?: number | null
+  notes?: string | null
+  createdAt: string
+}
+
+export interface CreateUserDto {
+  name: string
+  email: string
+  photoUrl?: string | null
+}
+
+export interface UpdateUserDto {
+  name?: string
+  email?: string
+  photoUrl?: string | null
 }
 
 export interface ApiUser {
   id: string
   name: string
   email: string
-  photo_url?: string
-  created_at: string
-  updated_at: string
+  photoUrl?: string | null
+  createdAt: string
 }

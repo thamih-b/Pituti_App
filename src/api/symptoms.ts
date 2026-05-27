@@ -1,10 +1,32 @@
-import { api } from './client';
-import type { ApiSymptom, CreateSymptomDto, UpdateSymptomDto } from './types';
+import {api} from './client'
+import type { ApiSymptom, CreateSymptomDto, UpdateSymptomDto } from './types'
+import { mapApiSymptom, toApiCreateSymptomDto, toApiUpdateSymptomDto } from './mappers'
 
 export const symptomsApi = {
-  getAll:  (petId: string)                                  => api.get<ApiSymptom[]>(`/pets/${petId}/symptoms`),
-  getById: (petId: string, id: string)                      => api.get<ApiSymptom>(`/pets/${petId}/symptoms/${id}`),
-  create:  (petId: string, dto: CreateSymptomDto)           => api.post<ApiSymptom>(`/pets/${petId}/symptoms`, dto),
-  update:  (petId: string, id: string, dto: UpdateSymptomDto) => api.patch<ApiSymptom>(`/pets/${petId}/symptoms/${id}`, dto),
-  delete:  (petId: string, id: string)                      => api.delete<void>(`/pets/${petId}/symptoms/${id}`),
-};
+  async getAll(petId: string) {
+    const res = await api.get<any[]>(`/pets/${petId}/symptoms`)
+    return { ...res, data: res.data.map(mapApiSymptom) as ApiSymptom[] }
+  },
+
+  async getById(petId: string, id: string) {
+    const res = await api.get<any>(`/pets/${petId}/symptoms/${id}`)
+    return { ...res, data: mapApiSymptom(res.data) as ApiSymptom }
+  },
+
+  async create(petId: string, dto: CreateSymptomDto) {
+    const res = await api.post<any>(`/pets/${petId}/symptoms`, toApiCreateSymptomDto(dto))
+    return { ...res, data: mapApiSymptom(res.data) as ApiSymptom }
+  },
+
+  async update(petId: string, id: string, dto: UpdateSymptomDto) {
+    const res = await api.patch<any>(
+      `/pets/${petId}/symptoms/${id}`,
+      toApiUpdateSymptomDto(dto),
+    )
+    return { ...res, data: mapApiSymptom(res.data) as ApiSymptom }
+  },
+
+  delete(petId: string, id: string) {
+    return api.delete<void>(`/pets/${petId}/symptoms/${id}`)
+  },
+}

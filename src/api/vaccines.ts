@@ -1,28 +1,29 @@
-import { api } from './client';
-import type { ApiVaccine, CreateVaccineDto, UpdateVaccineDto } from './types';
-
+import {api} from './client'
+import type { ApiVaccine, CreateVaccineDto, UpdateVaccineDto } from './types'
+import { mapApiVaccine, toApiCreateVaccineDto, toApiUpdateVaccineDto } from './mappers'
 
 const vaccinesApi = {
-  getAll: (petId: string) => api.get(`/pets/${petId}/vaccines`),
+  async getAll(petId: string) {
+    const res = await api.get<any[]>(`/pets/${petId}/vaccines`)
+    return { ...res, data: res.data.map(mapApiVaccine) as ApiVaccine[] }
+  },
 
-  create: (petId: string, data: {
-    name: string
-    date: string
-    nextduedate?: string | null
-    veterinary?: string | null
-    notes?: string | null
-  }) => api.post(`/pets/${petId}/vaccines`, data),
+  async create(petId: string, dto: CreateVaccineDto) {
+    const res = await api.post<any>(`/pets/${petId}/vaccines`, toApiCreateVaccineDto(dto))
+    return { ...res, data: mapApiVaccine(res.data) as ApiVaccine }
+  },
 
-  update: (petId: string, vaccineId: string, data: {
-    name?: string
-    date?: string
-    nextDueDate?: string | null
-    veterinary?: string | null
-    notes?: string | null
-  }) => api.patch(`/pets/${petId}/vaccines/${vaccineId}`, data),
+  async update(petId: string, vaccineId: string, dto: UpdateVaccineDto) {
+    const res = await api.patch<any>(
+      `/pets/${petId}/vaccines/${vaccineId}`,
+      toApiUpdateVaccineDto(dto),
+    )
+    return { ...res, data: mapApiVaccine(res.data) as ApiVaccine }
+  },
 
-  delete: (petId: string, vaccineId: string) =>
-    api.delete(`/pets/${petId}/vaccines/${vaccineId}`),
+  delete(petId: string, vaccineId: string) {
+    return api.delete<void>(`/pets/${petId}/vaccines/${vaccineId}`)
+  },
 }
 
 export default vaccinesApi

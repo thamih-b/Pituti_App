@@ -1,10 +1,29 @@
-import { api } from './client';
-import type { ApiPet, CreatePetDto, UpdatePetDto } from './types';
+import {api} from './client'
+import type { ApiPet, CreatePetDto, UpdatePetDto } from './types'
+import { mapApiPet, toApiCreatePetDto, toApiUpdatePetDto } from './mappers'
 
 export const petsApi = {
-  getAll:  (ownerId?: string) => api.get<ApiPet[]>(`/pets${ownerId ? `?ownerId=${ownerId}` : ''}`),
-  getById: (petId: string)    => api.get<ApiPet>(`/pets/${petId}`),
-  create:  (dto: CreatePetDto)             => api.post<ApiPet>('/pets', dto),
-  update:  (petId: string, dto: UpdatePetDto) => api.patch<ApiPet>(`/pets/${petId}`, dto),
-  delete:  (petId: string)                 => api.delete<void>(`/pets/${petId}`),
-};
+  async getAll() {
+    const res = await api.get<any[]>('/pets')
+    return { ...res, data: res.data.map(mapApiPet) as ApiPet[] }
+  },
+
+  async getById(id: string) {
+    const res = await api.get<any>(`/pets/${id}`)
+    return { ...res, data: mapApiPet(res.data) as ApiPet }
+  },
+
+  async create(dto: CreatePetDto) {
+    const res = await api.post<any>('/pets', toApiCreatePetDto(dto))
+    return { ...res, data: mapApiPet(res.data) as ApiPet }
+  },
+
+  async update(id: string, dto: UpdatePetDto) {
+    const res = await api.patch<any>(`/pets/${id}`, toApiUpdatePetDto(dto))
+    return { ...res, data: mapApiPet(res.data) as ApiPet }
+  },
+
+  delete(id: string) {
+    return api.delete<void>(`/pets/${id}`)
+  },
+}

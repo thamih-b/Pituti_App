@@ -7,11 +7,12 @@ import { showToast } from './AppLayout'
 import type { PetWithAlerts } from '../hooks/usePets'
 import type { Species } from '../types'
 import { PfBtn, PfFooter } from './FooterButtons'
+import type { CreatePetInput } from '../context/PitutiContext'
 
 interface Props {
-  isOpen:  boolean
+  isOpen: boolean
   onClose: () => void
-  onAdd:   (pet: PetWithAlerts) => void
+  onAdd: (pet: CreatePetInput) => void
 }
 
 export default function AddPetModal({ isOpen, onClose, onAdd }: Props) {
@@ -59,60 +60,82 @@ export default function AddPetModal({ isOpen, onClose, onAdd }: Props) {
     const petName = name.trim()
     setSuccess(true)
     setTimeout(() => {
-      onAdd({
-        id:          `pet-${Date.now()}`,
-        name:        petName,
-        species,
-        breed:       breed.trim() || undefined,
-        birthDate:   birthDate    || undefined,
-        photoUrl:    undefined,
-        ownerId:     'user.id',
-        createdAt:   new Date().toISOString(),
-        healthScore: 100,
-        alerts:      [],
-        vaccCoverage: 100,
-        ...(weight      ? { weight }      : {}),
-        ...(color       ? { color }       : {}),
-        ...(height      ? { height }      : {}),
-        ...(petLength   ? { petLength }   : {}),
-        ...(petWidth    ? { petWidth }    : {}),
-        ...(microchip   ? { microchip }   : {}),
-        ...(chipCountry ? { chipCountry } : {}),
-        ...(passport    ? { passport }    : {}),
-      } as PetWithAlerts)
+onAdd({
+  name: petName,
+  species,
+  breed: breed.trim() || undefined,
+  birthDate: birthDate || undefined,
+  ...(weight ? { weightKg: Number(weight) } : {}),
+  ...(color ? { color } : {}),
+  ...(height ? { height: Number(height) } : {}),
+  ...(petLength ? { petLength: Number(petLength) } : {}),
+  ...(petWidth ? { petWidth: Number(petWidth) } : {}),
+  ...(microchip ? { microchip } : {}),
+  ...(chipCountry ? { chipCountry } : {}),
+  ...(passport ? { passport } : {}),
+})
       showToast(`${selected.emoji} ${petName} — ${t('toast.petAdded')}`)
       reset(); setSuccess(false); onClose()
     }, 1000)
   }
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title=""
-      icon={selected.emoji}
-      accentBg="var(--pal-lilac)"
-      accentFg="var(--nav-bg)"
-      footer={!success ? (
-        <PfFooter>
-          <PfBtn variant="add" onClick={handleSubmit}>{t('pets.addBtn')}</PfBtn>
-        </PfFooter>
-      ) : <></>}
+return (
+  <Modal
+    isOpen={isOpen}
+    onClose={handleClose}
+    title=""
+    icon={selected.emoji}
+    accentBg="var(--pal-lilac)"
+    accentFg="var(--nav-bg)"
+    footer={!success ? (
+      <PfFooter>
+        <PfBtn variant="add" onClick={handleSubmit}>
+          {t('pets.addBtn')}
+        </PfBtn>
+      </PfFooter>
+    ) : <></>}
+  >
+    <div
+      className="modal-hero"
+      style={{ background: `linear-gradient(135deg,${selected.color},var(--surface))` }}
     >
-      {/* Hero */}
-      <div className="modal-hero" style={{ background:`linear-gradient(135deg,${selected.color},var(--surface))` }}>
-        <div className="modal-hero-icon" style={{ background:'var(--pal-denim)', color:'#fff', fontSize:'1.5rem' }}>
-          {selected.emoji}
+      <div
+        className="modal-hero-icon"
+        style={{ background: 'var(--pal-denim)', color: '#fff', fontSize: '1.5rem' }}
+      >
+        {selected.emoji}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="modal-hero-title" style={{ fontSize: '1rem' }}>
+          {name.trim() || t('pets.newPet')}
         </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div className="modal-hero-title" style={{ fontSize:'1rem' }}>
-            {name.trim() || t('pets.newPet')}
-          </div>
-          <div className="modal-hero-sub">
-            {selected.label}{breed ? ` · ${breed}` : ''}{color ? ` · ${color}` : ''}
-          </div>
+        <div className="modal-hero-sub">
+          {selected.label}
+          {breed ? ` · ${breed}` : ''}
+          {color ? ` · ${color}` : ''}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="pm-close"
+        onClick={handleClose}
+        aria-label={t('modal.close')}
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
 
       {success ? (
         <div className="modal-success">
