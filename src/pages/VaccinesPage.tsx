@@ -40,9 +40,6 @@ interface CalEvent {
   status:  'ok' | 'soon' | 'late'; color: string; bgColor: string; careId?: string
 }
 
-// ← tipo local removido — usa VaccineWithMeta do contexto
-// type VaccineWithMeta = VaccineRecord & { ... }  REMOVIDO
-
 const eventColor = (s: 'ok'|'soon'|'late') => s==='late' ? STATUS_COLOR.late : s==='soon' ? STATUS_COLOR.soon : STATUS_COLOR.ok
 const eventBg    = (s: 'ok'|'soon'|'late') => s==='late' ? STATUS_BG.late   : s==='soon' ? STATUS_BG.soon   : STATUS_BG.ok
 
@@ -57,7 +54,6 @@ function VaccinesCalendar({ allVaccines, initialDate, meds }: {
   allVaccines: VaccineWithMeta[]
   initialDate?: string
   meds: { date: string; petId: string; label: string }[]
-  // ← extraVacc removido — contexto já incorpora tudo em allVaccines
 }) {
   const { t }    = useTranslation()
   const { pets } = usePetsContext()
@@ -208,7 +204,7 @@ function VaccinesCalendar({ allVaccines, initialDate, meds }: {
 export default function VaccinesPage() {
   const { t }       = useTranslation()
   const location    = useLocation()
-  const { pets }    = usePetsContext()
+  const { pets, loading: petsLoading } = usePetsContext()
   const { vaccinesByPet, allVaccines: allVaccinesForCalendar, addVaccine, updateVaccine } = useVaccines()
   const initialDate = (location.state as { initialDate?: string }|null)?.initialDate
 
@@ -218,20 +214,31 @@ export default function VaccinesPage() {
     late: { badge: t('pet.vacc.badgeLate'), cls: 'badge-red'    },
   }
 
-  const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id ?? '')
-useEffect(() => {
-  if (pets.length > 0 && !selectedPetId) {
-    setSelectedPetId(pets[0].id)
-  }
-}, [pets, selectedPetId])
+  // ✅ FIX: inicialização segura — não acede a pets[0] diretamente
+  const [selectedPetId, setSelectedPetId] = useState('')
   const [registerOpen,  setRegisterOpen]  = useState(false)
   const [detailVaccine, setDetailVaccine] = useState<(VaccineRecord & { cls:'ok'|'soon'|'late'; petName:string; petEmoji:string })|null>(null)
   const [editVaccine,   setEditVaccine]   = useState<VaccineRecord|null>(null)
   const [editOpen,      setEditOpen]      = useState(false)
-  // ← extraVacc removido — contexto gere tudo
+
+  // ✅ FIX: inicializar quando pets carregam (espera loading terminar)
+  useEffect(() => {
+    if (!petsLoading && pets.length > 0 && !selectedPetId) {
+      setSelectedPetId(pets[0]?.id ?? '')
+    }
+  }, [pets, petsLoading, selectedPetId])
+
+  // ✅ FIX: sincronizar quando o pet selecionado é deletado
+  useEffect(() => {
+    if (selectedPetId && !pets.find(p => p.id === selectedPetId)) {
+      setSelectedPetId(pets[0]?.id ?? '')
+    }
+  }, [pets, selectedPetId])
 
   const getVacc    = (petId: string) => vaccinesByPet[petId] ?? []
-  const pet        = pets.find(p => p.id === selectedPetId) ?? pets[0]
+
+  // ✅ FIX: sem fallback para pets[0] — usa null se não encontrar
+  const pet        = pets.find(p => p.id === selectedPetId) ?? null
   const vaccines   = pet ? getVacc(pet.id) : []
   const withStatus = vaccines.map(v => ({ ...v, cls: getVaccStatus(v.nextDate) as 'ok'|'soon'|'late' }))
 
@@ -280,26 +287,46 @@ useEffect(() => {
     { label: `${t('vaccines.expiringSoon')} / ${t('vaccines.expired')}`, pct: penPct, color: penPct>0?'warn':'success' },
   ]
 
-  if (!pet) return (
-  <div>
-    <BackButton />
-    <div className="page-header">
-      <div>
-        <div className="page-title">{t('vaccines.title')}</div>
-        <div className="page-subtitle">{t('vaccines.subtitle')}</div>
+  // ✅ FIX: guard para loading
+  if (petsLoading) return (
+    <div>
+      <BackButton />
+      <div className="page-header">
+        <div>
+          <div className="page-title">{t('vaccines.title')}</div>
+          <div className="page-subtitle">{t('vaccines.subtitle')}</div>
+        </div>
+      </div>
+      <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+        <div style={{ fontSize: '.875rem', color: 'var(--text-muted)' }}>{t('common.loading')}</div>
       </div>
     </div>
-    <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
-      <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>💉</div>
-      <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: '.375rem' }}>
-        {t('pets.noPets')}
+  )
+
+  // ✅ FIX: guard para pets vazio
+  if (!pets.length) return (
+    <div>
+      <BackButton />
+      <div className="page-header">
+        <div>
+          <div className="page-title">{t('vaccines.title')}</div>
+          <div className="page-subtitle">{t('vaccines.subtitle')}</div>
+        </div>
       </div>
-      <div style={{ fontSize: '.875rem', color: 'var(--text-muted)' }}>
-        {t('pets.noPetsHint')}
+      <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>💉</div>
+        <div style={{ fontWeight: 700, color: 'var(--text)', marginBottom: '.375rem' }}>
+          {t('pets.noPets')}
+        </div>
+        <div style={{ fontSize: '.875rem', color: 'var(--text-muted)' }}>
+          {t('pets.noPetsHint')}
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+
+  // ✅ FIX: guard para pet não encontrado (ex: ainda a sincronizar)
+  if (!pet) return null
 
   return (
     <div>
@@ -389,7 +416,6 @@ useEffect(() => {
           initialDate={initialDate}
           meds={meds}
         />
-        {/* ← extraVacc removido da prop — calendário usa allVaccines do contexto */}
       </div>
 
       <RegisterVaccineModal petName={pet.name} isOpen={registerOpen} onClose={() => setRegisterOpen(false)} vaccines={vaccines} onRegister={handleRegister}/>
