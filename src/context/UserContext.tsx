@@ -47,12 +47,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedUser =
-      localStorage.getItem('pitutiuser') ||
-      sessionStorage.getItem('pitutiuser')
+      localStorage.getItem('pituti-user') ||
+      sessionStorage.getItem('pituti-user')
 
     const token =
-      localStorage.getItem('pitutitoken') ||
-      sessionStorage.getItem('pitutitoken')
+      localStorage.getItem('pituti-token') ||
+      sessionStorage.getItem('pituti-token')
 
     if (storedUser && token) {
       try {

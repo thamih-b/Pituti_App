@@ -158,7 +158,7 @@ export interface ApiMedicalProfile {
 // ── Gestão de Token ───────────────────────────────────────────────────────────
 
 export function getToken(): string | null {
-  return localStorage.getItem('pitutitoken') || sessionStorage.getItem('pitutitoken')
+  return localStorage.getItem('pituti-token') || sessionStorage.getItem('pituti-token')
 }
 
 

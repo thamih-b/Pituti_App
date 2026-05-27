@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import { setToken } from '../api/client'
 
-
-const API_BASE = import.meta.env.VITEAPIURL ?? ''
+const API_BASE = import.meta.env.VITEAPIURL ?? 'https://pituti-api.vercel.app/api'
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -271,18 +270,19 @@ export default function LoginPage() {
       return
     }
 
-    const path = mode === 'login' ? '/api/auth/login' : '/api/auth/register'
-    const payload = mode === 'login'
-      ? { email, password }
-      : { name, email, password }
+    const path = mode === 'login' ? '/auth/login' : '/auth/register'
+    const payload =
+      mode === 'login'
+        ? { email, password }
+        : { name, email, password }
 
     const res = await apiPost(path, payload)
-
     const user = res.data.user
 
     setToken(res.data.token, rememberMe)
-const storage = rememberMe ? localStorage : sessionStorage
-storage.setItem('pitutiuser', JSON.stringify(user))
+
+    const storage = rememberMe ? localStorage : sessionStorage
+    storage.setItem('pitutiuser', JSON.stringify(user))
 
     setUser({
       name: user.name,
