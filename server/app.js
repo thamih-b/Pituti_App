@@ -4,6 +4,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import authRouter from './routes/auth.js'; 
 
 import { errorHandler }    from './middleware/errorHandler.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
@@ -100,6 +101,7 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
+app.use('/api/auth',  authRouter); 
 app.use('/api/users',                           usersRouter);
 app.use('/api/pets',                            petsRouter);
 app.use('/api/pets/:petId/vaccines',            vaccinesRouter);
