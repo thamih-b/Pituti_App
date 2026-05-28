@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { clearToken } from '../api/client'
 
 export interface UserProfile {
+  id: string   
   name: string
   email: string
   phone: string
@@ -21,6 +22,7 @@ export function deriveAvatar(name: string): string {
 }
 
 const EMPTY_USER: UserProfile = {
+   id: '', 
   name: '',
   email: '',
   phone: '',
@@ -57,6 +59,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(storedUser)
         setUser({
+          id: parsed.id || '',
           name: parsed.name || '',
           email: parsed.email || '',
           phone: parsed.phone || '',
