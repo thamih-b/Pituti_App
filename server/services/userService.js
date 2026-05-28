@@ -1,34 +1,46 @@
-import { v4 as uuid } from 'uuid';
-import { store } from '../data/store.js';
-import { assertExists, createError } from '../data/helpers.js';
-import { HTTP } from '../config/httpStatus.js';
+// server/services/userService.js
+import { sql } from '../db.js'
+import { createError } from '../data/helpers.js'
+import { HTTP } from '../config/httpStatus.js'
 
 export const userService = {
-  getAll() {
-    return [...store.users.values()];
+  async getAll() {
+    return sql`SELECT id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"
+               FROM users ORDER BY created_at DESC`
   },
 
-  getById(id) {
-    return assertExists(store.users, id, 'Usuario');
+  async getById(id) {
+    const rows = await sql`
+      SELECT id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"
+      FROM users WHERE id = ${id}`
+    if (!rows[0]) throw createError('Usuario no encontrado', HTTP.NOT_FOUND)
+    return rows[0]
   },
 
-  create(data) {
-    const exists = [...store.users.values()].find(u => u.email === data.email);
-    if (exists) throw createError('Ya existe un usuario con ese email', HTTP.CONFLICT);
-    const user = { ...data, id: uuid(), createdAt: new Date().toISOString() };
-    store.users.set(user.id, user);
-    return user;
+  async create(data) {
+    const exists = await sql`SELECT id FROM users WHERE email = ${data.email}`
+    if (exists.length) throw createError('Ya existe un usuario con ese email', HTTP.CONFLICT)
+    const [row] = await sql`
+      INSERT INTO users (name, email, photo_url)
+      VALUES (${data.name}, ${data.email}, ${data.photoUrl ?? null})
+      RETURNING id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"`
+    return row
   },
 
-  update(id, data) {
-    const user = assertExists(store.users, id, 'Usuario');
-    const updated = { ...user, ...data };
-    store.users.set(id, updated);
-    return updated;
+  async update(id, data) {
+    await this.getById(id)
+    const [row] = await sql`
+      UPDATE users SET
+        name      = COALESCE(${data.name ?? null}, name),
+        email     = COALESCE(${data.email ?? null}, email),
+        photo_url = COALESCE(${data.photoUrl ?? null}, photo_url)
+      WHERE id = ${id}
+      RETURNING id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"`
+    return row
   },
 
-  delete(id) {
-    assertExists(store.users, id, 'Usuario');
-    store.users.delete(id);
+  async delete(id) {
+    await this.getById(id)
+    await sql`DELETE FROM users WHERE id = ${id}`
   },
-};
+}

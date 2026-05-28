@@ -1,80 +1,79 @@
-import { v4 as uuid } from 'uuid'
-import { store } from '../data/store.js'
-import { assertExists, filterMap } from '../data/helpers.js'
+// server/services/petService.js
+import { sql } from '../db.js'
+import { createError } from '../data/helpers.js'
+import { HTTP } from '../config/httpStatus.js'
 
 export const petService = {
-  getAll(ownerId) {
-    const pets = ownerId
-      ? filterMap(store.pets, (p) => p.ownerId === ownerId)
-      : [...store.pets.values()]
-
-    return pets.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-  },
-
-  getById(id) {
-    return assertExists(store.pets, id, 'Mascota')
-  },
-
-  create(data) {
-    if (!data?.ownerId) {
-      const err = new Error('El ownerId es obligatorio')
-      err.statusCode = 400
+  async getAll(ownerId) {
+    if (!ownerId) {
+      const err = createError('ownerId query param is required', HTTP.BAD_REQUEST)
       throw err
     }
-
-    const ownerExists = store.users.has(data.ownerId)
-
-    if (!ownerExists) {
-      store.users.set(data.ownerId, {
-        id: data.ownerId,
-        name: data.ownerName ?? 'User',
-        email: data.ownerEmail ?? `${data.ownerId}@pituti.local`,
-        photoUrl: null,
-        createdAt: new Date().toISOString(),
-      })
-    }
-
-    const pet = {
-      ...data,
-      id: uuid(),
-      createdAt: new Date().toISOString(),
-    }
-
-    store.pets.set(pet.id, pet)
-    return pet
+    const rows = await sql`
+      SELECT id, owner_id AS "ownerId", name, species, breed,
+             birth_date AS "birthDate", photo_url AS "photoUrl",
+             created_at AS "createdAt"
+      FROM pets
+      WHERE owner_id = ${ownerId}
+      ORDER BY created_at ASC
+    `
+    return rows
   },
 
-  update(id, data) {
-    const pet = assertExists(store.pets, id, 'Mascota')
-    const updated = { ...pet, ...data }
-    store.pets.set(id, updated)
-    return updated
+  async getById(id) {
+    const rows = await sql`
+      SELECT id, owner_id AS "ownerId", name, species, breed,
+             birth_date AS "birthDate", photo_url AS "photoUrl",
+             created_at AS "createdAt"
+      FROM pets WHERE id = ${id}
+    `
+    if (!rows[0]) {
+      const err = createError('Mascota no encontrada', HTTP.NOT_FOUND)
+      throw err
+    }
+    return rows[0]
   },
 
-  delete(id) {
-    assertExists(store.pets, id, 'Mascota')
-    store.pets.delete(id)
-
-    for (const [k, v] of store.vaccines) {
-      if (v.petId === id) store.vaccines.delete(k)
+  async create(data) {
+    if (!data?.ownerId) {
+      throw createError('El ownerId es obligatorio', HTTP.BAD_REQUEST)
     }
+    const [row] = await sql`
+      INSERT INTO pets (owner_id, name, species, breed, birth_date, photo_url)
+      VALUES (
+        ${data.ownerId},
+        ${data.name},
+        ${data.species},
+        ${data.breed ?? null},
+        ${data.birthDate ?? null},
+        ${data.photoUrl ?? null}
+      )
+      RETURNING id, owner_id AS "ownerId", name, species, breed,
+                birth_date AS "birthDate", photo_url AS "photoUrl",
+                created_at AS "createdAt"
+    `
+    return row
+  },
 
-    for (const [k, v] of store.medications) {
-      if (v.petId === id) store.medications.delete(k)
-    }
+  async update(id, data) {
+    await this.getById(id)
+    const [row] = await sql`
+      UPDATE pets SET
+        name       = COALESCE(${data.name ?? null}, name),
+        species    = COALESCE(${data.species ?? null}, species),
+        breed      = COALESCE(${data.breed ?? null}, breed),
+        birth_date = COALESCE(${data.birthDate ?? null}::date, birth_date),
+        photo_url  = COALESCE(${data.photoUrl ?? null}, photo_url)
+      WHERE id = ${id}
+      RETURNING id, owner_id AS "ownerId", name, species, breed,
+                birth_date AS "birthDate", photo_url AS "photoUrl",
+                created_at AS "createdAt"
+    `
+    return row
+  },
 
-    for (const [k, v] of store.symptoms) {
-      if (v.petId === id) store.symptoms.delete(k)
-    }
-
-    for (const [k, v] of store.cares) {
-      if (v.petId === id) store.cares.delete(k)
-    }
-
-    for (const [k, v] of store.notes) {
-      if (v.petId === id) store.notes.delete(k)
-    }
-
-    store.medicalProfiles.delete(id)
+  async delete(id) {
+    await this.getById(id)
+    await sql`DELETE FROM pets WHERE id = ${id}`
   },
 }
