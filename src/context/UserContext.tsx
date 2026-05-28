@@ -43,22 +43,19 @@ const UserContext = createContext<UserContextValue | null>(null)
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile>(EMPTY_USER)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // deriva automaticamente — sem estado separado
+  const isAuthenticated = !!user.email
 
   useEffect(() => {
-const storedUser =
-  localStorage.getItem('pituti_user') ||
-  sessionStorage.getItem('pituti_user')
-
-const token =
-  localStorage.getItem('pituti_token') ||
-  sessionStorage.getItem('pituti_token')
+    const storedUser =
+      localStorage.getItem('pituti_user') || sessionStorage.getItem('pituti_user')
+    const token =
+      localStorage.getItem('pituti_token') || sessionStorage.getItem('pituti_token')
 
     if (storedUser && token) {
       try {
         const parsed = JSON.parse(storedUser)
-        const avatar = deriveAvatar(parsed.name || '')
-
         setUser({
           name: parsed.name || '',
           email: parsed.email || '',
@@ -66,14 +63,11 @@ const token =
           city: parsed.city || '',
           bio: parsed.bio || '',
           photoUrl: parsed.photoUrl || null,
-          avatar,
+          avatar: deriveAvatar(parsed.name || ''),
           color: 'var(--primary-hl)',
           colorFg: 'var(--primary)',
         })
-
-        setIsAuthenticated(true)
       } catch (e) {
-        console.error('Error parsing stored user:', e)
         clearToken()
       }
     }
@@ -82,7 +76,6 @@ const token =
   const logout = () => {
     clearToken()
     setUser(EMPTY_USER)
-    setIsAuthenticated(false)
     window.location.href = '/login'
   }
 
