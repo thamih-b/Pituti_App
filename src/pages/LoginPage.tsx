@@ -262,6 +262,7 @@ export default function LoginPage() {
         storage.setItem('pituti_user', JSON.stringify(user))
 
         setUser({
+          id: user.id,
           name: user.name,
           email: user.email,
           phone: '',

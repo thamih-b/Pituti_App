@@ -9,6 +9,7 @@ import {
 import type { Species } from '../types'
 import type { PetWithAlerts } from '../hooks/usePets'
 import { petsApi } from '../api'
+import { useUser } from './UserContext'
 
 export type Theme = 'light' | 'dark'
 
@@ -100,6 +101,7 @@ function mapApiPetToPetWithAlerts(apiPet: any): PetWithAlerts {
 
 export function PitutiProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const { user } = useUser()
 
   const loadPets = useCallback(() => {
     dispatch({ type: 'SET_PETS_LOADING', payload: true })
@@ -144,12 +146,13 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
       species: data.species,
       breed: data.breed,
       birthDate: data.birthDate,
+      ownerId:  user.id,   
     })
 
-    const createdPet = mapApiPetToPetWithAlerts(res.data)
-    dispatch({ type: 'ADD_PET', payload: createdPet })
-    return createdPet
-  }, [])
+  const createdPet = mapApiPetToPetWithAlerts(res.data)
+  dispatch({ type: 'ADD_PET', payload: createdPet })
+  return createdPet
+}, [user.id])    
 
   const removePet = useCallback(
     (id: string) => dispatch({ type: 'REMOVE_PET', payload: id }),
