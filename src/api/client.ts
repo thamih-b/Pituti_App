@@ -203,13 +203,18 @@ class ApiClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     })
 
-    if (res.status === 401) {
-      clearToken()
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      }
-      throw new Error('Sessão expirada. Por favor, faça login novamente.')
-    }
+if (res.status === 401) {
+  clearToken()
+  const errBody = await res.json().catch(() => ({}))
+  const message = errBody?.error ?? errBody?.message ?? 'Credenciais inválidas'
+  // só redireciona se NÃO estiver já numa página de auth
+  const onAuthPage = typeof window !== 'undefined' &&
+    (window.location.pathname === '/login' || window.location.pathname === '/register')
+  if (!onAuthPage) {
+    window.location.href = '/login'
+  }
+  throw new Error(message)
+}
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
