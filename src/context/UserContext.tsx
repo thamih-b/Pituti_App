@@ -46,13 +46,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    const storedUser =
-      localStorage.getItem('pituti-user') ||
-      sessionStorage.getItem('pituti-user')
+const storedUser =
+  localStorage.getItem('pituti_user') ||
+  sessionStorage.getItem('pituti_user')
 
-    const token =
-      localStorage.getItem('pituti-token') ||
-      sessionStorage.getItem('pituti-token')
+const token =
+  localStorage.getItem('pituti_token') ||
+  sessionStorage.getItem('pituti_token')
 
     if (storedUser && token) {
       try {

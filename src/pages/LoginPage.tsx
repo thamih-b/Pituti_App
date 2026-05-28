@@ -259,7 +259,7 @@ export default function LoginPage() {
 
         setToken(token, rememberMe)
         const storage = rememberMe ? localStorage : sessionStorage
-        storage.setItem('pitutiuser', JSON.stringify(user))
+        storage.setItem('pituti_user', JSON.stringify(user))
 
         setUser({
           name: user.name,
@@ -282,43 +282,6 @@ export default function LoginPage() {
         setLoading(false)
       }
       return
-    }
-
-    const errs = validateRegister()
-    if (Object.keys(errs).length) {
-      setErrors(errs)
-      return
-    }
-
-    setLoading(true)
-    setErrors({})
-    try {
-      const res = await authApi.register({ name, email, password })
-      const { user, token } = res.data
-
-      setToken(token, rememberMe)
-      const storage = rememberMe ? localStorage : sessionStorage
-      storage.setItem('pitutiuser', JSON.stringify(user))
-
-      setUser({
-        name: user.name,
-        email: user.email,
-        phone: '',
-        city: '',
-        bio: '',
-        photoUrl: null,
-        avatar: user.name
-          ? user.name.trim().split(' ').slice(0, 2).map((n) => n[0]?.toUpperCase()).join('')
-          : '?',
-        color: 'var(--primary-hl)',
-        colorFg: 'var(--primary)',
-      })
-
-      navigate('/dashboard', { replace: true })
-    } catch (e: any) {
-      setErrors({ form: e.message ?? 'Erro ao criar conta' })
-    } finally {
-      setLoading(false)
     }
   }
 
