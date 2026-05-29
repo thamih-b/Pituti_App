@@ -1,7 +1,7 @@
 // server/services/vetService.js
 import { sql } from '../db.js'
-import { createError } from '../data/helpers.js'
-import { HTTP } from '../config/httpStatus.js'
+
+function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 
 export const vetService = {
   async getAll() {
@@ -9,16 +9,13 @@ export const vetService = {
                       phone, phone2, address, notes, created_at AS "createdAt"
                FROM vets ORDER BY created_at DESC`
   },
-
   async getById(id) {
-    const rows = await sql`
-      SELECT id, owner_id AS "ownerId", name, clinic, type, specialty,
-             phone, phone2, address, notes, created_at AS "createdAt"
-      FROM vets WHERE id = ${id}`
-    if (!rows[0]) throw createError('Veterinario no encontrado', HTTP.NOT_FOUND)
+    const rows = await sql`SELECT id, owner_id AS "ownerId", name, clinic, type, specialty,
+                                  phone, phone2, address, notes, created_at AS "createdAt"
+                           FROM vets WHERE id = ${id}`
+    if (!rows[0]) notFound('Veterinario no encontrado')
     return rows[0]
   },
-
   async create(data) {
     const [row] = await sql`
       INSERT INTO vets (name, clinic, type, specialty, phone, phone2, address, notes)
@@ -29,7 +26,6 @@ export const vetService = {
                 phone, phone2, address, notes, created_at AS "createdAt"`
     return row
   },
-
   async update(id, data) {
     await this.getById(id)
     const [row] = await sql`
@@ -47,7 +43,6 @@ export const vetService = {
                 phone, phone2, address, notes, created_at AS "createdAt"`
     return row
   },
-
   async delete(id) {
     await this.getById(id)
     await sql`DELETE FROM vets WHERE id = ${id}`

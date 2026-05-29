@@ -1,52 +1,38 @@
 // server/services/appointmentService.js
 import { sql } from '../db.js'
-import { createError } from '../data/helpers.js'
-import { HTTP } from '../config/httpStatus.js'
+
+function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 
 function fromRow(r) {
-  return {
-    id: r.id, petId: r.pet_id, vetId: r.vet_contact_id,
-    vetName: r.vet_name, clinic: r.clinic, type: r.type,
-    date: r.date, reason: r.reason, diagnosis: r.diagnosis,
-    treatment: r.treatment,
-    nextAppointmentDate: r.next_appointment_date,
-    nextAppointmentNote: r.next_appointment_note,
-    weightKg: r.weight_kg, cost: r.cost, notes: r.notes,
-    createdAt: r.created_at,
-  }
+  return { id: r.id, petId: r.pet_id, vetId: r.vet_contact_id, vetName: r.vet_name,
+    clinic: r.clinic, type: r.type, date: r.date, reason: r.reason,
+    diagnosis: r.diagnosis, treatment: r.treatment,
+    nextAppointmentDate: r.next_appointment_date, nextAppointmentNote: r.next_appointment_note,
+    weightKg: r.weight_kg, cost: r.cost, notes: r.notes, createdAt: r.created_at }
 }
 
 export const appointmentService = {
   async getAllForVet(vetId) {
-    const rows = await sql`
-      SELECT * FROM appointments
-      WHERE vet_contact_id = ${vetId}
-      ORDER BY date DESC`
+    const rows = await sql`SELECT * FROM appointments WHERE vet_contact_id = ${vetId} ORDER BY date DESC`
     return rows.map(fromRow)
   },
-
   async getById(id) {
     const rows = await sql`SELECT * FROM appointments WHERE id = ${id}`
-    if (!rows[0]) throw createError('Consulta no encontrada', HTTP.NOT_FOUND)
+    if (!rows[0]) notFound('Consulta no encontrada')
     return fromRow(rows[0])
   },
-
   async create(vetId, data) {
     const [row] = await sql`
-      INSERT INTO appointments
-        (pet_id, vet_contact_id, vet_name, clinic, type, date, reason,
-         diagnosis, treatment, next_appointment_date, next_appointment_note,
-         weight_kg, cost, notes)
-      VALUES
-        (${data.petId}, ${vetId}, ${data.vetName}, ${data.clinic ?? null},
-         ${data.type ?? 'routine'}, ${data.date}, ${data.reason},
-         ${data.diagnosis ?? null}, ${data.treatment ?? null},
-         ${data.nextAppointmentDate ?? null}, ${data.nextAppointmentNote ?? null},
-         ${data.weightKg ?? null}, ${data.cost ?? null}, ${data.notes ?? null})
+      INSERT INTO appointments (pet_id, vet_contact_id, vet_name, clinic, type, date, reason,
+        diagnosis, treatment, next_appointment_date, next_appointment_note, weight_kg, cost, notes)
+      VALUES (${data.petId}, ${vetId}, ${data.vetName}, ${data.clinic ?? null},
+        ${data.type ?? 'routine'}, ${data.date}, ${data.reason},
+        ${data.diagnosis ?? null}, ${data.treatment ?? null},
+        ${data.nextAppointmentDate ?? null}, ${data.nextAppointmentNote ?? null},
+        ${data.weightKg ?? null}, ${data.cost ?? null}, ${data.notes ?? null})
       RETURNING *`
     return fromRow(row)
   },
-
   async update(vetId, id, data) {
     await this.getById(id)
     const [row] = await sql`
@@ -66,7 +52,6 @@ export const appointmentService = {
       WHERE id = ${id} RETURNING *`
     return fromRow(row)
   },
-
   async delete(vetId, id) {
     await this.getById(id)
     await sql`DELETE FROM appointments WHERE id = ${id}`
