@@ -41,13 +41,7 @@ export function PetsProvider({ children }: { children: ReactNode }) {
   const [pets,    setPets]    = useState<Pet[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Carga inicial de mascotas desde la API
-  useEffect(() => {
-    petsApi.getAll()
-      .then(res => setPets(res.data as unknown as Pet[]))
-      .catch(() => { /* silencioso — pets queda vacío si la API no responde */ })
-      .finally(() => setLoading(false))
-  }, [])
+
 
   const addPet    = useCallback((pet: Pet) =>
     setPets(prev => [...prev, pet]), [])

@@ -103,31 +103,31 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const { user } = useUser()
 
-  const loadPets = useCallback(() => {
-    dispatch({ type: 'SET_PETS_LOADING', payload: true })
-    dispatch({ type: 'SET_PETS_ERROR', payload: null })
+const loadPets = useCallback((ownerId: string) => {
+  if (!ownerId) return   // ← não carrega se user ainda não está pronto
+  dispatch({ type: 'SET_PETS_LOADING', payload: true })
+  dispatch({ type: 'SET_PETS_ERROR', payload: null })
 
-    petsApi
-      .getAll()
-      .then((res) => {
-        const pets = Array.isArray(res.data)
-          ? res.data.map(mapApiPetToPetWithAlerts)
-          : []
+  petsApi
+    .getAll(ownerId)     // ← passa ownerId
+    .then((res) => {
+      const pets = Array.isArray(res.data)
+        ? res.data.map(mapApiPetToPetWithAlerts)
+        : []
+      dispatch({ type: 'SET_PETS', payload: pets })
+      dispatch({ type: 'SET_PETS_LOADING', payload: false })
+    })
+    .catch((err: unknown) => {
+      dispatch({ type: 'SET_PETS', payload: [] })
+      const message = err instanceof Error ? err.message : String(err)
+      dispatch({ type: 'SET_PETS_ERROR', payload: message || null })
+      dispatch({ type: 'SET_PETS_LOADING', payload: false })
+    })
+}, [])
 
-        dispatch({ type: 'SET_PETS', payload: pets })
-        dispatch({ type: 'SET_PETS_LOADING', payload: false })
-      })
-      .catch((err: unknown) => {
-        dispatch({ type: 'SET_PETS', payload: [] })
-        const message = err instanceof Error ? err.message : String(err)
-        dispatch({ type: 'SET_PETS_ERROR', payload: message || null })
-        dispatch({ type: 'SET_PETS_LOADING', payload: false })
-      })
-  }, [])
-
-  useEffect(() => {
-    loadPets()
-  }, [loadPets])
+useEffect(() => {
+  loadPets(user.id)
+}, [loadPets, user.id])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.theme)
@@ -159,7 +159,7 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
     []
   )
 
-  const refetchPets = useCallback(() => loadPets(), [loadPets])
+const refetchPets = useCallback(() => loadPets(user.id), [loadPets, user.id])
 
   const toggleTheme = useCallback(() => {
     dispatch({

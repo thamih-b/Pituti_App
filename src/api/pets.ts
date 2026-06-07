@@ -3,10 +3,10 @@ import type { ApiPet, CreatePetDto, UpdatePetDto } from './types'
 import { mapApiPet, toApiCreatePetDto, toApiUpdatePetDto } from './mappers'
 
 export const petsApi = {
-  async getAll() {
-    const res = await api.get<any[]>('/pets')
-    return { ...res, data: res.data.map(mapApiPet) as ApiPet[] }
-  },
+async getAll(ownerId: string) {
+  const res = await api.get<any[]>(`/pets?ownerId=${ownerId}`)
+  return { ...res, data: res.data.map(mapApiPet) as ApiPet[] }
+},
 
   async getById(id: string) {
     const res = await api.get<any>(`/pets/${id}`)
