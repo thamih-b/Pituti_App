@@ -1,9 +1,8 @@
 import {
   createContext, useContext,
-  useState, useCallback, useEffect,
+  useState, useCallback,
   type ReactNode,
 } from 'react'
-import { petsApi } from '../api'
 
 export interface Pet {
   id:         string;
@@ -38,12 +37,10 @@ interface PetsContextValue {
 const PetsContext = createContext<PetsContextValue | null>(null)
 
 export function PetsProvider({ children }: { children: ReactNode }) {
-  const [pets,    setPets]    = useState<Pet[]>([])
-  const [loading, setLoading] = useState(true)
+  const [pets, setPets] = useState<Pet[]>([])
+  const loading = false  // carregamento gerido pelo PitutiContext
 
-
-
-  const addPet    = useCallback((pet: Pet) =>
+  const addPet = useCallback((pet: Pet) =>
     setPets(prev => [...prev, pet]), [])
 
   const updatePet = useCallback((pet: Pet) =>

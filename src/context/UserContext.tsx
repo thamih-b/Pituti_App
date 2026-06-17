@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { clearToken } from '../api/client'
 
 export interface UserProfile {
-  id: string   
+  id: string
   name: string
   email: string
   phone: string
@@ -22,7 +22,7 @@ export function deriveAvatar(name: string): string {
 }
 
 const EMPTY_USER: UserProfile = {
-   id: '', 
+  id: '',
   name: '',
   email: '',
   phone: '',
@@ -36,6 +36,7 @@ const EMPTY_USER: UserProfile = {
 
 interface UserContextValue {
   user: UserProfile
+  ready: boolean
   setUser: React.Dispatch<React.SetStateAction<UserProfile>>
   logout: () => void
   isAuthenticated: boolean
@@ -45,8 +46,8 @@ const UserContext = createContext<UserContextValue | null>(null)
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile>(EMPTY_USER)
+  const [ready, setReady] = useState(false)
 
-  // deriva automaticamente — sem estado separado
   const isAuthenticated = !!user.email
 
   useEffect(() => {
@@ -70,10 +71,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
           color: 'var(--primary-hl)',
           colorFg: 'var(--primary)',
         })
-      } catch (e) {
+      } catch {
         clearToken()
       }
     }
+    setReady(true)
   }, [])
 
   const logout = () => {
@@ -83,7 +85,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout, isAuthenticated }}>
+    <UserContext.Provider value={{ user, ready, setUser, logout, isAuthenticated }}>
       {children}
     </UserContext.Provider>
   )

@@ -53,29 +53,15 @@ const initialState: PitutiState = {
 
 function reducer(state: PitutiState, action: Action): PitutiState {
   switch (action.type) {
-    case 'SET_PETS':
-      return { ...state, pets: action.payload }
-    case 'SET_PETS_LOADING':
-      return { ...state, petsLoading: action.payload }
-    case 'SET_PETS_ERROR':
-      return { ...state, petsError: action.payload }
-    case 'ADD_PET':
-      return { ...state, pets: [action.payload, ...state.pets] }
-    case 'REMOVE_PET':
-      return { ...state, pets: state.pets.filter((p) => p.id !== action.payload) }
-    case 'SET_THEME':
-      return { ...state, theme: action.payload }
-    case 'SHOW_TOAST':
-      return {
-        ...state,
-        toastMessage: action.payload.message,
-        toastType: action.payload.kind,
-        toastVisible: true,
-      }
-    case 'HIDE_TOAST':
-      return { ...state, toastVisible: false }
-    default:
-      return state
+    case 'SET_PETS':         return { ...state, pets: action.payload }
+    case 'SET_PETS_LOADING': return { ...state, petsLoading: action.payload }
+    case 'SET_PETS_ERROR':   return { ...state, petsError: action.payload }
+    case 'ADD_PET':          return { ...state, pets: [action.payload, ...state.pets] }
+    case 'REMOVE_PET':       return { ...state, pets: state.pets.filter(p => p.id !== action.payload) }
+    case 'SET_THEME':        return { ...state, theme: action.payload }
+    case 'SHOW_TOAST':       return { ...state, toastMessage: action.payload.message, toastType: action.payload.kind, toastVisible: true }
+    case 'HIDE_TOAST':       return { ...state, toastVisible: false }
+    default:                 return state
   }
 }
 
@@ -92,42 +78,40 @@ interface PitutiContextValue {
 const PitutiContext = createContext<PitutiContextValue | null>(null)
 
 function mapApiPetToPetWithAlerts(apiPet: any): PetWithAlerts {
-  return {
-    ...apiPet,
-    alerts: [],
-    vaccCoverage: 100,
-  }
+  return { ...apiPet, alerts: [], vaccCoverage: 100 }
 }
 
 export function PitutiProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
-  const { user } = useUser()
+  const { user, ready } = useUser()
 
-const loadPets = useCallback((ownerId: string) => {
-  if (!ownerId) return   // ← não carrega se user ainda não está pronto
-  dispatch({ type: 'SET_PETS_LOADING', payload: true })
-  dispatch({ type: 'SET_PETS_ERROR', payload: null })
+  const loadPets = useCallback((ownerId: string) => {
+    if (!ownerId) return
+    dispatch({ type: 'SET_PETS_LOADING', payload: true })
+    dispatch({ type: 'SET_PETS_ERROR', payload: null })
 
-  petsApi
-    .getAll(ownerId)     // ← passa ownerId
-    .then((res) => {
-      const pets = Array.isArray(res.data)
-        ? res.data.map(mapApiPetToPetWithAlerts)
-        : []
-      dispatch({ type: 'SET_PETS', payload: pets })
-      dispatch({ type: 'SET_PETS_LOADING', payload: false })
-    })
-    .catch((err: unknown) => {
-      dispatch({ type: 'SET_PETS', payload: [] })
-      const message = err instanceof Error ? err.message : String(err)
-      dispatch({ type: 'SET_PETS_ERROR', payload: message || null })
-      dispatch({ type: 'SET_PETS_LOADING', payload: false })
-    })
-}, [])
+    petsApi
+      .getAll(ownerId)
+      .then((res) => {
+        const pets = Array.isArray(res.data)
+          ? res.data.map(mapApiPetToPetWithAlerts)
+          : []
+        dispatch({ type: 'SET_PETS', payload: pets })
+        dispatch({ type: 'SET_PETS_LOADING', payload: false })
+      })
+      .catch((err: unknown) => {
+        dispatch({ type: 'SET_PETS', payload: [] })
+        const message = err instanceof Error ? err.message : String(err)
+        dispatch({ type: 'SET_PETS_ERROR', payload: message || null })
+        dispatch({ type: 'SET_PETS_LOADING', payload: false })
+      })
+  }, [])
 
-useEffect(() => {
-  loadPets(user.id)
-}, [loadPets, user.id])
+  // Só carrega depois do UserContext ter lido o localStorage
+  useEffect(() => {
+    if (!ready) return
+    loadPets(user.id)
+  }, [loadPets, user.id, ready])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', state.theme)
@@ -146,48 +130,31 @@ useEffect(() => {
       species: data.species,
       breed: data.breed,
       birthDate: data.birthDate,
-      ownerId:  user.id,   
+      ownerId: user.id,
     })
-
-  const createdPet = mapApiPetToPetWithAlerts(res.data)
-  dispatch({ type: 'ADD_PET', payload: createdPet })
-  return createdPet
-}, [user.id])    
+    const createdPet = mapApiPetToPetWithAlerts(res.data)
+    dispatch({ type: 'ADD_PET', payload: createdPet })
+    return createdPet
+  }, [user.id])
 
   const removePet = useCallback(
-    (id: string) => dispatch({ type: 'REMOVE_PET', payload: id }),
-    []
-  )
+    (id: string) => dispatch({ type: 'REMOVE_PET', payload: id }), [])
 
-const refetchPets = useCallback(() => loadPets(user.id), [loadPets, user.id])
+  const refetchPets = useCallback(
+    () => loadPets(user.id), [loadPets, user.id])
 
   const toggleTheme = useCallback(() => {
-    dispatch({
-      type: 'SET_THEME',
-      payload: state.theme === 'light' ? 'dark' : 'light',
-    })
+    dispatch({ type: 'SET_THEME', payload: state.theme === 'light' ? 'dark' : 'light' })
   }, [state.theme])
 
   const showToast = useCallback(
     (message: string, kind: 'success' | 'err' = 'success') =>
-      dispatch({ type: 'SHOW_TOAST', payload: { message, kind } }),
-    []
-  )
+      dispatch({ type: 'SHOW_TOAST', payload: { message, kind } }), [])
 
   const hideToast = useCallback(() => dispatch({ type: 'HIDE_TOAST' }), [])
 
   return (
-    <PitutiContext.Provider
-      value={{
-        state,
-        addPet,
-        removePet,
-        refetchPets,
-        toggleTheme,
-        showToast,
-        hideToast,
-      }}
-    >
+    <PitutiContext.Provider value={{ state, addPet, removePet, refetchPets, toggleTheme, showToast, hideToast }}>
       {children}
     </PitutiContext.Provider>
   )
@@ -201,12 +168,7 @@ export function usePituti() {
 
 export const usePets = () => {
   const { state, refetchPets } = usePituti()
-  return {
-    pets: state.pets,
-    loading: state.petsLoading,
-    error: state.petsError,
-    refetch: refetchPets,
-  }
+  return { pets: state.pets, loading: state.petsLoading, error: state.petsError, refetch: refetchPets }
 }
 
 export const useTheme = () => {
