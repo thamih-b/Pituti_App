@@ -1,10 +1,12 @@
-// traduzido e sem mock
-import { useState, useRef } from 'react'
+// src/pages/SettingsPage.tsx
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { showToast } from '../components/AppLayout'
 import { PfBtn } from '../components/FooterButtons'
 import BackButton from '../components/BackButton'
 import DeleteAccountModal from '../components/DeleteAccountModal'
+import { useUser, deriveAvatar } from '../context/UserContext'
+import { usersApi } from '../api'
 
 // ── Toggle ────────────────────────────────────────────────────────
 
@@ -43,7 +45,6 @@ function SettingsField({ icon, label, type='text', value, onChange, placeholder,
 
 // ── exportCSV ─────────────────────────────────────────────────────
 
-// ✅ só exporta os dados reais do utilizador — sem pets mockadas
 function exportCSV(name: string, email: string, t: (k: string) => string) {
   const rows = [
     [t('field.name'),  name],
@@ -103,8 +104,8 @@ function LanguageSelector() {
 
 export default function SettingsPage() {
   const { t } = useTranslation()
+  const { user, setUser, logout } = useUser()
 
-  // ✅ campos vazios — serão populados pela API de utilizador
   const [name,       setName]       = useState('')
   const [email,      setEmail]      = useState('')
   const [phone,      setPhone]      = useState('')
@@ -115,9 +116,17 @@ export default function SettingsPage() {
   const [saved,      setSaved]      = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  // ✅ snapshot para o discard — sem valores hardcoded
-  const savedSnapshot = useRef({ name, email, phone, bio, city })
   const photoRef = useRef<HTMLInputElement>(null)
+
+  // ← carrega os dados reais do utilizador ao montar
+  useEffect(() => {
+    setName(user.name)
+    setEmail(user.email)
+    setPhone(user.phone || '')
+    setBio(user.bio || '')
+    setCity(user.city || '')
+    setPhotoUrl(user.photoUrl)
+  }, [user])
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
@@ -129,26 +138,69 @@ export default function SettingsPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return
     setSaving(true)
-    setTimeout(() => {
-      savedSnapshot.current = { name, email, phone, bio, city }
-      setSaving(false); setSaved(true)
+    try {
+      // Guarda na API
+      if (user.id) {
+        await usersApi.update(user.id, {
+          name: name.trim(),
+          photoUrl: photoUrl ?? undefined,
+        })
+      }
+
+      // Actualiza o contexto
+      const updatedUser = {
+        ...user,
+        name: name.trim(),
+        email,
+        phone,
+        bio,
+        city,
+        photoUrl,
+        avatar: deriveAvatar(name.trim()),
+      }
+      setUser(updatedUser)
+
+      // Persiste no localStorage
+      const stored = localStorage.getItem('pituti_user') ? localStorage : sessionStorage
+      stored.setItem('pituti_user', JSON.stringify({
+        id: user.id,
+        name: name.trim(),
+        email,
+        phone,
+        bio,
+        city,
+        photoUrl,
+      }))
+
+      setSaved(true)
       showToast(t('toast.changesSaved'))
       setTimeout(() => setSaved(false), 3000)
-    }, 800)
+    } catch (e: any) {
+      showToast(e.message ?? t('toast.saveError'), 'err')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDiscard = () => {
-    const s = savedSnapshot.current
-    setName(s.name); setEmail(s.email); setPhone(s.phone); setBio(s.bio); setCity(s.city)
+    setName(user.name)
+    setEmail(user.email)
+    setPhone(user.phone || '')
+    setBio(user.bio || '')
+    setCity(user.city || '')
+    setPhotoUrl(user.photoUrl)
   }
 
   const handleDeleteAccount = () => {
     setDeleteOpen(false)
     showToast(t('settings.deleteToast'), 'err')
-    setTimeout(() => { try { localStorage.clear() } catch {} }, 2000)
+    setTimeout(() => {
+      try { localStorage.clear(); sessionStorage.clear() } catch {}
+      window.location.href = '/login'
+    }, 2000)
   }
 
   const initials = name.split(' ').filter(Boolean).slice(0,2).map(w => w[0].toUpperCase()).join('')
@@ -189,6 +241,18 @@ export default function SettingsPage() {
         </div>
         <div style={{ display:'flex', gap:'.5rem', flexDirection:'column', alignSelf:'flex-start', flexShrink:0 }}>
           <span className="badge badge-green">✓ {t('settings.activeAccount')}</span>
+          {/* ← botão de logout */}
+          <button
+            onClick={logout}
+            style={{
+              padding:'.4rem .875rem', borderRadius:'var(--r-full)',
+              border:'1.5px solid var(--border)', background:'var(--surface-offset)',
+              color:'var(--text-muted)', fontWeight:600, fontSize:'.8125rem',
+              cursor:'pointer', fontFamily:'inherit', minHeight:36,
+            }}
+          >
+            🚪 {t('settings.logout') ?? 'Sair'}
+          </button>
         </div>
       </div>
 
