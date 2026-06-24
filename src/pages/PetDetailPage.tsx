@@ -10,7 +10,7 @@ import { showToast } from '../components/AppLayout'
 import Modal from '../components/Modal'
 import VaccRing from '../components/VaccRing'
 import AddCareModal from '../components/AddCareModal'
-import AddMedicationModal from '../components/AddMedicationModal'
+import AddMedicationModal, { type AddMedData } from '../components/AddMedicationModal'
 import RegisterSymptomModal from '../components/RegisterSymptomModal'
 import { SymptomDetailModal, EditSymptomModal } from '../components/SymptomModals'
 import NewNoteModal from '../components/NewNoteModal'
@@ -1044,10 +1044,11 @@ const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
 />
 
 <AddMedicationModal
-  isOpen={addMedOpen}
-  onClose={() => setAddMedOpen(false)}
-  defaultPetId={petData.id}
-/>
+          isOpen={addMedOpen}
+          onClose={() => setAddMedOpen(false)}
+          defaultPetId={petData.id} onAdd={function (d: AddMedData): void {
+            throw new Error('Function not implemented.')
+          } }/>
 
 <NewNoteModal
   isOpen={addNoteOpen}
