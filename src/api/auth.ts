@@ -1,33 +1,10 @@
-import { apiClient } from './client';
-
-export interface AuthUser {
-  id: string;
-  name: string;
-  email: string;
-  photoUrl?: string | null;
-}
+import api from './client';
+import type { LoginDto, RegisterDto, AuthResponse } from './types';
 
 export const authApi = {
-  async register(
-    name: string,
-    email: string,
-    password: string
-  ): Promise<{ data: AuthUser; token: string }> {
-    const res = await apiClient.post<{ data: AuthUser; token: string }>(
-      '/api/auth/register',
-      { name, email, password }
-    );
-    return res.data;
-  },
+  login: (dto: LoginDto) =>
+    api.post<AuthResponse>('auth/login', dto),
 
-  async login(
-    email: string,
-    password: string
-  ): Promise<{ data: AuthUser; token: string }> {
-    const res = await apiClient.post<{ data: AuthUser; token: string }>(
-      '/api/auth/login',
-      { email, password }
-    );
-    return res.data;
-  },
+  register: (dto: RegisterDto) =>
+    api.post<AuthResponse>('auth/register', dto),
 };
