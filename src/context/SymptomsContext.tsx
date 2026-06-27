@@ -1,75 +1,113 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import createContext, { useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { petsApi, symptomsApi } from "../api";
+import type { ApiSymptom } from "../api";
 
-export interface Symptom {
+export interface SymptomEntry {
   id: string;
   petId: string;
   description: string;
-  severity?: 'mild' | 'moderate' | 'severe' | null;
+  category: string;
+  severity: string;
   date: string;
-  notes?: string | null;
-  resolved?: boolean;
-  createdAt?: string;
+  notes: string;
+  resolved: boolean;
 }
 
 interface SymptomsContextValue {
-  symptoms: Symptom[];
+  symptoms: SymptomEntry[];
   loading: boolean;
   error: string | null;
-  fetchSymptoms: (petId: string) => Promise<void>;
-  addSymptom: (petId: string, data: Omit<Symptom, 'id' | 'petId' | 'createdAt'>) => Promise<Symptom>;
-  updateSymptom: (petId: string, id: string, data: Partial<Symptom>) => Promise<Symptom>;
-  deleteSymptom: (petId: string, id: string) => Promise<void>;
+  refetch: () => void;
+  addSymptom: (s: Omit<SymptomEntry, "id">) => void;
+  saveSymptom: (s: SymptomEntry) => void;
+  resolve: (id: string) => void;
+  unresolve: (id: string) => void;
+}
+
+const SEVERITY_MAP: Record<string, string> = {
+  mild: "leve", moderate: "moderado", severe: "grave",
+};
+
+function mapApiSymptom(s: ApiSymptom, petId: string): SymptomEntry {
+  return {
+    id: s.id,
+    petId,
+    description: s.description,
+    category: (s as any).category ?? "general",
+    severity: SEVERITY_MAP[s.severity] ?? s.severity,
+    date: s.date ?? s.createdAt?.split("T")[0] ?? "",
+    notes: s.notes ?? "",
+    resolved: s.resolved ?? false,
+  };
 }
 
 const SymptomsContext = createContext<SymptomsContextValue | null>(null);
 
-export function SymptomsProvider({ children }: { children: React.ReactNode }) {
-  const [symptoms, setSymptoms] = useState<Symptom[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function SymptomsProvider({ children }: { children: ReactNode }) {
+  const [symptoms, setSymptoms] = useState<SymptomEntry[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [tick, setTick]         = useState(0);
 
-  const fetchSymptoms = useCallback(async (petId: string) => {
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
+
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
-    try {
-      const res = await apiClient.get<{ data: Symptom[] }>(`/api/pets/${petId}/symptoms`);
-      setSymptoms(res.data.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Erro ao carregar sintomas');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    petsApi
+      .getAll()
+      .then(async (res) => {
+        const pets = res.data;
+        const results = await Promise.all(
+          pets.map((p) =>
+            symptomsApi
+              .getAll(p.id)
+              .then((r) => r.data.map((s) => mapApiSymptom(s, p.id)))
+              .catch(() => [] as SymptomEntry[])
+          )
+        );
+        if (!cancelled) setSymptoms(results.flat());
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message ?? "Error al cargar síntomas");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [tick]);
 
-  const addSymptom = async (petId: string, data: Omit<Symptom, 'id' | 'petId' | 'createdAt'>): Promise<Symptom> => {
-    const res = await apiClient.post<{ data: Symptom }>(`/api/pets/${petId}/symptoms`, data);
-    const s = res.data.data;
-    setSymptoms((prev) => [s, ...prev]);
-    return s;
-  };
+  const addSymptom  = useCallback((s: Omit<SymptomEntry, "id">) =>
+    setSymptoms((prev) => [...prev, { ...s, id: `s-${Date.now()}` }]), []);
 
-  const updateSymptom = async (petId: string, id: string, data: Partial<Symptom>): Promise<Symptom> => {
-    const res = await apiClient.patch<{ data: Symptom }>(`/api/pets/${petId}/symptoms/${id}`, data);
-    const u = res.data.data;
-    setSymptoms((prev) => prev.map((s) => (s.id === id ? u : s)));
-    return u;
-  };
+  const saveSymptom = useCallback((updated: SymptomEntry) =>
+    setSymptoms((prev) => prev.map((s) => (s.id === updated.id ? updated : s))), []);
 
-  const deleteSymptom = async (petId: string, id: string): Promise<void> => {
-    await apiClient.delete(`/api/pets/${petId}/symptoms/${id}`);
-    setSymptoms((prev) => prev.filter((s) => s.id !== id));
-  };
+  const resolve   = useCallback((id: string) =>
+    setSymptoms((prev) => prev.map((s) => (s.id === id ? { ...s, resolved: true }  : s))), []);
+
+  const unresolve = useCallback((id: string) =>
+    setSymptoms((prev) => prev.map((s) => (s.id === id ? { ...s, resolved: false } : s))), []);
 
   return (
-    <SymptomsContext.Provider value={{ symptoms, loading, error, fetchSymptoms, addSymptom, updateSymptom, deleteSymptom }}>
+    <SymptomsContext.Provider value={{ symptoms, loading, error, refetch, addSymptom, saveSymptom, resolve, unresolve }}>
       {children}
     </SymptomsContext.Provider>
   );
 }
 
-export function useSymptoms(): SymptomsContextValue {
+export function useSymptoms() {
   const ctx = useContext(SymptomsContext);
-  if (!ctx) throw new Error('useSymptoms must be used within SymptomsProvider');
+  if (!ctx) throw new Error("useSymptoms must be used within SymptomsProvider");
   return ctx;
+}
+
+export function usePetSymptoms(petId: string) {
+  const { symptoms } = useSymptoms();
+  return {
+    active:   symptoms.filter((s) => s.petId === petId && !s.resolved),
+    resolved: symptoms.filter((s) => s.petId === petId &&  s.resolved),
+    all:      symptoms.filter((s) => s.petId === petId),
+  };
 }
