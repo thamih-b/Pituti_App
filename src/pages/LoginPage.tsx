@@ -95,20 +95,20 @@ export default function LoginPage() {
     return e;
   };
 
-  const buildUserState = (u: { id: string; name: string; email: string; photoUrl?: string | null }) => ({
-    id: u.id, name: u.name, email: u.email,
-    phone: '', city: '', bio: '', photoUrl: u.photoUrl ?? null,
-    avatar: u.name
-      ? u.name.trim().split(' ').slice(0, 2).map(n => n[0]?.toUpperCase()).join('')
-      : '?',
-    color: 'var(--primary-hl)', colorFg: 'var(--primary)',
-  });
-
-  const persistSession = (user: any, token: string) => {
+  const persistSession = (
+    user: { id: string; name: string; email: string; photoUrl?: string | null },
+    token: string
+  ) => {
     setToken(token, rememberMe);
     const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem('pitutiuser', JSON.stringify(user));
-    setUser(buildUserState(user));
+    storage.setItem('pitutiuser', JSON.stringify({
+      id: user.id, name: user.name, email: user.email, photoUrl: user.photoUrl ?? null,
+    }));
+    const parts  = user.name.trim().split(' ').filter(Boolean);
+    const avatar = parts.length > 1
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : (parts[0]?.slice(0, 2) ?? '?').toUpperCase();
+    setUser(prev => ({ ...prev, id: user.id, name: user.name, email: user.email, photoUrl: user.photoUrl ?? null, avatar }));
   };
 
   const handleSubmit = async () => {
@@ -116,24 +116,22 @@ export default function LoginPage() {
     if (mode === 'forgot') {
       const errs = validateForgot();
       if (Object.keys(errs).length) { setErrors(errs); return; }
-      setLoading(true); setErrors({});
+      setLoading(true);
       try { setSuccess(true); } finally { setLoading(false); }
       return;
     }
 
-    /* REGISTER */
+    /* REGISTER — era aqui que estava o bug: este bloco não existia */
     if (mode === 'register') {
       const errs = validateRegister();
       if (Object.keys(errs).length) { setErrors(errs); return; }
       setLoading(true); setErrors({});
       try {
-        const res   = await authApi.register(name.trim(), email.trim().toLowerCase(), password);
-        const user  = (res as any).data  ?? res;
-        const token = (res as any).token ?? '';
-        persistSession(user, token);
+        const res = await authApi.register({ name: name.trim(), email: email.trim().toLowerCase(), password });
+        persistSession(res.data, res.token);
         navigate('/dashboard', { replace: true });
       } catch (e: any) {
-        setErrors({ form: e?.response?.data?.error ?? e?.message ?? 'Erro no registo' });
+        setErrors({ form: e?.message ?? 'Erro no registo' });
       } finally { setLoading(false); }
       return;
     }
@@ -143,13 +141,11 @@ export default function LoginPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true); setErrors({});
     try {
-      const res   = await authApi.login(email, password);
-      const user  = (res as any).data  ?? res;
-      const token = (res as any).token ?? '';
-      persistSession(user, token);
+      const res = await authApi.login({ email: email.trim().toLowerCase(), password });
+      persistSession(res.data, res.token);
       navigate('/dashboard', { replace: true });
     } catch (e: any) {
-      setErrors({ form: e?.response?.data?.error ?? e?.message ?? 'Credenciais invalidas' });
+      setErrors({ form: e?.message ?? 'Credenciais inválidas' });
     } finally { setLoading(false); }
   };
 
