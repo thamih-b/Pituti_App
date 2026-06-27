@@ -1,98 +1,88 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { clearToken } from '../api/client'
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getToken, removeToken } from '../api/client';
 
-export interface UserProfile {
-  id: string
-  name: string
-  email: string
-  phone: string
-  city: string
-  bio: string
-  photoUrl: string | null
-  avatar: string
-  color: string
-  colorFg: string
-}
-
-export function deriveAvatar(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 0 || !parts[0]) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-const EMPTY_USER: UserProfile = {
-  id: '',
-  name: '',
-  email: '',
-  phone: '',
-  city: '',
-  bio: '',
-  photoUrl: null,
-  avatar: '?',
-  color: 'var(--primary-hl)',
-  colorFg: 'var(--primary)',
+export interface AppUser {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  bio?: string;
+  photoUrl?: string | null;
+  avatar?: string;
+  color?: string;
+  colorFg?: string;
 }
 
 interface UserContextValue {
-  user: UserProfile
-  ready: boolean
-  setUser: React.Dispatch<React.SetStateAction<UserProfile>>
-  logout: () => void
-  isAuthenticated: boolean
+  user: AppUser | null;
+  setUser: (u: AppUser | null) => void;
+  logout: () => void;
+  isAuthenticated: boolean;
 }
 
-const UserContext = createContext<UserContextValue | null>(null)
+const UserContext = createContext<UserContextValue | null>(null);
 
-export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile>(EMPTY_USER)
-  const [ready, setReady] = useState(false)
+export function UserProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUserState] = useState<AppUser | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
-  const isAuthenticated = !!user.email
-
+  // Restaura sessão ao carregar a app
   useEffect(() => {
-    const storedUser =
-      localStorage.getItem('pituti_user') || sessionStorage.getItem('pituti_user')
-    const token =
-      localStorage.getItem('pituti_token') || sessionStorage.getItem('pituti_token')
-
-    if (storedUser && token) {
-      try {
-        const parsed = JSON.parse(storedUser)
-        setUser({
-          id: parsed.id || '',
-          name: parsed.name || '',
-          email: parsed.email || '',
-          phone: parsed.phone || '',
-          city: parsed.city || '',
-          bio: parsed.bio || '',
-          photoUrl: parsed.photoUrl || null,
-          avatar: deriveAvatar(parsed.name || ''),
-          color: 'var(--primary-hl)',
-          colorFg: 'var(--primary)',
-        })
-      } catch {
-        clearToken()
+    const token = getToken();
+    if (token) {
+      const raw =
+        localStorage.getItem('pitutiuser') ??
+        sessionStorage.getItem('pitutiuser');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as AppUser;
+          setUserState({
+            ...parsed,
+            avatar:
+              parsed.avatar ??
+              (parsed.name
+                ? parsed.name
+                    .trim()
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((n) => n[0]?.toUpperCase())
+                    .join('')
+                : '?'),
+            color: parsed.color ?? 'var(--primary-hl)',
+            colorFg: parsed.colorFg ?? 'var(--primary)',
+          });
+        } catch {
+          removeToken();
+        }
+      } else {
+        removeToken(); // token sem dados de user: força re-login
       }
     }
-    setReady(true)
-  }, [])
+    setHydrated(true);
+  }, []);
+
+  const setUser = (u: AppUser | null) => setUserState(u);
 
   const logout = () => {
-    clearToken()
-    setUser(EMPTY_USER)
-    window.location.href = '/login'
-  }
+    removeToken();
+    setUserState(null);
+  };
+
+  // Evita flash de conteúdo não autenticado
+  if (!hydrated) return null;
 
   return (
-    <UserContext.Provider value={{ user, ready, setUser, logout, isAuthenticated }}>
+    <UserContext.Provider
+      value={{ user, setUser, logout, isAuthenticated: !!user }}
+    >
       {children}
     </UserContext.Provider>
-  )
+  );
 }
 
-export function useUser() {
-  const ctx = useContext(UserContext)
-  if (!ctx) throw new Error('useUser must be used inside UserProvider')
-  return ctx
+export function useUser(): UserContextValue {
+  const ctx = useContext(UserContext);
+  if (!ctx) throw new Error('useUser must be used within UserProvider');
+  return ctx;
 }
