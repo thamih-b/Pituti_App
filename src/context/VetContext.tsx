@@ -30,6 +30,23 @@ interface VetContextValue {
 
 const VetContext = createContext<VetContextValue | null>(null);
 
+// Tipos mínimos para não criar importação circular com VetPrescriptionsContext
+type PrescriptionStatusInput = {
+  status: 'active' | 'expiring' | 'expired' | 'used';
+  expiresAt: string | null;
+};
+
+export function computePrescriptionStatus(
+  p: PrescriptionStatusInput
+): 'active' | 'expiring' | 'expired' | 'used' {
+  if (p.status === 'used') return 'used';
+  if (!p.expiresAt) return 'active';
+  const msLeft = new Date(p.expiresAt).getTime() - Date.now();
+  if (msLeft < 0) return 'expired';
+  if (msLeft < 30 * 24 * 60 * 60 * 1000) return 'expiring'; // < 30 dias
+  return 'active';
+}
+
 export function VetProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useUser();
   const [vets, setVets] = useState<Vet[]>([]);

@@ -35,13 +35,13 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const [user] = await query<{ id: string; name: string; email: string }>(
-      'INSERT INTO users (name, email, passwordhash) VALUES ($1, $2, $3) RETURNING id, name, email',
+      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
       [name.trim(), normalizedEmail, passwordHash]
     );
 
     const token = await signToken({ id: user.id, name: user.name, email: user.email });
 
-    return NextResponse.json({ data: user, token }, { status: 201 });
+    return NextResponse.json({ data: { user, token } }, { status: 201 });
   } catch (err: any) {
     // Unique constraint do Postgres → email duplicado numa race condition
     if (err?.code === '23505') {
