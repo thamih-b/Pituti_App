@@ -1,9 +1,10 @@
-import createContext, { useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { CareEditData } from "../components/EditCareModal";
 import { petsApi, caresApi } from "../api";
 import type { ApiCare } from "../api";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
+import { useUser } from './UserContext';
 
 export interface CareItem {
   id: string;
@@ -121,7 +122,9 @@ function mapApiCare(c: ApiCare, petId: string, t: TFunction): CareItem {
 const CaresContext = createContext<CaresContextValue | null>(null);
 
 export function CaresProvider({ children }: { children: ReactNode }) {
+
   const { t } = useTranslation();
+  const { user } = useUser();
   const [items, setItems] = useState<CareItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,8 +133,8 @@ export function CaresProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    petsApi
-      .getAll()
+petsApi
+  .getAll(user.id)
       .then(async (res) => {
         const pets = res.data;
         const results = await Promise.all(
@@ -193,28 +196,71 @@ export function CaresProvider({ children }: { children: ReactNode }) {
     [t]
   );
 
-  const deleteCare = useCallback(
-    (id: string) => setItems((prev) => prev.filter((c) => c.id !== id)),
-    []
-  );
+const deleteCare = useCallback(
+  async (id: string) => {
+    const care = items.find((c) => c.id === id);
+    if (care) {
+      try { await caresApi.delete(care.petId, id); } catch { /* silencia */ }
+    }
+    setItems((prev) => prev.filter((c) => c.id !== id));
+  },
+  [items]
+);
 
-  const addCare = useCallback(
-    (item: NewCareItem) =>
+const addCare = useCallback(
+  async (item: NewCareItem) => {
+    if (!item.petId) {
+      // Fallback local se não houver petId
       setItems((prev) => [
         ...prev,
-        {
-          ...item,
-          id: item.id ?? `care-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          doneByDate: item.doneByDate ?? {},
-        },
-      ]),
-    []
-  );
+        { ...item, id: item.id ?? `care-${Date.now()}`, doneByDate: item.doneByDate ?? {} },
+      ]);
+      return;
+    }
+    try {
+      const dto = {
+        name: item.title,
+        type: item.emoji === '🍖' ? 'food'
+            : item.emoji === '💧' ? 'water'
+            : item.emoji === '🦮' ? 'walk'
+            : item.emoji === '🛁' ? 'bath'
+            : item.emoji === '🪮' ? 'brush'
+            : item.emoji === '💊' ? 'medication'
+            : 'other',
+        frequency: item.total,
+        // cast period to match API type (CarePeriodType | null | undefined)
+        periodType: item.period as any,
+        time: item.time,
+        notes: item.quantity,
+        status: 'pending' as const,
+      };
+      const res = await caresApi.create(item.petId, dto);
+      const created = mapApiCare(res.data, item.petId, t);
+      setItems((prev) => [...prev, { ...created, doneByDate: {} }]);
+    } catch {
+      // Se API falhar, guarda local
+      setItems((prev) => [
+        ...prev,
+        { ...item, id: item.id ?? `care-${Date.now()}`, doneByDate: item.doneByDate ?? {} },
+      ]);
+    }
+  },
+  [t]
+);
+
+  const value: CaresContextValue = {
+    items,
+    loading,
+    error,
+    setCareProgress,
+    editCare,
+    updateCare,
+    deleteCare,
+    addCare,
+  };
 
   return (
-    <CaresContext.Provider value={{ items, loading, error, setCareProgress, editCare, updateCare, deleteCare, addCare }}>
-      {children}
-    </CaresContext.Provider>
+    <CaresContext.Provider value={value}>{children}</CaresContext.Provider>
   );
 }
 

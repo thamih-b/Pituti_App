@@ -1,6 +1,8 @@
-import createContext, { useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { petsApi, symptomsApi } from "../api";
 import type { ApiSymptom } from "../api";
+import { useUser } from './UserContext';
+
 
 export interface SymptomEntry {
   id: string;
@@ -48,6 +50,7 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [tick, setTick]         = useState(0);
+  const { user } = useUser();
 
   const refetch = useCallback(() => setTick((t) => t + 1), []);
 
@@ -55,8 +58,8 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    petsApi
-      .getAll()
+petsApi
+  .getAll(user.id)
       .then(async (res) => {
         const pets = res.data;
         const results = await Promise.all(
@@ -76,19 +79,50 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [tick]);
+  }, [tick, user.id]);
 
-  const addSymptom  = useCallback((s: Omit<SymptomEntry, "id">) =>
-    setSymptoms((prev) => [...prev, { ...s, id: `s-${Date.now()}` }]), []);
+const addSymptom = useCallback(async (s: Omit<SymptomEntry, 'id'>) => {
+  try {
+    const dto = {
+      description: s.description,
+      severity: (s.severity === 'leve' ? 'mild'
+               : s.severity === 'moderado' ? 'moderate'
+               : s.severity === 'grave' ? 'severe'
+               : s.severity) as 'mild' | 'moderate' | 'severe',
+      date: s.date,
+      notes: s.notes || undefined,
+      resolved: s.resolved,
+    };
+    const res = await symptomsApi.create(s.petId, dto);
+    const created = mapApiSymptom(res.data, s.petId);
+    setSymptoms((prev) => [...prev, created]);
+  } catch {
+    setSymptoms((prev) => [...prev, { ...s, id: `s-${Date.now()}` }]);
+  }
+}, []);
 
   const saveSymptom = useCallback((updated: SymptomEntry) =>
     setSymptoms((prev) => prev.map((s) => (s.id === updated.id ? updated : s))), []);
 
-  const resolve   = useCallback((id: string) =>
-    setSymptoms((prev) => prev.map((s) => (s.id === id ? { ...s, resolved: true }  : s))), []);
+const resolve = useCallback(async (id: string) => {
+  const s = symptoms.find((x) => x.id === id);
+  if (s) {
+    try {
+      await symptomsApi.update(s.petId, id, { resolved: true } as any);
+    } catch { /* silencia */ }
+  }
+  setSymptoms((prev) => prev.map((x) => (x.id === id ? { ...x, resolved: true } : x)));
+}, [symptoms]);
 
-  const unresolve = useCallback((id: string) =>
-    setSymptoms((prev) => prev.map((s) => (s.id === id ? { ...s, resolved: false } : s))), []);
+const unresolve = useCallback(async (id: string) => {
+  const s = symptoms.find((x) => x.id === id);
+  if (s) {
+    try {
+      await symptomsApi.update(s.petId, id, { resolved: false } as any);
+    } catch { /* silencia */ }
+  }
+  setSymptoms((prev) => prev.map((x) => (x.id === id ? { ...x, resolved: false } : x)));
+}, [symptoms]);
 
   return (
     <SymptomsContext.Provider value={{ symptoms, loading, error, refetch, addSymptom, saveSymptom, resolve, unresolve }}>

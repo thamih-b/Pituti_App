@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { apiClient } from '../api/client';
+import { vetsApi } from '../api';
+import type { CreateVetDto, UpdateVetDto } from '../api';
 import { useUser } from './UserContext';
 
 export interface Vet {
@@ -40,10 +41,11 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get<{ data: Vet[] }>('/api/vets');
-      setVets(res.data.data);
+      const res = await vetsApi.getAll();
+      // vetsApi.getAll devolve { data: ApiVet[], ... } onde data é o array
+      setVets(res.data as unknown as Vet[]);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Erro ao carregar veterinários');
+      setError(e?.message ?? 'Erro ao carregar veterinários');
     } finally {
       setLoading(false);
     }
@@ -55,21 +57,21 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, fetchVets]);
 
   const addVet = async (data: Omit<Vet, 'id' | 'ownerId' | 'createdAt'>): Promise<Vet> => {
-    const res = await apiClient.post<{ data: Vet }>('/api/vets', data);
-    const v = res.data.data;
+    const res = await vetsApi.create(data as unknown as CreateVetDto);
+    const v = res.data as unknown as Vet;
     setVets((prev) => [v, ...prev]);
     return v;
   };
 
   const updateVet = async (id: string, data: Partial<Vet>): Promise<Vet> => {
-    const res = await apiClient.patch<{ data: Vet }>(`/api/vets/${id}`, data);
-    const u = res.data.data;
+    const res = await vetsApi.update(id, data as unknown as UpdateVetDto);
+    const u = res.data as unknown as Vet;
     setVets((prev) => prev.map((v) => (v.id === id ? u : v)));
     return u;
   };
 
   const deleteVet = async (id: string): Promise<void> => {
-    await apiClient.delete(`/api/vets/${id}`);
+    await vetsApi.delete(id);
     setVets((prev) => prev.filter((v) => v.id !== id));
   };
 

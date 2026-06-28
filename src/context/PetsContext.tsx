@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../api/client';
+import { petsApi } from '../api';
+import type { CreatePetDto, UpdatePetDto } from '../api';
 import { useUser } from './UserContext';
 
 export interface Pet {
@@ -29,46 +30,47 @@ interface PetsContextValue {
 const PetsContext = createContext<PetsContextValue | null>(null);
 
 export function PetsProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useUser();
+  const { user, isAuthenticated } = useUser();
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user.id) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get<{ data: Pet[] }>('/api/pets');
-      setPets(res.data.data);
+      const res = await petsApi.getAll(user.id);
+      // petsApi.getAll devolve { data: ApiPet[] } onde data é o array mapeado
+      setPets(res.data as unknown as Pet[]);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Erro ao carregar pets');
+      setError(e?.message ?? 'Erro ao carregar pets');
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user.id]);
 
   useEffect(() => {
-    if (isAuthenticated) refresh();
+    if (isAuthenticated && user.id) refresh();
     else setPets([]);
-  }, [isAuthenticated, refresh]);
+  }, [isAuthenticated, user.id, refresh]);
 
   const addPet = async (data: Omit<Pet, 'id' | 'ownerId' | 'createdAt'>): Promise<Pet> => {
-    const res = await apiClient.post<{ data: Pet }>('/api/pets', data);
-    const p = res.data.data;
+    const res = await petsApi.create({ ...data, ownerId: user.id } as CreatePetDto);
+    const p = res.data as unknown as Pet;
     setPets((prev) => [p, ...prev]);
     return p;
   };
 
   const updatePet = async (id: string, data: Partial<Pet>): Promise<Pet> => {
-    const res = await apiClient.patch<{ data: Pet }>(`/api/pets/${id}`, data);
-    const u = res.data.data;
+    const res = await petsApi.update(id, data as UpdatePetDto);
+    const u = res.data as unknown as Pet;
     setPets((prev) => prev.map((p) => (p.id === id ? u : p)));
     return u;
   };
 
   const deletePet = async (id: string): Promise<void> => {
-    await apiClient.delete(`/api/pets/${id}`);
+    await petsApi.delete(id);
     setPets((prev) => prev.filter((p) => p.id !== id));
   };
 
@@ -79,8 +81,11 @@ export function PetsProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function usePets(): PetsContextValue {
+export function usePetsContext(): PetsContextValue {
   const ctx = useContext(PetsContext);
-  if (!ctx) throw new Error('usePets must be used within PetsProvider');
+  if (!ctx) throw new Error('usePetsContext must be used within PetsProvider');
   return ctx;
 }
+
+// Alias para compatibilidade
+export { usePetsContext as usePets };
