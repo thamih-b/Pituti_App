@@ -84,6 +84,14 @@ function buildSub(u: CareEditData, t: TFunction): string {
   return u.total <= 1 && u.quantity?.trim() ? u.quantity.trim() : freq;
 }
 
+function loadCares(userId: string) {
+  try { return JSON.parse(localStorage.getItem(`pituti_cares_${userId}`) ?? 'null') ?? []; }
+  catch { return []; }
+}
+function saveCares(userId: string, items: any[]) {
+  try { localStorage.setItem(`pituti_cares_${userId}`, JSON.stringify(items)); } catch { /* ignore */ }
+}
+
 const CARE_EMOJI: Record<string, string> = {
   food: "🍖", water: "💧", walk: "🦮", bath: "🛁", brush: "🪮", medication: "💊", other: "⭐",
 };
@@ -137,6 +145,8 @@ useEffect(() => {
 petsApi
   .getAll(user.id)
       .then(async (res) => {
+        const stored = loadCares(user.id);
+if (stored.length) setItems(stored);
         const pets = res.data;
         const results = await Promise.all(
           pets.map((p) =>
@@ -203,7 +213,11 @@ const deleteCare = useCallback(
     if (care) {
       try { await caresApi.delete(care.petId, id); } catch { /* silencia */ }
     }
-    setItems((prev) => prev.filter((c) => c.id !== id));
+    setItems((prev) => {
+  const next = prev.filter((c) => c.id !== id);
+  if (user.id) saveCares(user.id, next);
+  return next;
+});
   },
   [items]
 );
@@ -212,11 +226,12 @@ const addCare = useCallback(
   async (item: NewCareItem) => {
     if (!item.petId) {
       // Fallback local se não houver petId
-      setItems((prev) => [
-        ...prev,
-        { ...item, id: item.id ?? `care-${Date.now()}`, doneByDate: item.doneByDate ?? {} },
-      ]);
-      return;
+      // Guarda no localStorage imediatamente
+setItems((prev) => {
+  const next = [...prev, { ...item, id: `care-${Date.now()}`, doneByDate: {} }];
+  saveCares(user.id, next);
+  return next;
+});
     }
     try {
       const dto = {
@@ -234,6 +249,8 @@ const addCare = useCallback(
         time: item.time,
         notes: item.quantity,
         status: 'pending' as const,
+        startDate: item.startDate,
+        
       };
       const res = await caresApi.create(item.petId, dto);
       const created = mapApiCare(res.data, item.petId, t);

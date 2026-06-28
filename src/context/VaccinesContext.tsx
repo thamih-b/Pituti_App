@@ -23,6 +23,14 @@ const BADGE_MAP: Record<VaccStatus, { badge: string; badgeCls: string }> = {
   late: { badge: "Expirada",       badgeCls: "badge-red"    },
 };
 
+function loadVaccines(key: string) {
+  try { return JSON.parse(localStorage.getItem(`pituti_vaccines_${key}`) ?? 'null') ?? []; }
+  catch { return []; }
+}
+function saveVaccines(key: string, items: any[]) {
+  try { localStorage.setItem(`pituti_vaccines_${key}`, JSON.stringify(items)); } catch { /* ignore */ }
+}
+
 function toVaccineRecord(api: Record<string, unknown>): VaccineRecord {
   const nextDate = String(api.nextdue ?? api.nextDate ?? api.nextdate ?? "");
   const name     = String(api.vaccinename ?? api.name ?? "");
@@ -82,6 +90,8 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // localStorage per-pet can be loaded/used where needed
+
   const allVaccines: VaccineWithMeta[] = pets.flatMap((p) =>
     (vaccinesByPet[p.id] ?? []).map((v) => ({
       ...v,
@@ -92,11 +102,16 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
     }))
   );
 
-  const addVaccine = useCallback(
-    (petId: string, v: VaccineRecord) =>
-      setVaccinesByPet((prev) => ({ ...prev, [petId]: [...(prev[petId] ?? []), v] })),
-    []
-  );
+  const addVaccine = useCallback(async (petId: string, data: any) => {
+    const local = { ...data, id: `v-${Date.now()}` } as VaccineRecord;
+    setVaccinesByPet((prev) => {
+      const nextForPet = [...(prev[petId] ?? []), local];
+      const next = { ...prev, [petId]: nextForPet };
+      try { saveVaccines(petId, nextForPet); } catch { /* ignore */ }
+      return next;
+    });
+    vaccinesApi.create(petId, data).catch(() => { /* silencia */ });
+  }, []);
 
   const deleteVaccine = useCallback(async (petId: string, vaccineId: string) => {
     await vaccinesApi.delete(petId, vaccineId);
