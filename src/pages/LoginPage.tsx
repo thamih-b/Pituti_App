@@ -155,7 +155,7 @@ function SocialBtn({ icon, label, onClick }: { icon: ReactNode; label: string; o
 export default function LoginPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const setUser = useUser();
+  const {setUser} = useUser();
 
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
@@ -173,7 +173,7 @@ export default function LoginPage() {
 
   const validateLogin = () => {
     const e: Record<string, string> = {};
-    if (!email.trim) e.email = t('login.errEmailRequired');
+    if (!email.trim()) e.email = t('login.errEmailRequired');
     else if (!/\S+@\S+\.\S+/.test(email)) e.email = t('login.errEmailInvalid');
     if (!password) e.password = t('login.errPasswordRequired');
     return e;
@@ -214,10 +214,13 @@ export default function LoginPage() {
       setErrors({});
       try {
         const res = await authApi.login({ email, password });
-        const { data: user, token } = res.data;
+        const authData = res.data as Record<string, any>;
+        const user = authData.user ?? authData.data;
+        const token = authData.token;
+        if (!user || !token) throw new Error('Resposta de autenticação inválida');
         setToken(token, rememberMe);
         const storage = rememberMe ? localStorage : sessionStorage;
-        storage.setItem('pituti-user', JSON.stringify(user));
+        storage.setItem('pitutiuser', JSON.stringify(user));
         setUser({
           id: user.id,
           name: user.name,
@@ -249,10 +252,13 @@ export default function LoginPage() {
       setErrors({});
       try {
         const res = await authApi.register({ name, email, password });
-        const { data: user, token } = res.data;
+        const authData = res.data as Record<string, any>;
+        const user = authData.user ?? authData.data;
+        const token = authData.token;
+        if (!user || !token) throw new Error('Resposta de autenticação inválida');
         setToken(token, rememberMe);
         const storage = rememberMe ? localStorage : sessionStorage;
-        storage.setItem('pituti-user', JSON.stringify(user));
+        storage.setItem('pitutiuser', JSON.stringify(user));
         setUser({
           id: user.id,
           name: user.name,

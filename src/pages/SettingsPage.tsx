@@ -164,8 +164,8 @@ export default function SettingsPage() {
       setUser(updatedUser)
 
       // Persiste no localStorage
-      const stored = localStorage.getItem('pituti_user') ? localStorage : sessionStorage
-      stored.setItem('pituti_user', JSON.stringify({
+      const stored = localStorage.getItem('pitutiuser') ? localStorage : sessionStorage
+      stored.setItem('pitutiuser', JSON.stringify({
         id: user.id,
         name: name.trim(),
         email,
