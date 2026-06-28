@@ -362,7 +362,7 @@ export default function LoginPage() {
 
           {/* Fields */}
           {mode === 'register' && (
-            <FormField type="text" label={t('settings.fullName', 'Nome completo')} value={name} onChange={v => { setName(v); clearErrors(); }} placeholder="Thamires Lopes" icon={nameIcon} error={errors.name} />
+            <FormField type="text" label={t('settings.fullName', 'Nome completo')} value={name} onChange={v => { setName(v); clearErrors(); }} placeholder="Tu nombre" icon={nameIcon} error={errors.name} />
           )}
 
           <FormField type="email" label={t('settings.email', 'Email')} value={email} onChange={v => { setEmail(v); clearErrors(); }} placeholder="nome@email.com" icon={emailIcon} error={errors.email} />
