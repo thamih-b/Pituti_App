@@ -442,7 +442,7 @@ const {
         </div>
       </div>
 
-<AddMedicationModal isOpen={addOpen} onClose={() => setAddOpen(false)} />
+<AddMedicationModal isOpen={addOpen} onClose={() => setAddOpen(false)} onAdd={() => setAddOpen(false)} />
 
       <EditMedModal
         isOpen={editOpen}

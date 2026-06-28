@@ -524,7 +524,7 @@
     "category": "Categoria",
     "date": "Data",
     "notes": "Notas",
-    "noActive": "Sem sintomas ativos ✓",
+    "noActive": "Sem sintomas ativos",
     "noResolved": "Sem sintomas resolvidos",
     "markResolved": "Marcar resolvido",
     "reopen": "↩ Reabrir",

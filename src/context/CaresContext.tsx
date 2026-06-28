@@ -129,9 +129,10 @@ export function CaresProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+useEffect(() => {
+  if (!user.id) return;
+  let cancelled = false;
+  setLoading(true);
     setError(null);
 petsApi
   .getAll(user.id)

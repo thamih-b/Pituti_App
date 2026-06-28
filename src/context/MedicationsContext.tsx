@@ -25,6 +25,9 @@ export interface MedRecord {
 }
 
 interface MedicationsContextValue {
+  getMedicationsByPetId: (petId: string) => MedRecord[];
+  medications: MedRecord[];
+  getActiveMedicationsByPetId: (petId: string) => MedRecord[];
   active: MedRecord[];
   history: MedRecord[];
   loading: boolean;
@@ -183,9 +186,26 @@ export function MedicationsProvider({ children }: { children: React.ReactNode })
     []
   );
 
+ 
+
+  const getActiveMedicationsByPetId = useCallback(
+  (petId: string): MedRecord[] =>
+    meds.filter((m) => m.petId === petId && !archivedIds.has(m.id)),
+  [meds, archivedIds]
+);
+
+ const getMedicationsByPetId = useCallback(
+    (petId: string): MedRecord[] =>
+      meds.filter((m) => m.petId === petId),
+    [meds]
+  );
+  
   return (
     <MedicationsContext.Provider
       value={{
+        medications: meds,
+        getMedicationsByPetId,
+        getActiveMedicationsByPetId,
         active, history, loading, error,
         addMedication, updateMedication, deleteMedication,
         archiveMedication, unarchiveMedication,

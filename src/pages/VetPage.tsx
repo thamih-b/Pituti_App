@@ -4,10 +4,6 @@ import { SPECIES_EMOJI } from '../hooks/usePets';
 import { usePetsContext } from '../context/PetsContext';
 import {
   useVet,
-  type PetMedicalProfile,
-  type VetContact,
-  type VetAppointment,
-  type DigitalPrescription,
 } from '../context/VetContext';
 import { VET_TYPES } from '../components/AddEditVetModal';
 import { APPOINTMENT_TYPES } from '../components/AddEditAppointmentModal';
@@ -22,16 +18,20 @@ import TabPrescriptions, { type MedicationOption } from '../pages/vet/TabPrescri
 import TabExams                     from './vet/tabExams';
 import TabDocuments                 from './vet/TabDocuments';
 import { useVaccinesContext }              from '../context/VaccinesContext';
-import type { VaccineRecord }       from '../context/PetsContext';
+import type { VaccineRecord }       from '../utils/vaccUtils';
 import { useVetExams }          from '../context/VetExamsContext';
 import { useVetDocuments }      from '../context/VetDocumentsContext';
 import { useVetPrescriptions }  from '../context/VetPrescriptionsContext';
 import { useMedications } from '../context/MedicationsContext';
+import type { DigitalPrescription } from '../context/VetPrescriptionsContext';
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
 const TAB_KEYS = ['profile', 'vets', 'appointments', 'exams', 'documents', 'prescriptions'] as const;
 type TabKey = typeof TAB_KEYS[number];
+
+type VetContact = ReturnType<typeof useVet>['vets'][number];
+type VetAppointment = ReturnType<typeof useVet>['appointments'][number];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
@@ -275,7 +275,8 @@ export default function VetPage() {
           onDelete={deleteDocument}
           showToast={showToast}
         />
-      )}
+      )}   
+      
 
       {activeTab === 'prescriptions' && (
         <TabPrescriptions
@@ -336,6 +337,80 @@ export default function VetPage() {
 
 type ConditionId = (typeof CONDITIONS_CATALOG)[number]['id'];
 
+interface SurgeryRecord {
+  id: string;
+  name: string;
+  date?: string;
+  notes?: string;
+}
+
+type EnvironmentType = 'apartment' | 'house' | 'both';
+type SexType = 'male' | 'female';
+
+interface MedicalProfile {
+  bloodType?: string;
+  allergies?: string;
+  chronicConditionIds: ConditionId[];
+  customConditions: string[];
+  sex?: SexType;
+  neutered?: boolean;
+  neuteredAge?: string | number;
+  environment?: EnvironmentType;
+  livingWithAnimals?: boolean | null;
+  parasiteControl?: string;
+  vetQuestions?: string;
+  behavioralNotes?: string;
+  surgeries: SurgeryRecord[];
+  updatedAt?: string;
+}
+
+interface TabMedicalProfileProps {
+  profile: MedicalProfile;
+  hasData: boolean;
+  onEdit: () => void;
+  t: any;
+}
+
+interface ProfileRowProps {
+  label: string;
+  value?: string | number;
+}
+
+interface PetSummary {
+  id: string;
+  name: string;
+  species: string;
+}
+
+interface TabVetsProps {
+  vets: VetContact[];
+  pets: PetSummary[];
+  confirmDeleteId: string | null;
+  onAdd: () => void;
+  onEdit: (item: VetContact) => void;
+  onRequestDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: (id: string) => void;
+  t: any;
+}
+
+interface TabAppointmentsProps {
+  petName: string;
+  appointments: VetAppointment[];
+  confirmDeleteId: string | null;
+  onAdd: () => void;
+  onEdit: (item: VetAppointment) => void;
+  onRequestDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: (id: string) => void;
+  t: any;
+}
+
+interface NextReturnBannerProps {
+  appointment: VetAppointment;
+  t: any;
+}
+
 const conditionsById = new Map<ConditionId, (typeof CONDITIONS_CATALOG)[number]>(
   CONDITIONS_CATALOG.map((item) => [item.id, item]),
 );
@@ -345,12 +420,7 @@ function TabMedicalProfile({
   hasData,
   onEdit,
   t,
-}: {
-  profile: PetMedicalProfile;
-  hasData: boolean;
-  onEdit: () => void;
-  t: any;
-}) {
+}: TabMedicalProfileProps) {
   const conditionLabels = (profile.chronicConditionIds as ConditionId[]).map((id) => {
     const condition = conditionsById.get(id);
     return condition ? t(condition.labelKey) : id;
@@ -489,7 +559,7 @@ function TabMedicalProfile({
   );
 }
 
-function ProfileRow({ label, value }: { label: string; value?: string }) {
+function ProfileRow({ label, value }: ProfileRowProps) {
   if (!value) return null;
   return (
     <div className="profile-row">
@@ -509,17 +579,7 @@ function TabVets({
   onCancelDelete,
   onConfirmDelete,
   t,
-}: {
-  vets: VetContact[];
-  pets: { id: string; name: string; species: string }[];
-  confirmDeleteId: string | null;
-  onAdd: () => void;
-  onEdit: (item: VetContact) => void;
-  onRequestDelete: (id: string) => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: (id: string) => void;
-  t: any;
-}) {
+}: TabVetsProps) {
   return (
     <div className="tab-content">
       {vets.length === 0 ? (
@@ -626,17 +686,7 @@ function TabAppointments({
   onCancelDelete,
   onConfirmDelete,
   t,
-}: {
-  petName: string;
-  appointments: VetAppointment[];
-  confirmDeleteId: string | null;
-  onAdd: () => void;
-  onEdit: (item: VetAppointment) => void;
-  onRequestDelete: (id: string) => void;
-  onCancelDelete: () => void;
-  onConfirmDelete: (id: string) => void;
-  t: any;
-}) {
+}: TabAppointmentsProps) {
   const todayDate = new Date().toISOString().split('T')[0];
   const upcoming  = appointments.filter(
     (item) => item.nextAppointmentDate && item.nextAppointmentDate >= todayDate,
@@ -762,10 +812,7 @@ function TabAppointments({
 function NextReturnBanner({
   appointment,
   t,
-}: {
-  appointment: VetAppointment;
-  t: any;
-}) {
+}: NextReturnBannerProps) {
   if (!appointment.nextAppointmentDate) return null;
 
   const returnDate = new Date(`${appointment.nextAppointmentDate}T12:00:00`);

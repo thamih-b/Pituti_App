@@ -521,7 +521,7 @@
     "category": "Category",
     "date": "Date",
     "notes": "Notes",
-    "noActive": "No active symptoms ✓",
+    "noActive": "No active symptoms",
     "noResolved": "No resolved symptoms",
     "markResolved": "Mark as resolved",
     "reopen": "↩ Reopen",

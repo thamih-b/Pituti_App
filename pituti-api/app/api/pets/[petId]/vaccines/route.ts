@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await requireAuth(request);
     const { petId } = await params;
-    const rows = await query('SELECT * FROM vaccines WHERE pet_id = $1 ORDER BY date DESC', [petId]);
+    const rows = await query('SELECT * FROM vaccines WHERE pet_id = $1 ORDER BY vaccine_date DESC', [petId]);
     return NextResponse.json({ data: rows.map(mapVaccine), total: rows.length });
   } catch (error: any) {
     const status = error?.status ?? 500;
@@ -34,12 +34,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ errors: result.error.issues }, { status: 400 });
     }
 
-    const { name, date, next_due_date, veterinary, notes } = result.data;
+    const { name, date: vaccine_date, next_due_date: next_dose_date, veterinary: veterinarian, notes } = result.data;
     const [row] = await query(
-      `INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [petId, name, date, next_due_date, veterinary, notes]
+      `INSERT INTO vaccines (pet_id, name, vaccine_date, next_dose_date, veterinarian, notes)
+ VALUES ($1, $2, $3, $4, $5, $6)
+ RETURNING *`,
+      [petId, name, vaccine_date, next_dose_date, veterinarian, notes]
     );
 
     return NextResponse.json({ data: mapVaccine(row) }, { status: 201 });

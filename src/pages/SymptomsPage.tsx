@@ -106,7 +106,7 @@ export default function SymptomsPage() {
           </div>
           {active.length === 0
             ? <div style={{ textAlign:'center', padding:'2rem', color:'var(--text-muted)', fontSize:'.875rem' }}>
-                {t('symptoms.noActive')} ✓
+                {t('symptoms.noActive')}
               </div>
             : active.map(s => <SymptomRow key={s.id} s={s}/>)
           }
