@@ -9,10 +9,10 @@ import {
 import { usePetsContext } from './PetsContext'
 import { useUser } from './UserContext'
 import { getVaccStatus } from '../utils/vaccUtils'
-import type { VaccineRecord, VaccStatus } from '../utils/vaccUtils'
+import type { VaccineRecord } from '../utils/vaccUtils'
 import { vaccinesApi } from '../api'
 
-export type { VaccStatus }
+export type VaccStatus = ReturnType<typeof getVaccStatus>
 
 export interface VaccineWithMeta extends VaccineRecord {
   cls: VaccStatus
