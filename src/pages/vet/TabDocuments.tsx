@@ -1,17 +1,17 @@
 // src/pages/vet/TabDocuments.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { VetDocument, PetMedicalProfile, VetAppointment } from '../../context/VetContext';
-import type { VaccineRecord } from '../../context/PetsContext';
-import type { MedRecord } from '../../components/EditMedModal';
+// ✅ VetDocument vem de VetDocumentsContext, NÃO de VetContext
+import type { VetDocument } from '../../context/VetDocumentsContext';
+import type { PetMedicalProfile, VetAppointment } from '../../context/VetContext';
+// ✅ VaccineRecord vem de vaccUtils
+import type { VaccineRecord } from '../../utils/vaccUtils';
 import type { Pet } from '../../context/PetsContext';
+import type { MedRecord } from '../../components/EditMedModal';
 import { CONDITIONS_CATALOG, type ConditionItem } from '../../context/conditionsCatalog';
 
-// ─── DocType local (fonte única — não vem do VetContext) ───────────────────────
-
+// ─── DocType local ──────────────────────────────────────────────────────────
 export type DocType = 'passport' | 'certificate' | 'report' | 'other';
-
-// ─── Tipos de documento ────────────────────────────────────────────────────────
 
 const DOC_TYPE_VALUES: { value: DocType; emoji: string }[] = [
   { value: 'passport',    emoji: '📗' },
@@ -20,8 +20,7 @@ const DOC_TYPE_VALUES: { value: DocType; emoji: string }[] = [
   { value: 'other',       emoji: '📁' },
 ];
 
-// ─── Props ─────────────────────────────────────────────────────────────────────
-
+// ─── Props ──────────────────────────────────────────────────────────────────
 interface TabDocumentsProps {
   pet: Pet;
   documents: VetDocument[];
@@ -35,8 +34,7 @@ interface TabDocumentsProps {
   showToast: (message: string, type?: 'success' | 'err') => void;
 }
 
-// ─── Componente principal ──────────────────────────────────────────────────────
-
+// ─── Componente principal ────────────────────────────────────────────────────
 export default function TabDocuments({
   pet, documents, vaccines, medications, appointments,
   profile, onAdd, onUpdate, onDelete,
@@ -170,8 +168,7 @@ export default function TabDocuments({
   );
 }
 
-// ─── Modal: Adicionar / Editar documento ──────────────────────────────────────
-
+// ─── Modal: Adicionar / Editar documento ─────────────────────────────────────
 function DocModal({
   initial, petId, onClose, onSave,
 }: {
@@ -310,8 +307,7 @@ function DocModal({
   );
 }
 
-// ─── Passaporte Digital ────────────────────────────────────────────────────────
-
+// ─── Passaporte Digital ──────────────────────────────────────────────────────
 const SPECIES_EMOJI: Record<string, string> = {
   cat: '🐱', dog: '🐶', bird: '🐦', rabbit: '🐰',
   reptile: '🦎', fish: '🐠', other: '🐾',
@@ -320,26 +316,34 @@ const SPECIES_EMOJI: Record<string, string> = {
 function PassportOverlay({
   pet, profile, vaccines, medications, appointments, onClose,
 }: {
-  pet: Pet;                        // ← era ApiPet
+  pet: Pet;
   profile: PetMedicalProfile;
-  vaccines: VaccineRecord[];       // ← era ApiVaccine[]
-  medications: MedRecord[];        // ← era ApiMedication[]
+  vaccines: VaccineRecord[];
+  medications: MedRecord[];
   appointments: VetAppointment[];
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
 
+  // VaccineRecord usa os campos: name, applied, nextDate
   const activeVaccines = vaccines.filter((v) =>
     !v.nextDate || new Date(v.nextDate + 'T12:00:00') >= new Date()
+  );
+
+  const rabiesVaccines = activeVaccines.filter((v) =>
+    /rabi[ae]s|rabia|tollwut/i.test(v.name)
+  );
+  const otherVaccines = activeVaccines.filter((v) =>
+    !/rabi[ae]s|rabia|tollwut/i.test(v.name)
   );
 
   const activeMeds = medications.filter((m) =>
     !m.endDate || new Date(m.endDate + 'T12:00:00') >= new Date()
   );
 
-  const lastAppt = [...appointments].sort(
-    (a, b) => b.date.localeCompare(a.date)
-  )[0] ?? null;
+  const sortedAppts = [...appointments].sort((a, b) => b.date.localeCompare(a.date));
+  const lastAppt = sortedAppts[0] ?? null;
+  const nextAppt = sortedAppts.find((a) => a.date >= new Date().toISOString().split('T')[0]) ?? null;
 
   const age = pet.birthDate
     ? Math.floor((Date.now() - new Date(pet.birthDate + 'T12:00:00').getTime()) / 31557600000)
@@ -366,35 +370,42 @@ function PassportOverlay({
       generatePassportHTML({
         pet, profile, allergiesText, allConditions,
         vaccines: activeVaccines,
+        rabiesVaccines,
         medications: activeMeds,
         appointments,
         lastAppt,
+        nextAppt,
         today,
         labels: {
-          identity:    t('vet.documents.passport.identity'),
-          species:     t('vet.documents.passport.species'),
-          breed:       t('vet.documents.passport.breed'),
-          birthDate:   t('vet.documents.passport.birthDate'),
-          bloodType:   t('vet.documents.passport.bloodType'),
-          neutered:    t('vet.documents.passport.neutered'),
-          neuteredYes: t('vet.documents.passport.neuteredYes'),
-          neuteredNo:  t('vet.documents.passport.neuteredNo'),
-          sex:         t('vet.documents.passport.sex'),
-          health:      t('vet.documents.passport.health'),
-          allergies:   t('vet.documents.passport.allergies'),
-          conditions:  t('vet.documents.passport.conditions'),
-          vaccines:    t('vet.documents.passport.vaccines'),
+          identity:       t('vet.documents.passport.identity'),
+          species:        t('vet.documents.passport.species'),
+          breed:          t('vet.documents.passport.breed'),
+          birthDate:      t('vet.documents.passport.birthDate'),
+          bloodType:      t('vet.documents.passport.bloodType'),
+          neutered:       t('vet.documents.passport.neutered'),
+          neuteredYes:    t('vet.documents.passport.neuteredYes'),
+          neuteredNo:     t('vet.documents.passport.neuteredNo'),
+          sex:            t('vet.documents.passport.sex'),
+          microchip:      t('vet.documents.passport.microchip'),
+          passportNum:    t('vet.documents.passport.passportNum'),
+          health:         t('vet.documents.passport.health'),
+          allergies:      t('vet.documents.passport.allergies'),
+          conditions:     t('vet.documents.passport.conditions'),
+          vaccines:       t('vet.documents.passport.vaccines'),
           vaccinesActive: t('vet.documents.passport.vaccinesActive'),
-          noVaccines:  t('vet.documents.passport.noVaccines'),
-          medications: t('vet.documents.passport.medications'),
+          noVaccines:     t('vet.documents.passport.noVaccines'),
+          rabies:         t('vet.documents.passport.rabies'),
+          travel:         t('vet.documents.passport.travel'),
+          medications:    t('vet.documents.passport.medications'),
           medicationsActive: t('vet.documents.passport.medicationsActive'),
-          noMeds:      t('vet.documents.passport.noMeds'),
-          lastAppt:    t('vet.documents.passport.lastAppt'),
-          apptDate:    t('vet.documents.passport.apptDate'),
-          apptVet:     t('vet.documents.passport.apptVet'),
-          apptDiagnosis: t('vet.documents.passport.apptDiagnosis'),
-          apptWeight:  t('vet.documents.passport.apptWeight'),
-          generatedOn: t('vet.documents.passport.generatedOn'),
+          noMeds:         t('vet.documents.passport.noMeds'),
+          lastAppt:       t('vet.documents.passport.lastAppt'),
+          nextAppt:       t('vet.documents.passport.nextAppt'),
+          apptDate:       t('vet.documents.passport.apptDate'),
+          apptVet:        t('vet.documents.passport.apptVet'),
+          apptDiagnosis:  t('vet.documents.passport.apptDiagnosis'),
+          apptWeight:     t('vet.documents.passport.apptWeight'),
+          generatedOn:    t('vet.documents.passport.generatedOn'),
         },
       })
     );
@@ -433,9 +444,7 @@ function PassportOverlay({
                   value={new Date(pet.birthDate + 'T12:00:00').toLocaleDateString()}
                 />
               )}
-              {profile.bloodType && (
-                <InfoChip label={t('vet.documents.passport.bloodType')} value={profile.bloodType} />
-              )}
+              {profile.sex && <InfoChip label={t('vet.documents.passport.sex')} value={profile.sex} />}
               <InfoChip
                 label={t('vet.documents.passport.neutered')}
                 value={
@@ -443,14 +452,32 @@ function PassportOverlay({
                   profile.neutered === false ? t('vet.documents.passport.neuteredNo') : '—'
                 }
               />
-              {profile.sex && <InfoChip label={t('vet.documents.passport.sex')} value={profile.sex} />}
+              {profile.bloodType && (
+                <InfoChip label={t('vet.documents.passport.bloodType')} value={profile.bloodType} />
+              )}
             </div>
           </div>
+
+          {(pet.microchip || pet.passport) && (
+            <div className="passport-section">
+              <div className="passport-section-title">
+                <span>📡</span> {t('vet.documents.passport.identification')}
+              </div>
+              <div className="detail-info-grid">
+                {pet.microchip && (
+                  <InfoChip label={t('vet.documents.passport.microchip')} value={pet.microchip} />
+                )}
+                {pet.passport && (
+                  <InfoChip label={t('vet.documents.passport.passportNum')} value={pet.passport} />
+                )}
+              </div>
+            </div>
+          )}
 
           {(allergiesText || allConditions.length > 0) && (
             <div className="passport-section">
               <div className="passport-section-title">
-                <span>💊</span> {t('vet.documents.passport.health')}
+                <span>🏥</span> {t('vet.documents.passport.health')}
               </div>
               {allergiesText && (
                 <div style={{ marginBottom: '0.5rem' }}>
@@ -475,15 +502,38 @@ function PassportOverlay({
 
           <div className="passport-section">
             <div className="passport-section-title">
-              <span>💉</span> {t('vet.documents.passport.vaccines')} ({activeVaccines.length} {t('vet.documents.passport.vaccinesActive')})
+              <span>💉</span> {t('vet.documents.passport.vaccines')}
+              {' '}({activeVaccines.length} {t('vet.documents.passport.vaccinesActive')})
             </div>
-            {activeVaccines.length === 0 ? (
+
+            {rabiesVaccines.length > 0 && (
+              <div style={{ marginBottom: '0.5rem' }}>
+                {rabiesVaccines.map((v, i) => (
+                  <div key={i} className="passport-list-item passport-list-item--travel">
+                    <span className="passport-list-name">
+                      {v.name}
+                      <span className="badge-travel">✈️ {t('vet.documents.passport.travel')}</span>
+                    </span>
+                    <span className="passport-list-meta">
+                      {v.applied}
+                      {v.nextDate && (
+                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-faint)' }}>
+                          → {v.nextDate}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {otherVaccines.length === 0 && rabiesVaccines.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                 {t('vet.documents.passport.noVaccines')}
               </p>
             ) : (
               <div className="passport-list">
-                {activeVaccines.map((v, i) => (
+                {otherVaccines.map((v, i) => (
                   <div key={i} className="passport-list-item">
                     <span className="passport-list-name">{v.name}</span>
                     <span className="passport-list-meta">
@@ -502,7 +552,8 @@ function PassportOverlay({
 
           <div className="passport-section">
             <div className="passport-section-title">
-              <span>🧴</span> {t('vet.documents.passport.medications')} ({activeMeds.length} {t('vet.documents.passport.medicationsActive')})
+              <span>💊</span> {t('vet.documents.passport.medications')}
+              {' '}({activeMeds.length} {t('vet.documents.passport.medicationsActive')})
             </div>
             {activeMeds.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
@@ -523,7 +574,7 @@ function PassportOverlay({
           {lastAppt && (
             <div className="passport-section">
               <div className="passport-section-title">
-                <span>🏥</span> {t('vet.documents.passport.lastAppt')}
+                <span>🩺</span> {t('vet.documents.passport.lastAppt')}
               </div>
               <div className="detail-info-grid">
                 <InfoChip
@@ -537,6 +588,21 @@ function PassportOverlay({
                 {lastAppt.weightKg != null && (
                   <InfoChip label={t('vet.documents.passport.apptWeight')} value={`${lastAppt.weightKg} kg`} />
                 )}
+              </div>
+            </div>
+          )}
+
+          {nextAppt && nextAppt.id !== lastAppt?.id && (
+            <div className="passport-section">
+              <div className="passport-section-title">
+                <span>📅</span> {t('vet.documents.passport.nextAppt')}
+              </div>
+              <div className="detail-info-grid">
+                <InfoChip
+                  label={t('vet.documents.passport.apptDate')}
+                  value={new Date(nextAppt.date + 'T12:00:00').toLocaleDateString()}
+                />
+                <InfoChip label={t('vet.documents.passport.apptVet')} value={nextAppt.vetName} />
               </div>
             </div>
           )}
@@ -557,8 +623,7 @@ function PassportOverlay({
   );
 }
 
-// ─── Helper: chip de detalhe ───────────────────────────────────────────────────
-
+// ─── Helper chip ─────────────────────────────────────────────────────────────
 function InfoChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="detail-info-chip">
@@ -568,114 +633,156 @@ function InfoChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── HTML para exportação PDF ──────────────────────────────────────────────────
-
+// ─── HTML para exportação / impressão ────────────────────────────────────────
 interface PassportLabels {
   identity: string; species: string; breed: string; birthDate: string;
   bloodType: string; neutered: string; neuteredYes: string; neuteredNo: string;
-  sex: string; health: string; allergies: string; conditions: string;
+  sex: string; microchip: string; passportNum: string;
+  health: string; allergies: string; conditions: string;
   vaccines: string; vaccinesActive: string; noVaccines: string;
+  rabies: string; travel: string;
   medications: string; medicationsActive: string; noMeds: string;
-  lastAppt: string; apptDate: string; apptVet: string;
+  lastAppt: string; nextAppt: string; apptDate: string; apptVet: string;
   apptDiagnosis: string; apptWeight: string; generatedOn: string;
 }
 
 function generatePassportHTML({
   pet, profile, allergiesText, allConditions,
-  vaccines, medications, lastAppt, today, labels,
+  vaccines, rabiesVaccines, medications,
+  lastAppt, nextAppt, today, labels,
 }: {
-  pet: Pet;                         // ← era ApiPet
+  pet: Pet;
   profile: PetMedicalProfile;
   allergiesText: string;
   allConditions: string[];
-  vaccines: VaccineRecord[];        // ← era ApiVaccine[]
-  medications: MedRecord[];         // ← era ApiMedication[]
+  vaccines: VaccineRecord[];
+  rabiesVaccines: VaccineRecord[];
+  medications: MedRecord[];
   appointments: VetAppointment[];
   lastAppt: VetAppointment | null;
+  nextAppt: VetAppointment | null;
   today: string;
   labels: PassportLabels;
 }): string {
   const chip = (label: string, value: string) =>
     `<div class="chip"><div class="chip-label">${label}</div><div class="chip-value">${value}</div></div>`;
 
-  const listItem = (name: string, meta: string) =>
-    `<div class="list-item"><span class="list-name">${name}</span><span class="list-meta">${meta}</span></div>`;
+  const vaccineRow = (v: VaccineRecord, travel = false) =>
+    `<div class="list-item">
+      <span class="list-name">${v.name}${travel ? ` <span class="badge-travel">✈️ ${labels.travel}</span>` : ''}</span>
+      <span class="list-meta">${[v.applied, v.nextDate ? '→ ' + v.nextDate : ''].filter(Boolean).join(' ')}</span>
+    </div>`;
+
+  const medRow = (m: MedRecord) =>
+    `<div class="list-item">
+      <span class="list-name">${m.title}</span>
+      <span class="list-meta">${m.dose} · ${m.frequency}</span>
+    </div>`;
 
   const neuteredLabel =
     profile.neutered === true  ? labels.neuteredYes :
     profile.neutered === false ? labels.neuteredNo  : '—';
 
   return `<!DOCTYPE html>
-<html lang="pt"><head><meta charset="UTF-8"><title>Passaporte — ${pet.name}</title>
+<html lang="pt"><head><meta charset="UTF-8">
+<title>Passaporte — ${pet.name}</title>
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,700,800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Satoshi',sans-serif;color:#1a1714;background:#fff;padding:2rem;max-width:700px;margin:auto}
-h1{font-size:2rem;font-weight:800;margin-bottom:.25rem}
-.sub{color:#6b6a66;margin-bottom:2rem}
+.cover{display:flex;align-items:center;gap:1rem;margin-bottom:2rem;padding:1.25rem 1.5rem;background:#01696f;border-radius:1rem;color:#fff}
+.cover-emoji{font-size:2.5rem;line-height:1}
+.cover-name{font-size:1.75rem;font-weight:800}
+.cover-sub{font-size:.9rem;opacity:.8;margin-top:.2rem}
+h2{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9b9994;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:1.5px solid #e8e5e0}
 .section{margin-bottom:1.75rem}
-.section-title{font-weight:800;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#9b9994;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:1.5px solid #e8e5e0}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:.625rem}
 .chip{background:#f5f3ef;padding:.625rem .875rem;border-radius:.625rem}
 .chip-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#9b9994}
 .chip-value{font-size:.9rem;font-weight:700;color:#1a1714;margin-top:.125rem}
 .list-item{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #f0ede8}
 .list-item:last-child{border-bottom:none}
+.list-item--travel{background:#f0fdf4;border-radius:.5rem;padding:.5rem .75rem;margin-bottom:.375rem;border-bottom:none}
 .list-name{font-weight:700;font-size:.9rem}
 .list-meta{font-size:.8125rem;color:#6b6a66}
+.badge-travel{display:inline-block;background:#dcfce7;color:#15803d;padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;margin-left:.375rem}
 .tag{display:inline-block;background:#fce4ec;color:#b5174e;padding:.25rem .625rem;border-radius:99px;font-size:.75rem;font-weight:700;margin:.2rem}
-.footer{margin-top:2.5rem;padding-top:1rem;border-top:1.5px solid #e8e5e0;color:#9b9994;font-size:.75rem;text-align:center}
-@media print{body{padding:1.25rem}}
+.footer{margin-top:2.5rem;padding-top:.1rem;border-top:1.5px solid #e8e5e0;color:#9b9994;font-size:.75rem;text-align:center}
+@media print{body{padding:1.25rem}.cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head><body>
-<h1>${pet.name}</h1>
-<p class="sub">${pet.breed ?? pet.species}</p>
+
+<div class="cover">
+  <div class="cover-emoji">${SPECIES_EMOJI[pet.species] ?? '🐾'}</div>
+  <div>
+    <div class="cover-name">${pet.name}</div>
+    <div class="cover-sub">${pet.breed ?? pet.species}</div>
+  </div>
+</div>
 
 <div class="section">
-  <div class="section-title">${labels.identity}</div>
+  <h2>${labels.identity}</h2>
   <div class="grid">
     ${chip(labels.species, pet.species)}
     ${pet.breed     ? chip(labels.breed, pet.breed) : ''}
     ${pet.birthDate ? chip(labels.birthDate, new Date(pet.birthDate + 'T12:00:00').toLocaleDateString()) : ''}
-    ${profile.bloodType ? chip(labels.bloodType, profile.bloodType) : ''}
-    ${chip(labels.neutered, neuteredLabel)}
     ${profile.sex   ? chip(labels.sex, profile.sex) : ''}
+    ${chip(labels.neutered, neuteredLabel)}
+    ${profile.bloodType ? chip(labels.bloodType, profile.bloodType) : ''}
   </div>
 </div>
 
-${allergiesText
-  ? `<div class="section"><div class="section-title">${labels.allergies}</div><p style="font-size:.9rem">${allergiesText}</p></div>`
-  : ''}
+${(pet.microchip || pet.passport) ? `
+<div class="section">
+  <h2>📡 Identificação Eletrónica</h2>
+  <div class="grid">
+    ${pet.microchip ? chip(labels.microchip, pet.microchip) : ''}
+    ${pet.passport  ? chip(labels.passportNum, pet.passport) : ''}
+  </div>
+</div>` : ''}
 
-${allConditions.length > 0
-  ? `<div class="section"><div class="section-title">${labels.conditions}</div>${allConditions.map((c) => `<span class="tag">${c}</span>`).join('')}</div>`
-  : ''}
+${allergiesText ? `
+<div class="section">
+  <h2>${labels.allergies}</h2>
+  <p style="font-size:.9rem">${allergiesText}</p>
+</div>` : ''}
+
+${allConditions.length > 0 ? `
+<div class="section">
+  <h2>${labels.conditions}</h2>
+  ${allConditions.map((c) => `<span class="tag">${c}</span>`).join('')}
+</div>` : ''}
 
 <div class="section">
-  <div class="section-title">${labels.vaccines} (${vaccines.length} ${labels.vaccinesActive})</div>
-  ${vaccines.length === 0
-    ? `<p style="color:#9b9994;font-size:.9rem">${labels.noVaccines}</p>`
-    : vaccines.map((v) =>
-        listItem(v.name, [v.applied, v.nextDate ? '→ ' + v.nextDate : ''].filter(Boolean).join(' '))
-      ).join('')}
+  <h2>${labels.vaccines} (${vaccines.length} ${labels.vaccinesActive})</h2>
+  ${rabiesVaccines.map((v) => vaccineRow(v, true)).join('')}
+  ${vaccines.filter((v) => !/rabi[ae]s|rabia|tollwut/i.test(v.name)).map((v) => vaccineRow(v)).join('')}
+  ${vaccines.length === 0 ? `<p style="color:#9b9994;font-size:.9rem">${labels.noVaccines}</p>` : ''}
 </div>
 
 <div class="section">
-  <div class="section-title">${labels.medications} (${medications.length} ${labels.medicationsActive})</div>
+  <h2>${labels.medications} (${medications.length} ${labels.medicationsActive})</h2>
   ${medications.length === 0
     ? `<p style="color:#9b9994;font-size:.9rem">${labels.noMeds}</p>`
-    : medications.map((m) =>
-        listItem(m.title, `${m.dose} · ${m.frequency}`)
-      ).join('')}
+    : medications.map((m) => medRow(m)).join('')}
 </div>
 
 ${lastAppt ? `
 <div class="section">
-  <div class="section-title">${labels.lastAppt}</div>
+  <h2>${labels.lastAppt}</h2>
   <div class="grid">
     ${chip(labels.apptDate, new Date(lastAppt.date + 'T12:00:00').toLocaleDateString())}
     ${chip(labels.apptVet, lastAppt.vetName)}
     ${lastAppt.diagnosis ? chip(labels.apptDiagnosis, lastAppt.diagnosis) : ''}
     ${lastAppt.weightKg != null ? chip(labels.apptWeight, `${lastAppt.weightKg} kg`) : ''}
+  </div>
+</div>` : ''}
+
+${nextAppt && nextAppt.id !== lastAppt?.id ? `
+<div class="section">
+  <h2>${labels.nextAppt}</h2>
+  <div class="grid">
+    ${chip(labels.apptDate, new Date(nextAppt.date + 'T12:00:00').toLocaleDateString())}
+    ${chip(labels.apptVet, nextAppt.vetName)}
   </div>
 </div>` : ''}
 

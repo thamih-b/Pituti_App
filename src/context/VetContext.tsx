@@ -242,10 +242,27 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+const SAFE_VET: VetContextValue = {
+  vets: [],
+  loading: false,
+  error: null,
+  fetchVets: async () => {},
+  addVet: async () => ({ id: '', name: '', clinic: '', phone: '', type: 'primary', petIds: [] } as any),
+  updateVet: async () => {},
+  deleteVet: async () => {},
+  appointments: [],
+  addAppointment: async () => ({} as any),
+  updateAppointment: async () => {},
+  deleteAppointment: async () => {},
+  getMedicalProfile: (petId: string) => ({ ...EMPTY_PROFILE, petId }),
+  saveMedicalProfile: () => {},
+  vetCalendarDates: [],
+};
+
 export function useVet(): VetContextValue {
   const ctx = useContext(VetContext);
-  if (!ctx) throw new Error('useVet must be used within VetProvider');
-  return ctx;
+  // Retorna fallback seguro em vez de lançar React error #310
+  return ctx ?? SAFE_VET;
 }
 
 // ── computePrescriptionStatus (usado por TabPrescriptions) ────────────────────

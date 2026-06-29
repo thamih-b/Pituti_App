@@ -86,10 +86,10 @@ export default function VetPage() {
     { key: 'prescriptions', label: t('vet.tabs.prescriptions') },
   ] as const;
 
-  const pet = useMemo(
-    () => pets.find((item) => item.id === selectedPetId) ?? pets[0] ?? null,
-    [selectedPetId, pets],
-  );
+const pet = useMemo(() => {
+  if (!pets || pets.length === 0) return null;
+  return pets.find((item) => item.id === selectedPetId) ?? pets[0] ?? null;
+}, [selectedPetId, pets]);
 
   // ── Estado de carga ────────────────────────────────────────
   if (petsLoading) {
@@ -136,7 +136,23 @@ export default function VetPage() {
     );
   }
 
-  const profile = getMedicalProfile(pet.id);
+  if (!pet) {
+  return (
+    <div>
+      <BackButton />
+      <div className="empty-state">
+        <div className="empty-state-icon" style={{ fontSize: '2.5rem' }}>🐾</div>
+        <h3>{t('pets.noPets')}</h3>
+        <p>{t('pets.noPetsHint')}</p>
+        <button className="btn btn-primary" onClick={() => navigate('/pets')}>
+          {t('pets.addPet')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+ const profile = getMedicalProfile(pet?.id ?? '');
 
   const hasProfileData = Boolean(
     profile.bloodType || profile.allergies ||
@@ -146,29 +162,24 @@ export default function VetPage() {
     profile.environment || profile.parasiteControl || profile.vetQuestions,
   );
 
-  const petAppointments = appointments
-    .filter((item: VetAppointment) => item.petId === pet.id)
-    .sort((a: VetAppointment, b: VetAppointment) => b.date.localeCompare(a.date));
+  const petAppointments = appointments.filter((item) => item.petId === (pet?.id ?? ''))
+  .sort((a, b) => b.date.localeCompare(a.date));
 
-  const petPrescriptions = useMemo(
-    () => getPrescriptionsByPetId(pet.id),
-    [pet.id, getPrescriptionsByPetId]
-  );
+const petPrescriptions = useMemo(
+  () => getPrescriptionsByPetId(pet?.id ?? ''),
+  [pet?.id, getPrescriptionsByPetId],
+);
 
-  const medicationOptions: MedicationOption[] = useMemo(() =>
-    getActiveMedicationsByPetId(pet.id).map((med) => ({
-      id:        med.id,
-      name:      med.title,
-      dosage:    med.dose,
-      frequency: med.frequency,
-      petId:     pet.id,
-      endDate:   med.endDate ?? null,
-    })),
-    [pet.id, getActiveMedicationsByPetId]
-  );
+ const medicationOptions: MedicationOption[] = useMemo(
+  () => getActiveMedicationsByPetId(pet?.id ?? '').map((med) => ({
+    id: med.id, name: med.title, dosage: med.dose,
+    frequency: med.frequency, petId: pet?.id ?? '', endDate: med.endDate ?? null,
+  })),
+  [pet?.id, getActiveMedicationsByPetId],
+);
 
-  const petVaccines: VaccineRecord[] = vaccinesByPet[pet.id] ?? [];
-  const petMedications               = getMedicationsByPetId(pet.id);
+  const petVaccines: VaccineRecord[] = vaccinesByPet[pet?.id ?? ''] ?? [];
+  const petMedications               = getMedicationsByPetId(pet?.id ?? '');
 
   return (
     <div>
