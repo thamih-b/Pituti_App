@@ -7,10 +7,8 @@ import React, {
   useMemo,
 } from 'react'
 import { petsApi, medicationsApi } from '../api'
-import type { CreateMedicationDto, UpdateMedicationDto } from '../api'
 import { useUser } from './UserContext'
 
-// Tipos
 export interface MedRecord {
   id: string
   petId: string
@@ -48,7 +46,6 @@ interface MedicationsContextValue {
   refetch: () => void
 }
 
-// Helpers
 const ICONS = ['💊', '💉', '🩺', '🌡️', '🧪']
 const BGCOLORS = [
   'linear-gradient(135deg,#FFF3DC,#FFE0A0)',
@@ -85,7 +82,6 @@ function mapApiMedToRecord(api: any, petId: string): MedRecord {
   }
 }
 
-// Persistência localStorage
 function loadMeds(userId: string): MedRecord[] {
   if (!userId) return []
   try {
@@ -99,16 +95,13 @@ function saveMeds(userId: string, meds: MedRecord[]): void {
   if (!userId) return
   try {
     localStorage.setItem(`pituti-meds-${userId}`, JSON.stringify(meds))
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 }
 
-// Context
 const MedicationsContext = createContext<MedicationsContextValue | null>(null)
 
 export function MedicationsProvider({ children }: { children: React.ReactNode }) {
-  // FIX: incluir `ready` para nao carregar antes do UserContext ter lido o localStorage
+  // FIX: incluir `ready` — sem ele, carrega com user.id='' e usa chave localStorage errada
   const { user, isAuthenticated, ready } = useUser()
   const [meds, setMeds] = useState<MedRecord[]>([])
   const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set())
@@ -118,15 +111,15 @@ export function MedicationsProvider({ children }: { children: React.ReactNode })
 
   const refetch = useCallback(() => setTick(t => t + 1), [])
 
-  // FIX: dep array inclui `ready` — garante que user.id já tem o valor do localStorage
+  // FIX: dep array inclui `ready`
   useEffect(() => {
     if (!ready || !isAuthenticated || !user.id) return
 
-    // 1. Carregar localStorage imediatamente com a key correcta
+    // 1. localStorage imediato com chave correcta
     const stored = loadMeds(user.id)
     if (stored.length) setMeds(stored)
 
-    // 2. Tentar actualizar da API em background
+    // 2. API em background
     let cancelled = false
     petsApi
       .getAll(user.id)
@@ -148,130 +141,83 @@ export function MedicationsProvider({ children }: { children: React.ReactNode })
           }
         }
       })
-      .catch(() => {
-        // API indisponível: fica com localStorage (já carregado acima)
-      })
+      .catch(() => { /* fica com localStorage */ })
 
     return () => { cancelled = true }
   }, [ready, isAuthenticated, user.id, tick])
 
-  // active / history derivados
   const active = useMemo(() => meds.filter(m => !archivedIds.has(m.id)), [meds, archivedIds])
   const history = useMemo(() => meds.filter(m => archivedIds.has(m.id)), [meds, archivedIds])
 
-  const addMedication = useCallback(
-    async (
-      petId: string,
-      data: Omit<MedRecord, 'id' | 'icon' | 'bg' | 'color' | 'badge' | 'badgeCls' | 'archived'>
-    ): Promise<MedRecord> => {
-      const localMed: MedRecord = {
-        ...data,
-        id: `local-${Date.now()}`,
-        icon: ICONS[Math.floor(Math.random() * ICONS.length)],
-        bg: BGCOLORS[Math.floor(Math.random() * BGCOLORS.length)],
-        color: 'var(--primary)',
-        archived: false,
-        ...deriveBadge(data.endDate ?? ''),
-      }
-      setMeds(prev => {
-        const next = [localMed, ...prev]
-        if (user.id) saveMeds(user.id, next)
-        return next
+  const addMedication = useCallback(async (
+    petId: string,
+    data: Omit<MedRecord, 'id' | 'icon' | 'bg' | 'color' | 'badge' | 'badgeCls' | 'archived'>
+  ): Promise<MedRecord> => {
+    const localMed: MedRecord = {
+      ...data,
+      id: `local-${Date.now()}`,
+      icon: ICONS[Math.floor(Math.random() * ICONS.length)],
+      bg: BGCOLORS[Math.floor(Math.random() * BGCOLORS.length)],
+      color: 'var(--primary)',
+      archived: false,
+      ...deriveBadge(data.endDate ?? ''),
+    }
+    setMeds(prev => {
+      const next = [localMed, ...prev]
+      if (user.id) saveMeds(user.id, next)
+      return next
+    })
+    medicationsApi
+      .create(petId, { name: data.title, dosage: data.dose, frequency: data.frequency, startDate: data.startDate, endDate: data.endDate || undefined, notes: data.notes || undefined } as any)
+      .then(res => {
+        const serverMed = mapApiMedToRecord(res.data, petId)
+        setMeds(prev => {
+          const next = prev.map(m => (m.id === localMed.id ? serverMed : m))
+          if (user.id) saveMeds(user.id, next)
+          return next
+        })
       })
+      .catch(() => { /* fica com ID local */ })
+    return localMed
+  }, [user.id])
 
-      // Tentar persistir na API em background
+  const updateMedication = useCallback(async (updated: MedRecord): Promise<void> => {
+    setMeds(prev => {
+      const next = prev.map(m => (m.id === updated.id ? updated : m))
+      if (user.id) saveMeds(user.id, next)
+      return next
+    })
+    if (!updated.id.startsWith('local-')) {
       medicationsApi
-        .create(petId, {
-          name: data.title,
-          dosage: data.dose,
-          frequency: data.frequency,
-          startDate: data.startDate,
-          endDate: data.endDate || undefined,
-          notes: data.notes || undefined,
-        } as any)
-        .then(res => {
-          const serverMed = mapApiMedToRecord(res.data, petId)
-          setMeds(prev => {
-            const next = prev.map(m => (m.id === localMed.id ? serverMed : m))
-            if (user.id) saveMeds(user.id, next)
-            return next
-          })
-        })
-        .catch(() => {
-          // fica com ID local
-        })
+        .update(updated.petId, updated.id, { name: updated.title, dosage: updated.dose, frequency: updated.frequency, startDate: updated.startDate, endDate: updated.endDate || undefined, notes: updated.notes || undefined } as any)
+        .catch(() => { /* silencia */ })
+    }
+  }, [user.id])
 
-      return localMed
-    },
-    [user.id]
-  )
-
-  const updateMedication = useCallback(
-    async (updated: MedRecord): Promise<void> => {
-      setMeds(prev => {
-        const next = prev.map(m => (m.id === updated.id ? updated : m))
-        if (user.id) saveMeds(user.id, next)
-        return next
-      })
-      if (!updated.id.startsWith('local-')) {
-        medicationsApi
-          .update(updated.petId, updated.id, {
-            name: updated.title,
-            dosage: updated.dose,
-            frequency: updated.frequency,
-            startDate: updated.startDate,
-            endDate: updated.endDate || undefined,
-            notes: updated.notes || undefined,
-          } as any)
-          .catch(() => {
-            // silencia
-          })
-      }
-    },
-    [user.id]
-  )
-
-  const deleteMedication = useCallback(
-    async (id: string): Promise<void> => {
-      const med = meds.find(m => m.id === id)
-      setMeds(prev => {
-        const next = prev.filter(m => m.id !== id)
-        if (user.id) saveMeds(user.id, next)
-        return next
-      })
-      setArchivedIds(prev => {
-        const s = new Set(prev)
-        s.delete(id)
-        return s
-      })
-      if (med && !med.id.startsWith('local-')) {
-        medicationsApi.delete(med.petId, id).catch(() => {
-          // silencia
-        })
-      }
-    },
-    [meds, user.id]
-  )
+  const deleteMedication = useCallback(async (id: string): Promise<void> => {
+    const med = meds.find(m => m.id === id)
+    setMeds(prev => {
+      const next = prev.filter(m => m.id !== id)
+      if (user.id) saveMeds(user.id, next)
+      return next
+    })
+    setArchivedIds(prev => { const s = new Set(prev); s.delete(id); return s })
+    if (med && !med.id.startsWith('local-')) {
+      medicationsApi.delete(med.petId, id).catch(() => { /* silencia */ })
+    }
+  }, [meds, user.id])
 
   const archiveMedication = useCallback((id: string) => {
     setArchivedIds(prev => new Set([...prev, id]))
   }, [])
 
   const unarchiveMedication = useCallback((id: string) => {
-    setArchivedIds(prev => {
-      const s = new Set(prev)
-      s.delete(id)
-      return s
-    })
+    setArchivedIds(prev => { const s = new Set(prev); s.delete(id); return s })
   }, [])
 
   const markMedicationAdministered = useCallback(
     (med: MedRecord, date: string, locale = 'pt') =>
-      new Date(date + 'T12:00:00').toLocaleDateString(locale, {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
+      new Date(date + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }),
     []
   )
 
@@ -286,24 +232,7 @@ export function MedicationsProvider({ children }: { children: React.ReactNode })
   )
 
   return (
-    <MedicationsContext.Provider
-      value={{
-        medications: meds,
-        getMedicationsByPetId,
-        getActiveMedicationsByPetId,
-        active,
-        history,
-        loading,
-        error,
-        addMedication,
-        updateMedication,
-        deleteMedication,
-        archiveMedication,
-        unarchiveMedication,
-        markMedicationAdministered,
-        refetch,
-      }}
-    >
+    <MedicationsContext.Provider value={{ medications: meds, getMedicationsByPetId, getActiveMedicationsByPetId, active, history, loading, error, addMedication, updateMedication, deleteMedication, archiveMedication, unarchiveMedication, markMedicationAdministered, refetch }}>
       {children}
     </MedicationsContext.Provider>
   )

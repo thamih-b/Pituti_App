@@ -44,6 +44,8 @@ interface CaresContextValue {
   addCare: (item: NewCareItem) => void
 }
 
+// ─── Funções utilitárias exportadas ────────────────────────────────────────────
+
 export function getDueDatesInRange(care: CareItem, fromStr: string, toStr: string): string[] {
   const result: string[] = []
   const start = new Date(care.startDate + 'T12:00:00')
@@ -63,14 +65,35 @@ export function isDueOnDate(care: CareItem, dateStr: string): boolean {
   return getDueDatesInRange(care, dateStr, dateStr).length > 0
 }
 
-const CARE_EMOJI: Record<string, string> = {
-  food: '🍽️', water: '💧', walk: '🦮', bath: '🛁',
-  brush: '🪮', medication: '💊', other: '⭐',
+// FIX: exportar getNextDueDate — em falta no ficheiro anterior, causava build error
+export function getNextDueDate(care: CareItem, fromStr: string): string {
+  if (care.intervalDays <= 1) return fromStr
+  const start = new Date(care.startDate + 'T12:00:00')
+  const from = new Date(fromStr + 'T12:00:00')
+  let cur = new Date(start)
+  while (cur <= from) cur.setDate(cur.getDate() + care.intervalDays)
+  return cur.toISOString().split('T')[0]
 }
-const CARE_BG: Record<string, string> = {
-  food: 'var(--warn-hl)', water: 'var(--blue-hl)', walk: 'var(--success-hl)',
-  bath: 'var(--primary-hl)', brush: 'var(--purple-hl)', medication: 'var(--pal-candy)',
-  other: 'var(--surface-offset)',
+
+// ─── Helpers internos ──────────────────────────────────────────────────────────
+
+function periodToInterval(p: string): number {
+  return p === 'week' ? 7 : p === 'month' ? 30 : 1
+}
+
+function resolveIntervalDays(u: CareEditData): number {
+  if (u.period === 'custom' && u.intervalDays != null) return Math.max(2, Number(u.intervalDays) || 2)
+  return periodToInterval(u.period ?? 'day')
+}
+
+function buildSub(u: CareEditData, t: TFunction): string {
+  const xd = u.intervalDays ?? 2
+  const freq =
+    u.period === 'day' ? t('cares.sub.perDay')
+    : u.period === 'week' ? t('cares.sub.perWeek')
+    : u.period === 'month' ? t('cares.sub.perMonth')
+    : t('cares.sub.everyNDays', { count: xd })
+  return u.total > 1 && u.quantity?.trim() ? u.quantity.trim() : freq
 }
 
 // Persistência localStorage
@@ -92,6 +115,21 @@ function saveCares(userId: string, items: CareItem[]): void {
   }
 }
 
+const CARE_EMOJI: Record<string, string> = {
+  food: '🍽️', water: '💧', walk: '🦮', bath: '🛁',
+  brush: '🪮', medication: '💊', other: '⭐',
+}
+const CARE_BG: Record<string, string> = {
+  food: 'linear-gradient(135deg,#FFF3DC,#FFE0A0)',
+  water: 'linear-gradient(135deg,#E0F4FF,#B8E0FF)',
+  walk: 'linear-gradient(135deg,#E8FFE8,#B8F0B8)',
+  bath: 'linear-gradient(135deg,#E0F8FF,#A8DCFF)',
+  brush: 'linear-gradient(135deg,#F0E8FF,#DDD0FF)',
+  other: 'linear-gradient(135deg,#F5F5F5,#E0E0E0)',
+}
+
+const todayStr = new Date().toISOString().split('T')[0]
+
 function mapApiCare(c: ApiCare, petId: string, t: TFunction): CareItem {
   const freq = typeof c.frequency === 'number' ? c.frequency : 1
   return {
@@ -103,7 +141,7 @@ function mapApiCare(c: ApiCare, petId: string, t: TFunction): CareItem {
     total: freq,
     period: 'day',
     intervalDays: 1,
-    startDate: (c as any).createdAt?.split('T')[0] ?? new Date().toISOString().split('T')[0],
+    startDate: (c as any).createdAt?.split('T')[0] ?? todayStr,
     quantity: c.notes ?? '',
     notify: true,
     time: (c as any).time ?? '',
@@ -113,25 +151,27 @@ function mapApiCare(c: ApiCare, petId: string, t: TFunction): CareItem {
   }
 }
 
+// ─── Context ──────────────────────────────────────────────────────────────────
+
 const CaresContext = createContext<CaresContextValue | null>(null)
 
 export function CaresProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
-  // FIX: incluir `ready` para evitar carregar com user.id vazio
+  // FIX: incluir `ready` — evita carregar com user.id vazio após reload
   const { user, isAuthenticated, ready } = useUser()
   const [items, setItems] = useState<CareItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // FIX: aguardar ready
+    // FIX: aguardar ready antes de qualquer acesso ao localStorage ou API
     if (!ready || !isAuthenticated || !user.id) return
 
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    // 1. localStorage imediato
+    // 1. localStorage imediato (chave correcta com user.id real)
     const stored = loadCares(user.id)
     if (stored.length) setItems(stored)
 
@@ -170,9 +210,9 @@ export function CaresProvider({ children }: { children: ReactNode }) {
     (id: string, dateStr: string, done: number, doneState: boolean) => {
       setItems(prev => {
         const next = prev.map(item =>
-          item.id === id
-            ? { ...item, doneByDate: { ...item.doneByDate, [dateStr]: { done, doneState } } }
-            : item
+          item.id !== id
+            ? item
+            : { ...item, doneByDate: { ...item.doneByDate, [dateStr]: { done, doneState } } }
         )
         if (user.id) saveCares(user.id, next)
         return next
@@ -181,32 +221,55 @@ export function CaresProvider({ children }: { children: ReactNode }) {
     [user.id]
   )
 
-  const editCare = useCallback((_care: CareItem) => {
-    // abre modal externamente — sem estado aqui
+  const editCare = useCallback((care: CareItem) => {
+    setItems(prev => prev.map(c => (c.id !== care.id ? c : { ...c, ...care })))
   }, [])
 
   const updateCare = useCallback(
-    (updated: CareEditData) => {
+    (u: CareEditData) => {
       setItems(prev => {
-        const next = prev.map(item =>
-          item.id === updated.id ? { ...item, ...updated } : item
+        const next = prev.map(c =>
+          c.id !== u.id
+            ? c
+            : {
+                ...c,
+                emoji: u.emoji,
+                title: u.title,
+                total: Math.max(1, Number(u.total)),
+                period: u.period ?? 'day',
+                intervalDays: resolveIntervalDays(u),
+                quantity: u.quantity ?? '',
+                notify: u.notify ?? true,
+                time: u.time ?? c.time,
+                recurring: (u as any).recurring ?? c.recurring,
+                sub: buildSub(u, t),
+                bg: u.bg ?? c.bg,
+              }
         )
         if (user.id) saveCares(user.id, next)
         return next
       })
     },
-    [user.id]
+    [t, user.id]
   )
 
   const deleteCare = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      const care = items.find(c => c.id === id)
+      if (care) {
+        try {
+          await caresApi.delete(care.petId, id)
+        } catch {
+          // silencia
+        }
+      }
       setItems(prev => {
-        const next = prev.filter(item => item.id !== id)
+        const next = prev.filter(c => c.id !== id)
         if (user.id) saveCares(user.id, next)
         return next
       })
     },
-    [user.id]
+    [items, user.id]
   )
 
   const addCare = useCallback(
@@ -222,9 +285,14 @@ export function CaresProvider({ children }: { children: ReactNode }) {
       try {
         const dto = {
           name: item.title,
-          type: item.emoji === '🍽️' ? 'food' : item.emoji === '💧' ? 'water'
-              : item.emoji === '🦮' ? 'walk' : item.emoji === '🛁' ? 'bath'
-              : item.emoji === '🪮' ? 'brush' : item.emoji === '💊' ? 'medication' : 'other',
+          type:
+            item.emoji === '🍽️' ? 'food'
+            : item.emoji === '💧' ? 'water'
+            : item.emoji === '🦮' ? 'walk'
+            : item.emoji === '🛁' ? 'bath'
+            : item.emoji === '🪮' ? 'brush'
+            : item.emoji === '💊' ? 'medication'
+            : 'other',
           frequency: item.total,
           periodType: item.period as any,
           time: item.time,
@@ -254,7 +322,16 @@ export function CaresProvider({ children }: { children: ReactNode }) {
     [t, user.id]
   )
 
-  const value: CaresContextValue = { items, loading, error, setCareProgress, editCare, updateCare, deleteCare, addCare }
+  const value: CaresContextValue = {
+    items,
+    loading,
+    error,
+    setCareProgress,
+    editCare,
+    updateCare,
+    deleteCare,
+    addCare,
+  }
 
   return <CaresContext.Provider value={value}>{children}</CaresContext.Provider>
 }

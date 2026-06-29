@@ -30,7 +30,7 @@ interface PetsContextValue {
 const PetsContext = createContext<PetsContextValue | null>(null)
 
 export function PetsProvider({ children }: { children: React.ReactNode }) {
-  // FIX: incluir `ready` para nao chamar a API antes do UserContext ter lido o localStorage
+  // FIX: incluir `ready` — sem ele o useEffect dispara com user.id='' antes do localStorage ser lido
   const { user, isAuthenticated, ready } = useUser()
   const [pets, setPets] = useState<Pet[]>([])
   const [loading, setLoading] = useState(false)
@@ -55,7 +55,6 @@ export function PetsProvider({ children }: { children: React.ReactNode }) {
     if (ready && isAuthenticated && user.id) {
       refresh()
     } else if (ready && !isAuthenticated) {
-      // utilizador deslogado: limpar
       setPets([])
     }
   }, [isAuthenticated, user.id, ready, refresh])
@@ -92,5 +91,4 @@ export function usePetsContext(): PetsContextValue {
   return ctx
 }
 
-// Alias para compatibilidade
 export { usePetsContext as usePets }

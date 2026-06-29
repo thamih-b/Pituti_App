@@ -53,7 +53,7 @@ const initialState: PitutiState = {
 
 function reducer(state: PitutiState, action: Action): PitutiState {
   switch (action.type) {
-    case 'SET_PETS':        return { ...state, pets: action.payload }
+    case 'SET_PETS':         return { ...state, pets: action.payload }
     case 'SET_PETS_LOADING': return { ...state, petsLoading: action.payload }
     case 'SET_PETS_ERROR':   return { ...state, petsError: action.payload }
     case 'ADD_PET':         return { ...state, pets: [action.payload, ...state.pets] }
@@ -83,33 +83,30 @@ function mapApiPetToPetWithAlerts(apiPet: any): PetWithAlerts {
 
 export function PitutiProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
-  // FIX: destruturar `ready` do UserContext para aguardar leitura do localStorage
+  // FIX: incluir `ready` para garantir que o UserContext já leu o localStorage
   const { user, ready } = useUser()
 
-  const loadPets = useCallback(
-    (ownerId: string) => {
-      // FIX: validar ownerId antes de chamar a API (evita 400 com ownerId vazio)
-      if (!ownerId || !ownerId.trim()) return
-      dispatch({ type: 'SET_PETS_LOADING', payload: true })
-      dispatch({ type: 'SET_PETS_ERROR', payload: null })
-      petsApi
-        .getAll(ownerId)
-        .then(res => {
-          const pets = Array.isArray(res.data) ? res.data.map(mapApiPetToPetWithAlerts) : []
-          dispatch({ type: 'SET_PETS', payload: pets })
-          dispatch({ type: 'SET_PETS_LOADING', payload: false })
-        })
-        .catch((err: unknown) => {
-          dispatch({ type: 'SET_PETS', payload: [] })
-          const message = err instanceof Error ? err.message : String(err)
-          dispatch({ type: 'SET_PETS_ERROR', payload: message ?? null })
-          dispatch({ type: 'SET_PETS_LOADING', payload: false })
-        })
-    },
-    []
-  )
+  const loadPets = useCallback((ownerId: string) => {
+    // FIX: validação explícita de ownerId — evita GET /api/pets?ownerId= (HTTP 400)
+    if (!ownerId || !ownerId.trim()) return
+    dispatch({ type: 'SET_PETS_LOADING', payload: true })
+    dispatch({ type: 'SET_PETS_ERROR', payload: null })
+    petsApi
+      .getAll(ownerId)
+      .then(res => {
+        const pets = Array.isArray(res.data) ? res.data.map(mapApiPetToPetWithAlerts) : []
+        dispatch({ type: 'SET_PETS', payload: pets })
+        dispatch({ type: 'SET_PETS_LOADING', payload: false })
+      })
+      .catch((err: unknown) => {
+        dispatch({ type: 'SET_PETS', payload: [] })
+        const message = err instanceof Error ? err.message : String(err)
+        dispatch({ type: 'SET_PETS_ERROR', payload: message ?? null })
+        dispatch({ type: 'SET_PETS_LOADING', payload: false })
+      })
+  }, [])
 
-  // FIX: `ready` garante que o UserContext já leu o localStorage antes de chamar a API
+  // FIX: `ready` garante que user.id tem o valor real do localStorage antes de chamar a API
   useEffect(() => {
     if (!ready) return
     loadPets(user.id)
@@ -126,21 +123,18 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t)
   }, [state.toastVisible, state.toastMessage])
 
-  const addPet = useCallback(
-    async (data: CreatePetInput) => {
-      const res = await petsApi.create({
-        name: data.name,
-        species: data.species,
-        breed: data.breed,
-        birthDate: data.birthDate,
-        ownerId: user.id,
-      })
-      const createdPet = mapApiPetToPetWithAlerts(res.data)
-      dispatch({ type: 'ADD_PET', payload: createdPet })
-      return createdPet
-    },
-    [user.id]
-  )
+  const addPet = useCallback(async (data: CreatePetInput) => {
+    const res = await petsApi.create({
+      name: data.name,
+      species: data.species,
+      breed: data.breed,
+      birthDate: data.birthDate,
+      ownerId: user.id,
+    })
+    const createdPet = mapApiPetToPetWithAlerts(res.data)
+    dispatch({ type: 'ADD_PET', payload: createdPet })
+    return createdPet
+  }, [user.id])
 
   const removePet = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_PET', payload: id })
@@ -161,9 +155,7 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <PitutiContext.Provider
-      value={{ state, addPet, removePet, refetchPets, toggleTheme, showToast, hideToast }}
-    >
+    <PitutiContext.Provider value={{ state, addPet, removePet, refetchPets, toggleTheme, showToast, hideToast }}>
       {children}
     </PitutiContext.Provider>
   )

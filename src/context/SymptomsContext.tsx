@@ -32,11 +32,7 @@ interface SymptomsContextValue {
   unresolve: (id: string) => void
 }
 
-const SEVERITY_MAP: Record<string, string> = {
-  mild: 'leve',
-  moderate: 'moderado',
-  severe: 'grave',
-}
+const SEVERITY_MAP: Record<string, string> = { mild: 'leve', moderate: 'moderado', severe: 'grave' }
 
 function mapApiSymptom(s: ApiSymptom, petId: string): SymptomEntry {
   return {
@@ -51,29 +47,22 @@ function mapApiSymptom(s: ApiSymptom, petId: string): SymptomEntry {
   }
 }
 
-// Persistência localStorage — chave inclui userId para isolamento entre contas
 function loadSymptoms(userId: string): SymptomEntry[] {
   if (!userId) return []
-  try {
-    return JSON.parse(localStorage.getItem(`pituti-symptoms-${userId}`) ?? 'null') ?? []
-  } catch {
-    return []
-  }
+  try { return JSON.parse(localStorage.getItem(`pituti-symptoms-${userId}`) ?? 'null') ?? [] }
+  catch { return [] }
 }
 
 function saveSymptoms(userId: string, items: any): void {
   if (!userId) return
-  try {
-    localStorage.setItem(`pituti-symptoms-${userId}`, JSON.stringify(items))
-  } catch {
-    // ignore
-  }
+  try { localStorage.setItem(`pituti-symptoms-${userId}`, JSON.stringify(items)) }
+  catch { /* ignore */ }
 }
 
 const SymptomsContext = createContext<SymptomsContextValue | null>(null)
 
 export function SymptomsProvider({ children }: { children: ReactNode }) {
-  // FIX: incluir `ready` — sem ele o useEffect pode disparar com user.id='' e ler chave errada
+  // FIX: `ready` garante que user.id tem valor real antes de ler localStorage
   const { user, isAuthenticated, ready } = useUser()
   const [symptoms, setSymptoms] = useState<SymptomEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,7 +71,6 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
 
   const refetch = useCallback(() => setTick(t => t + 1), [])
 
-  // FIX: dep array inclui `ready`
   useEffect(() => {
     if (!ready || !isAuthenticated || !user.id) return
 
@@ -90,11 +78,9 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
 
-    // 1. localStorage imediato
     const stored = loadSymptoms(user.id)
     if (stored.length) setSymptoms(stored)
 
-    // 2. API em background
     petsApi
       .getAll(user.id)
       .then(async res => {
@@ -108,92 +94,40 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
           )
         )
         if (!cancelled) {
-          const apiSymptoms = results.flat()
-          if (apiSymptoms.length) {
-            setSymptoms(apiSymptoms)
-            saveSymptoms(user.id, apiSymptoms)
-          }
+          const api = results.flat()
+          if (api.length) { setSymptoms(api); saveSymptoms(user.id, api) }
         }
       })
-      .catch(err => {
-        if (!cancelled) setError(err?.message ?? 'Erro ao carregar sintomas')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      .catch(err => { if (!cancelled) setError(err?.message ?? 'Erro ao carregar sintomas') })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [ready, isAuthenticated, user.id, tick])
 
-  const addSymptom = useCallback(
-    async (s: Omit<SymptomEntry, 'id'>) => {
-      const local = { ...s, id: `s-${Date.now()}` }
-      setSymptoms(prev => {
-        const next = [...prev, local]
-        if (user.id) saveSymptoms(user.id, next)
-        return next
-      })
-      symptomsApi
-        .create(s.petId, {
-          description: s.description,
-          severity: s.severity as any,
-          date: s.date,
-          notes: s.notes || undefined,
-          resolved: s.resolved as any,
-        })
-        .catch(() => {
-          // silencia
-        })
-    },
-    [user.id]
-  )
+  const addSymptom = useCallback(async (s: Omit<SymptomEntry, 'id'>) => {
+    const local = { ...s, id: `s-${Date.now()}` }
+    setSymptoms(prev => { const next = [...prev, local]; if (user.id) saveSymptoms(user.id, next); return next })
+    symptomsApi.create(s.petId, { description: s.description, severity: s.severity as any, date: s.date, notes: s.notes || undefined, resolved: s.resolved as any }).catch(() => {})
+  }, [user.id])
 
   const saveSymptom = useCallback((updated: SymptomEntry) => {
     setSymptoms(prev => prev.map(s => (s.id === updated.id ? updated : s)))
   }, [])
 
-  const resolve = useCallback(
-    async (id: string) => {
-      const s = symptoms.find(x => x.id === id)
-      if (s) {
-        try {
-          await symptomsApi.update(s.petId, id, { resolved: true } as any)
-        } catch {
-          // silencia
-        }
-      }
-      setSymptoms(prev => {
-        const next = prev.map(x => (x.id === id ? { ...x, resolved: true } : x))
-        if (user.id) saveSymptoms(user.id, next)
-        return next
-      })
-    },
-    [symptoms, user.id]
-  )
+  const resolve = useCallback(async (id: string) => {
+    const s = symptoms.find(x => x.id === id)
+    if (s) { try { await symptomsApi.update(s.petId, id, { resolved: true } as any) } catch {} }
+    setSymptoms(prev => { const next = prev.map(x => (x.id === id ? { ...x, resolved: true } : x)); if (user.id) saveSymptoms(user.id, next); return next })
+  }, [symptoms, user.id])
 
-  const unresolve = useCallback(
-    async (id: string) => {
-      const s = symptoms.find(x => x.id === id)
-      if (s) {
-        try {
-          await symptomsApi.update(s.petId, id, { resolved: false } as any)
-        } catch {
-          // silencia
-        }
-      }
-      setSymptoms(prev => {
-        const next = prev.map(x => (x.id === id ? { ...x, resolved: false } : x))
-        if (user.id) saveSymptoms(user.id, next)
-        return next
-      })
-    },
-    [symptoms, user.id]
-  )
+  const unresolve = useCallback(async (id: string) => {
+    const s = symptoms.find(x => x.id === id)
+    if (s) { try { await symptomsApi.update(s.petId, id, { resolved: false } as any) } catch {} }
+    setSymptoms(prev => { const next = prev.map(x => (x.id === id ? { ...x, resolved: false } : x)); if (user.id) saveSymptoms(user.id, next); return next })
+  }, [symptoms, user.id])
 
   return (
-    <SymptomsContext.Provider
-      value={{ symptoms, loading, error, refetch, addSymptom, saveSymptom, resolve, unresolve }}
-    >
+    <SymptomsContext.Provider value={{ symptoms, loading, error, refetch, addSymptom, saveSymptom, resolve, unresolve }}>
       {children}
     </SymptomsContext.Provider>
   )
