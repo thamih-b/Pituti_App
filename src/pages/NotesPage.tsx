@@ -4,15 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useUser } from '../context/UserContext';
 import { usePetsContext } from '../context/PetsContext';
 import { useNotes } from '../context/NotesContext';
-import { BackButton } from '../components/BackButton';
+import BackButton from "../components/BackButton";
 import { showToast } from '../components/AppLayout';
 import {
   NoteDetailModal,
   EditNoteModal,
-  AddNoteModal,
   type NoteEntry,
   type NoteReply,
 } from '../components/NoteModals';
+import NewNoteModal from "../components/NewNoteModal";
 
 const TYPEICON: Record<string, string> = {
   control: '🩺', observacion: '👁', emergencia: '🚨',
@@ -84,7 +84,7 @@ function NoteCard({ note, onClick }: { note: NoteEntry; onClick: () => void }) {
 export default function NotesPage() {
   const { t } = useTranslation();
   const { user } = useUser();
-  const pets = usePetsContext();
+  const { pets } = usePetsContext();
   const { notes, loading, addNote, updateNote, archiveNote, unarchiveNote, deleteNote, addReply } = useNotes();
 
   const [addOpen, setAddOpen] = useState(false);
@@ -226,7 +226,7 @@ export default function NotesPage() {
 
       {/* Modais */}
       {addOpen && (
-        <AddNoteModal
+        <NewNoteModal
           isOpen={addOpen}
           onClose={() => setAddOpen(false)}
           onAdd={handleAdd}

@@ -3,11 +3,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePetsContext } from '../context/PetsContext';
 import { useVaccinesContext } from '../context/VaccinesContext';
-import { VaccineDetailModal } from '../components/VaccineDetailModal';
-import { EditVaccineModal } from '../components/EditVaccineModal';
+import VaccineDetailModal from "../components/VaccineDetailModal";
+import EditVaccineModal from "../components/EditVaccineModal";
 import { getVaccStatus } from '../utils/vaccUtils';
 import type { Species } from '../types';
 import type { VaccineRecord } from '../utils/vaccUtils';
+
 
 const SPECIES_EMOJI: Record<string, string> = {
   cat: '🐱', dog: '🐶', bird: '🦜', rabbit: '🐰',
@@ -288,7 +289,7 @@ function VaccRing({ coverage, size = 96, strokeWidth = 8 }: { coverage: number; 
 // ── VaccinesPage principal ────────────────────────────────────────────────────
 export default function VaccinesPage() {
   const { t, i18n } = useTranslation();
-  const pets = usePetsContext();
+  const { pets } = usePetsContext();
   const { vaccinesByPet, loading: vaccinesLoading, addVaccine, updateVaccine, deleteVaccine } = useVaccinesContext();
 
   const VACCBADGE = {
