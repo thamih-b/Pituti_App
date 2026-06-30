@@ -30,11 +30,37 @@ type VetRow = {
   created_at: string;
 };
 
+// FIX: busca petIds para cada vet via vet_pets (com fallback seguro se a tabela não existir)
+async function getVetPetIds(vetId: string): Promise<string[]> {
+  try {
+    const rows = await query<{ pet_id: string }>(
+      'SELECT pet_id FROM vet_pets WHERE vet_id = $1',
+      [vetId]
+    );
+    return rows.map(r => r.pet_id);
+  } catch {
+    // Se a tabela vet_pets ainda não foi criada, retorna [] sem quebrar
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
-    const rows = await query<VetRow>('SELECT * FROM vets WHERE owner_id = $1 ORDER BY created_at DESC', [auth.userId]);
-    return NextResponse.json({ data: rows.map(mapVet), total: rows.length });
+    const rows = await query<VetRow>(
+      'SELECT * FROM vets WHERE owner_id = $1 ORDER BY created_at DESC',
+      [auth.userId]
+    );
+
+    // Inclui petIds em cada vet
+    const vetsWithPetIds = await Promise.all(
+      rows.map(async (vet) => {
+        const petIds = await getVetPetIds(vet.id);
+        return { ...mapVet(vet), petIds };
+      })
+    );
+
+    return NextResponse.json({ data: vetsWithPetIds, total: vetsWithPetIds.length });
   } catch (error: any) {
     const status = error?.status ?? 500;
     return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
@@ -58,12 +84,15 @@ export async function POST(request: NextRequest) {
 
     if (petIds.length > 0) {
       for (const petId of petIds) {
-        await query('INSERT INTO vet_pets (vet_id, pet_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [vet.id, petId]);
+        await query(
+          'INSERT INTO vet_pets (vet_id, pet_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [vet.id, petId]
+        );
       }
     }
 
-    const petRows = await query<{ pet_id: string }>('SELECT pet_id FROM vet_pets WHERE vet_id = $1', [vet.id]);
-    return NextResponse.json({ data: { ...mapVet(vet), pet_ids: petRows.map(r => r.pet_id) } }, { status: 201 });
+    const currentPetIds = await getVetPetIds(vet.id);
+    return NextResponse.json({ data: { ...mapVet(vet), petIds: currentPetIds } }, { status: 201 });
   } catch (error: any) {
     const status = error?.status ?? 500;
     return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });

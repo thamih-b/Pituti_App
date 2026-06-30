@@ -50,13 +50,14 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
     if (initial) {
       setType((initial.type as VetType) ?? 'primary')
       setName(initial.name)
-      setClinic(initial.clinic)
+      setClinic(initial.clinic ?? '')
       setSpecialty(initial.specialty ?? '')
-      setPhone(initial.phone)
+      setPhone(initial.phone ?? '')
       setPhone2(initial.phone2 ?? '')
       setAddress(initial.address ?? '')
       setNotes(initial.notes ?? '')
-      setPetIds(initial.petIds)
+      // FIX: guard contra petIds undefined quando a API não retorna o campo
+      setPetIds(Array.isArray(initial.petIds) ? initial.petIds : [])
     } else {
       setType('primary'); setName(''); setClinic(''); setSpecialty('')
       setPhone(''); setPhone2(''); setAddress(''); setNotes(''); setPetIds([])
@@ -75,6 +76,7 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
   const handleSave = () => {
     if (!validate()) return
     const data: Omit<VetContact, 'id'> = {
+      ownerId:   '',
       name:      name.trim(),
       clinic:    clinic.trim(),
       type,
@@ -129,7 +131,6 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
               color: type === vt.value ? vt.color : 'var(--text)',
             }}>
             <span>{vt.emoji}</span>
-            {/* ✅ label via i18n em vez de hardcode ES */}
             <span>{t(`vet.contactTypes.${vt.key}`)}</span>
           </button>
         ))}
@@ -193,7 +194,7 @@ const AddEditVetModal: FC<Props> = ({ isOpen, onClose, onSave, onUpdate, initial
           placeholder={t('vet.contacts.addressPh')}/>
       </div>
 
-      {/* ✅ pets via contexto */}
+      {/* Pets associados */}
       <div className="modal-section">{t('vet.contacts.sectionPets')}</div>
       <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap', marginBottom:'1rem' }}>
         {pets.map(p => (

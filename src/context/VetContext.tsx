@@ -20,6 +20,9 @@ export interface Vet {
   createdAt?: string;
 }
 
+// Alias exportado para compatibilidade com AddEditVetModal e outros
+export type VetContact = Vet;
+
 export interface VetAppointment {
   id: string;
   petId: string;
@@ -112,6 +115,18 @@ interface VetContextValue {
 
 const VetContext = createContext<VetContextValue | null>(null);
 
+// ── Normaliza vet vindo da API: garante que petIds é sempre um array ──────────
+function normalizeVet(v: any): Vet {
+  return {
+    ...v,
+    petIds: Array.isArray(v.petIds)
+      ? v.petIds
+      : Array.isArray(v.pet_ids)
+      ? v.pet_ids
+      : [],
+  };
+}
+
 export function VetProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useUser();
 
@@ -155,7 +170,8 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const res = await vetsApi.getAll();
-      setVets(res.data as unknown as Vet[]);
+      // FIX: normaliza petIds para sempre ser [] quando a API não retorna
+      setVets((res.data as unknown as any[]).map(normalizeVet));
     } catch (e: any) {
       setError(e?.message ?? 'Erro ao carregar veterinários');
     } finally {
@@ -170,14 +186,14 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
 
   const addVet = async (data: Omit<Vet, 'id'>): Promise<Vet> => {
     const res = await vetsApi.create(data as unknown as CreateVetDto);
-    const v = res.data as unknown as Vet;
+    const v = normalizeVet(res.data);
     setVets((prev) => [v, ...prev]);
     return v;
   };
 
   const updateVet = async (vet: Vet): Promise<void> => {
     const res = await vetsApi.update(vet.id, vet as unknown as UpdateVetDto);
-    const u = res.data as unknown as Vet;
+    const u = normalizeVet(res.data);
     setVets((prev) => prev.map((v) => (v.id === vet.id ? u : v)));
   };
 
@@ -214,6 +230,7 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
     if (!id) return;
     setProfiles((prev) => ({ ...prev, [id]: profile }));
   }, []);
+
   // ── vetCalendarDates (derivado dos appointments) ───────────────────────────
 
   const vetCalendarDates: VetCalendarEvent[] = appointments.flatMap((a) => {
@@ -247,7 +264,7 @@ const SAFE_VET: VetContextValue = {
   loading: false,
   error: null,
   fetchVets: async () => {},
-  addVet: async () => ({ id: '', name: '', clinic: '', phone: '', type: 'primary', petIds: [] } as any),
+  addVet: async () => ({ id: '', name: '', clinic: '', phone: '', type: 'primary', petIds: [], ownerId: '' } as any),
   updateVet: async () => {},
   deleteVet: async () => {},
   appointments: [],
@@ -261,7 +278,6 @@ const SAFE_VET: VetContextValue = {
 
 export function useVet(): VetContextValue {
   const ctx = useContext(VetContext);
-  // Retorna fallback seguro em vez de lançar React error #310
   return ctx ?? SAFE_VET;
 }
 
