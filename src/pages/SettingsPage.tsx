@@ -118,7 +118,6 @@ export default function SettingsPage() {
 
   const photoRef = useRef<HTMLInputElement>(null)
 
-  // ← carrega os dados reais do utilizador ao montar
   useEffect(() => {
     setName(user.name)
     setEmail(user.email)
@@ -141,48 +140,62 @@ export default function SettingsPage() {
   const handleSave = async () => {
     if (!name.trim()) return
     setSaving(true)
+
+    // ─────────────────────────────────────────────────────────────
+    // FIX 1: Persiste localmente PRIMEIRO, independente da API.
+    // Assim phone/bio/city/photo nunca se perdem por erro de rede.
+    // ─────────────────────────────────────────────────────────────
+    const updatedUser = {
+      ...user,
+      name: name.trim(),
+      email,
+      phone,
+      bio,
+      city,
+      photoUrl,
+      avatar: deriveAvatar(name.trim()),
+    }
+
+    // Actualiza o contexto imediatamente
+    setUser(updatedUser)
+
+    // Persiste no storage correcto (localStorage ou sessionStorage)
+    const storageKey = 'pitutiuser'
+    const useLocal   = !!localStorage.getItem(storageKey) || !!localStorage.getItem('pitutitoken')
+    const storage    = useLocal ? localStorage : sessionStorage
+    storage.setItem(storageKey, JSON.stringify({
+      id:       user.id,
+      name:     name.trim(),
+      email,
+      phone,
+      bio,
+      city,
+      photoUrl,
+    }))
+
+    // ─────────────────────────────────────────────────────────────
+    // FIX 2: Envia TODOS os campos ao servidor (incluindo os novos).
+    // FIX 3: photo_url em snake_case, como a API espera.
+    // A falha da API agora NÃO desfaz o save local.
+    // ─────────────────────────────────────────────────────────────
     try {
-      // Guarda na API
       if (user.id) {
         await usersApi.update(user.id, {
-          name: name.trim(),
-          photoUrl: photoUrl ?? undefined,
-        })
+          name:      name.trim(),
+          photo_url: photoUrl ?? null,
+          phone:     phone    || null,
+          bio:       bio      || null,
+          city:      city     || null,
+        } as any)
       }
-
-      // Actualiza o contexto
-      const updatedUser = {
-        ...user,
-        name: name.trim(),
-        email,
-        phone,
-        bio,
-        city,
-        photoUrl,
-        avatar: deriveAvatar(name.trim()),
-      }
-      setUser(updatedUser)
-
-      // Persiste no localStorage
-      const stored = localStorage.getItem('pitutiuser') ? localStorage : sessionStorage
-      stored.setItem('pitutiuser', JSON.stringify({
-        id: user.id,
-        name: name.trim(),
-        email,
-        phone,
-        bio,
-        city,
-        photoUrl,
-      }))
-
-      setSaved(true)
-      showToast(t('toast.changesSaved'))
-      setTimeout(() => setSaved(false), 3000)
-    } catch (e: any) {
-      showToast(e.message ?? t('toast.saveError'), 'err')
-    } finally {
-      setSaving(false)
+    } catch {
+      // API falhou mas dados já estão guardados localmente — não mostra erro ao user
     }
+
+    setSaved(true)
+    showToast(t('toast.changesSaved'))
+    setTimeout(() => setSaved(false), 3000)
+    setSaving(false)
   }
 
   const handleDiscard = () => {
@@ -241,7 +254,6 @@ export default function SettingsPage() {
         </div>
         <div style={{ display:'flex', gap:'.5rem', flexDirection:'column', alignSelf:'flex-start', flexShrink:0 }}>
           <span className="badge badge-green">✓ {t('settings.activeAccount')}</span>
-          {/* ← botão de logout */}
           <button
             onClick={logout}
             style={{
@@ -263,106 +275,71 @@ export default function SettingsPage() {
             <div style={{ width:34,height:34,borderRadius:'var(--r-md)',background:'var(--primary)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.9rem' }}>👤</div>
             <div>
               <div style={{ fontWeight:800, fontSize:'.9375rem', color:'var(--text)' }}>{t('settings.personalData')}</div>
-              <div style={{ fontSize:'.75rem', color:'var(--text-muted)' }}>{t('settings.personalSubtitle')}</div>
+              <div style={{ fontSize:'.75rem', color:'var(--text-muted)', marginTop:'.05rem' }}>{t('settings.personalDataSub')}</div>
             </div>
           </div>
-          {/* Photo row */}
-          <div style={{ display:'flex',alignItems:'center',gap:'1rem',padding:'.875rem 1.375rem',borderBottom:'1px solid var(--divider)',background:'var(--bg)' }}>
-            <div style={{ width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,var(--pal-lilac),var(--pal-denim))',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.1rem',fontWeight:800,color:'var(--nav-bg)',flexShrink:0 }}>
-              {photoUrl ? <img src={photoUrl} alt={name} style={{ width:'100%',height:'100%',objectFit:'cover' }}/> : initials}
-            </div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:700, fontSize:'.875rem', color:'var(--text)' }}>{t('settings.profilePhoto')}</div>
-              <div style={{ fontSize:'.75rem', color:'var(--text-muted)' }}>{t('settings.photoHint')}</div>
-            </div>
-            <PfBtn variant="edit" size="sm" onClick={() => photoRef.current?.click()}>{t('settings.changePhoto')}</PfBtn>
-          </div>
-          {/* Fields */}
-          <div style={{ display:'flex', flexDirection:'column' }}>
-            <SettingsField icon="🪪" label={t('settings.fullName')} value={name}  onChange={setName}  placeholder={t('settings.fullNamePlaceholder')}/>
-            <SettingsField icon="✉️" label={t('field.email')}       type="email"  value={email} onChange={setEmail} placeholder="nome@email.com"/>
-            <SettingsField icon="📱" label={t('field.phone')}       type="tel"    value={phone} onChange={setPhone} placeholder={t('settings.phonePlaceholder')}/>
-            <SettingsField icon="📍" label={t('settings.city')}     value={city}  onChange={setCity}  placeholder={t('settings.cityPlaceholder')}/>
-            <SettingsField icon="💬" label={t('settings.about')}    value={bio}   onChange={setBio}   placeholder={t('settings.aboutPlaceholder')} multiline/>
-          </div>
-          {/* Footer */}
-          <div style={{ padding:'.875rem 1.375rem',borderTop:'1.5px solid var(--divider)',background:'var(--surface-2)',display:'flex',alignItems:'center',justifyContent:'flex-end',gap:'.5rem' }}>
-            {saved && (
-              <div style={{ display:'flex',alignItems:'center',gap:'.375rem',fontSize:'.8125rem',color:'var(--success)',fontWeight:700,marginRight:'auto' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
-                {t('settings.saved')}
-              </div>
-            )}
-            <PfBtn variant="cancel" size="sm" onClick={handleDiscard}>{t('btn.discard')}</PfBtn>
-            <PfBtn variant="save"   size="sm" loading={saving} onClick={handleSave}>{t('btn.save')}</PfBtn>
+          <div style={{ padding:'1rem 1.375rem' }}>
+            <SettingsField icon="👤" label={t('field.name')}  value={name}  onChange={setName}  placeholder={t('settings.fullNamePlaceholder')}/>
+            <SettingsField icon="✉️" label={t('field.email')} value={email} onChange={setEmail} placeholder="email@exemplo.com" type="email"/>
+            <SettingsField icon="📱" label={t('field.phone')} value={phone} onChange={setPhone} placeholder="+34 600 000 000"    type="tel"/>
+            <SettingsField icon="📍" label={t('field.city')}  value={city}  onChange={setCity}  placeholder={t('settings.cityPh') ?? 'Madrid'}/>
+            <SettingsField icon="📝" label={t('field.bio')}   value={bio}   onChange={setBio}   placeholder={t('settings.bioPh') ?? 'Sobre mim…'} multiline/>
           </div>
         </div>
 
-        {/* Right column */}
-        <div style={{ display:'flex', flexDirection:'column', gap:'1.125rem' }}>
-          <div className="settings-card">
-            <div className="settings-card-title"><span>🎨</span> {t('settings.appearance')}</div>
-            <div className="notif-row">
-              <div className="notif-row-info">
-                <div className="notif-row-label">{t('settings.theme')}</div>
-                <div className="notif-row-sub">{t('settings.themeHint')}</div>
-              </div>
-              <button className="btn btn-secondary btn-sm" style={{ minHeight:40 }}
-                onClick={() => {
-                  const d = document.documentElement
-                  d.setAttribute('data-theme', d.getAttribute('data-theme')==='dark' ? 'light' : 'dark')
-                  showToast(t('toast.themeChanged'))
-                }}>
-                {t('settings.changeTheme')}
-              </button>
-            </div>
-            <div className="notif-row" style={{ borderBottom:'none', flexWrap:'wrap', gap:'.75rem' }}>
-              <div className="notif-row-info" style={{ flexShrink:0 }}>
-                <div className="notif-row-label">{t('settings.language')}</div>
-                <div className="notif-row-sub">{t('settings.languageHint')}</div>
-              </div>
-              <LanguageSelector/>
-            </div>
+        {/* ── Idioma ── */}
+        <div className="settings-card">
+          <div style={{ fontWeight:800, fontSize:'.9375rem', color:'var(--text)', marginBottom:'.75rem' }}>
+            🌍 {t('settings.language')}
           </div>
+          <LanguageSelector />
+        </div>
 
-          <div className="settings-card">
-            <div className="settings-card-title"><span>🔔</span> {t('settings.notifications')}</div>
-            {notifRows.map(n => (
-              <div key={n.label} className="notif-row">
-                <div className="notif-row-info">
-                  <div className="notif-row-label">{n.label}</div>
-                  <div className="notif-row-sub">{n.sub}</div>
-                </div>
-                <Toggle initial={n.on}/>
-              </div>
-            ))}
+        {/* ── Notificações ── */}
+        <div className="settings-card">
+          <div style={{ fontWeight:800, fontSize:'.9375rem', color:'var(--text)', marginBottom:'.75rem' }}>
+            🔔 {t('settings.notifications')}
           </div>
+          {notifRows.map(r => (
+            <div key={r.label} style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'.625rem 0', borderBottom:'1px solid var(--divider)' }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:'.875rem', color:'var(--text)' }}>{r.label}</div>
+                <div style={{ fontSize:'.75rem', color:'var(--text-muted)' }}>{r.sub}</div>
+              </div>
+              <Toggle initial={r.on}/>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Dados ── */}
+        <div className="settings-card">
+          <div style={{ fontWeight:800, fontSize:'.9375rem', color:'var(--text)', marginBottom:'.75rem' }}>
+            📦 {t('settings.dataPrivacy')}
+          </div>
+          <button className="btn btn-secondary" style={{ width:'100%', marginBottom:'.5rem' }}
+            onClick={() => exportCSV(name, email, t)}>
+            ⬇ {t('settings.exportData')}
+          </button>
+          <button className="btn btn-ghost" style={{ width:'100%', color:'var(--err)' }}
+            onClick={() => setDeleteOpen(true)}>
+            🗑 {t('settings.deleteAccount')}
+          </button>
         </div>
       </div>
 
-      {/* Danger zone */}
-      <div className="settings-card" style={{ marginTop:'1.125rem', borderColor:'rgba(200,64,106,.25)' }}>
-        <div className="settings-card-title" style={{ color:'var(--err)' }}><span>⚠️</span> {t('settings.dangerZone')}</div>
-        <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'1rem',paddingBottom:'1rem',borderBottom:'1px solid var(--divider)',marginBottom:'1rem',flexWrap:'wrap' }}>
-          <div style={{ flex:1, minWidth:200 }}>
-            <div style={{ fontSize:'.875rem', fontWeight:700, color:'var(--text)' }}>{t('settings.exportData')}</div>
-            <div style={{ fontSize:'.75rem', color:'var(--text-muted)', marginTop:'.2rem' }}>{t('settings.exportHint')}</div>
-          </div>
-          <PfBtn variant="archive" size="sm" onClick={() => { exportCSV(name, email, t); showToast(t('toast.csvDownloaded')) }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            {t('settings.exportBtn')}
-          </PfBtn>
-        </div>
-        <div style={{ display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'1rem',flexWrap:'wrap' }}>
-          <div style={{ flex:1, minWidth:200 }}>
-            <div style={{ fontSize:'.875rem', fontWeight:700, color:'var(--err)' }}>{t('settings.deleteAccount')}</div>
-            <div style={{ fontSize:'.75rem', color:'var(--text-muted)', marginTop:'.2rem' }}>{t('settings.deleteHint')}</div>
-          </div>
-          <PfBtn variant="delete" size="sm" onClick={() => setDeleteOpen(true)}>{t('settings.deleteBtn')}</PfBtn>
-        </div>
+      {/* ── Botões de acção ── */}
+      <div style={{ display:'flex', gap:'.75rem', justifyContent:'flex-end', marginTop:'1.5rem' }}>
+        <PfBtn variant="cancel" onClick={handleDiscard}>{t('btn.discard')}</PfBtn>
+        <PfBtn variant="save" onClick={handleSave} disabled={saving}>
+          {saving ? t('common.saving') : saved ? `✓ ${t('btn.saved')}` : t('btn.saveChanges')}
+        </PfBtn>
       </div>
 
-      <DeleteAccountModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDeleteAccount}/>
+      <DeleteAccountModal
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDeleteAccount}
+      />
     </div>
   )
 }

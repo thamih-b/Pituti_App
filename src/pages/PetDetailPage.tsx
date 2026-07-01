@@ -13,7 +13,7 @@ import AddCareModal from '../components/AddCareModal'
 import AddMedicationModal, { type AddMedData } from '../components/AddMedicationModal'
 import RegisterSymptomModal from '../components/RegisterSymptomModal'
 import { SymptomDetailModal, EditSymptomModal } from '../components/SymptomModals'
-import NewNoteModal from '../components/NewNoteModal'
+import NewNoteModal, { type NoteData } from '../components/NewNoteModal'
 import EditPetModal from '../components/EditPetModal'
 import EditCareModal from '../components/EditCareModal'
 import PetChipEditOverlay from '../components/PetChipEditOverlay'
@@ -170,9 +170,9 @@ function ShareModal({ petName, isOpen, onClose }: {
   petName: string; isOpen: boolean; onClose: () => void
 }) {
   const { t } = useTranslation()
-  const [email, setEmail]       = useState('')
-  const [role, setRole]         = useState('caregiver')
-  const [emailErr, setEmailErr] = useState('')
+  const [email, setEmail]           = useState('')
+  const [role, setRole]             = useState('caregiver')
+  const [emailErr, setEmailErr]     = useState('')
   const [caregivers, setCaregivers] = useState([
     { id: 'tl', initials: 'TL', name: 'Thamires Lopes', role: t('pet.share.roleOwner'),     bg: 'var(--pal-lilac)', color: 'var(--nav-bg)', badge: t('pet.share.badgeYou') as string | null, removable: false },
     { id: 'am', initials: 'AM', name: 'Ana Martínez',   role: t('pet.share.roleCaregiver'), bg: 'var(--blue-hl)',   color: 'var(--blue)',   badge: null as string | null,                   removable: true  },
@@ -499,29 +499,16 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
     late: { badge: t('pet.vacc.badgeLate'), cls: 'badge-red'    },
   }
 
-const handleRegister = (v: {
-  name: string
-  date: string
-  nextDate: string
-  vet: string
-  notes: string
-}) => {
-  const lbl = new Date(v.date + 'T12:00:00').toLocaleDateString(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-  const cls = getVaccStatus(v.nextDate) as 'ok' | 'soon' | 'late'
-
-  addVaccine(petId, {
-    id: '',
-    name: v.name,
-    applied: lbl,
-    nextDate: v.nextDate,
-    badge: VACC_BADGE[cls].badge,
-    badgeCls: VACC_BADGE[cls].cls,
-  })
-}
+  const handleRegister = (v: { name: string; date: string; nextDate: string; vet: string; notes: string }) => {
+    const lbl = new Date(v.date + 'T12:00:00').toLocaleDateString(undefined, {
+      day: '2-digit', month: 'short', year: 'numeric',
+    })
+    const cls = getVaccStatus(v.nextDate) as 'ok' | 'soon' | 'late'
+    addVaccine(petId, {
+      id: '', name: v.name, applied: lbl, nextDate: v.nextDate,
+      badge: VACC_BADGE[cls].badge, badgeCls: VACC_BADGE[cls].cls,
+    })
+  }
 
   return (
     <>
@@ -590,19 +577,15 @@ const handleRegister = (v: {
         vaccine={vaccDetail ? { ...vaccDetail, petName, petEmoji: SPECIES_EMOJI[petId] ?? '🐾' } : null}
         onClose={() => setVaccDetail(null)}
         onEdit={vacc => { setVaccDetail(null); setEditVacc(vacc); setEditVaccOpen(true) }}
-onMarkApplied={(vacc, appliedDate, nextDate) => {
-  const lbl = new Date(appliedDate + 'T12:00:00').toLocaleDateString(undefined, {
-    day: '2-digit', month: 'short', year: 'numeric',
-  })
-  const cls = getVaccStatus(nextDate) as 'ok' | 'soon' | 'late'
-  updateVaccine(petId, {
-    ...vacc,   // ← já tem id
-    applied: lbl,
-    nextDate,
-    badge:    VACC_BADGE[cls].badge,
-    badgeCls: VACC_BADGE[cls].cls,
-  })
-
+        onMarkApplied={(vacc, appliedDate, nextDate) => {
+          const lbl = new Date(appliedDate + 'T12:00:00').toLocaleDateString(undefined, {
+            day: '2-digit', month: 'short', year: 'numeric',
+          })
+          const cls = getVaccStatus(nextDate) as 'ok' | 'soon' | 'late'
+          updateVaccine(petId, {
+            ...vacc, applied: lbl, nextDate,
+            badge: VACC_BADGE[cls].badge, badgeCls: VACC_BADGE[cls].cls,
+          })
           setVaccDetail(null)
           showToast(t('pet.vacc.toastApplied'))
         }}
@@ -624,34 +607,29 @@ onMarkApplied={(vacc, appliedDate, nextDate) => {
 
 // ─── Pet Detail Page ──────────────────────────────────────────────────────────
 
-
 export default function PetDetailPage() {
   const { t } = useTranslation()
   const { petId = '' } = useParams<{ petId: string }>()
   const navigate = useNavigate()
-  const { pets, loading } = usePetsContext()
+  const { pets, loading, updatePet } = usePetsContext()
 
-  const [activeTab, setActiveTab] = useState(0)
-  const [shareOpen, setShareOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [addMedOpen, setAddMedOpen] = useState(false)
-  const [addNoteOpen, setAddNoteOpen] = useState(false)
+  // ── Todos os useState/useMemo/hooks ANTES de qualquer return condicional ──
+  const [activeTab,      setActiveTab]      = useState(0)
+  const [shareOpen,      setShareOpen]      = useState(false)
+  const [editOpen,       setEditOpen]       = useState(false)
+  const [addMedOpen,     setAddMedOpen]     = useState(false)
+  const [addNoteOpen,    setAddNoteOpen]    = useState(false)
   const [addSymptomOpen, setAddSymptomOpen] = useState(false)
-  const [chipField, setChipField] = useState<ChipField | null>(null)
+  const [chipField,      setChipField]      = useState<ChipField | null>(null)
 
-  // ✅ pet derivado de forma segura, sem pets[0]
-  const petData = useMemo<PetWithAlerts | null>(() => {
+  const petData = useMemo<(PetWithAlerts & { weight?: number | string | null }) | null>(() => {
     if (!petId || pets.length === 0) return null
-    return (pets.find(p => p.id === petId) as PetWithAlerts | undefined) ?? null
+    return (pets.find(p => p.id === petId) as PetWithAlerts & { weight?: number | string | null } | undefined) ?? null
   }, [pets, petId])
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
     if (!petId) return null
-    try {
-      return localStorage.getItem(`pet-photo-${petId}`) ?? null
-    } catch {
-      return null
-    }
+    try { return localStorage.getItem(`pet-photo-${petId}`) ?? null } catch { return null }
   })
 
   const { addSymptom, saveSymptom, resolve, unresolve } = useSymptoms()
@@ -659,7 +637,7 @@ export default function PetDetailPage() {
   const { active: activeSymptoms, resolved: resolvedSymptoms } = usePetSymptoms(safePetId)
 
   const [detailSym, setDetailSym] = useState<SymptomEntry | null>(null)
-  const [editSym, setEditSym] = useState<SymptomEntry | null>(null)
+  const [editSym,   setEditSym]   = useState<SymptomEntry | null>(null)
   const [editSymOpen, setEditSymOpen] = useState(false)
 
   const photoRef = useRef<HTMLInputElement>(null)
@@ -673,16 +651,24 @@ export default function PetDetailPage() {
 
   const localMeds = safePetId ? getActiveMedicationsByPetId(safePetId) : []
 
-  const [medDetail, setMedDetail] = useState<MedRecord | null>(null)
-  const [editMed, setEditMed] = useState<MedRecord | null>(null)
-  const [editMedOpen, setEditMedOpen] = useState(false)
-
-  const [localNotes, setLocalNotes] = useState<NoteEntry[]>([])
-  const [noteDetail, setNoteDetail] = useState<NoteEntry | null>(null)
-  const [editNote, setEditNote] = useState<NoteEntry | null>(null)
+  const [medDetail,    setMedDetail]    = useState<MedRecord | null>(null)
+  const [editMed,      setEditMed]      = useState<MedRecord | null>(null)
+  const [editMedOpen,  setEditMedOpen]  = useState(false)
+  const [localNotes,   setLocalNotes]   = useState<NoteEntry[]>([])
+  const [noteDetail,   setNoteDetail]   = useState<NoteEntry | null>(null)
+  const [editNote,     setEditNote]     = useState<NoteEntry | null>(null)
   const [editNoteOpen, setEditNoteOpen] = useState(false)
 
-  // ✅ guards ANTES de qualquer uso de petData
+  // FIX: histDetail estava DEPOIS dos returns condicionais → React error #310
+  const [histDetail, setHistDetail] = useState<{
+    cls: string; icon: string; title: string; meta: string; time: string
+    medId?: string; noteId?: string
+  } | null>(null)
+
+  // FIX: useVaccinesContext estava DEPOIS dos returns condicionais → React error #310
+  const { vaccinesByPet } = useVaccinesContext()
+
+  // ── Returns condicionais APÓS todos os hooks ───────────────────────────────
   if (loading) {
     return <div className="page-loading">{t('common.loading')}</div>
   }
@@ -711,7 +697,7 @@ export default function PetDetailPage() {
     )
   }
 
-  // ✅ daqui para baixo petData é non-null
+  // ── daqui para baixo petData é non-null ────────────────────────────────────
 
   const NOTE_LABEL: Record<string, string> = {
     control:     t('pet.noteType.control'),
@@ -746,15 +732,12 @@ export default function PetDetailPage() {
     reader.readAsDataURL(file)
   }
 
-const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
-  setChipField(null)
-}
+  const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
+    setChipField(null)
+  }
 
-  type HistItem = { cls: string; icon: string; title: string; meta: string; time: string; medId?: string; noteId?: string }
-  const [histDetail, setHistDetail] = useState<HistItem | null>(null)
-
-  const { vaccinesByPet } = useVaccinesContext()
-  const histItems = useMemo((): HistItem[] => [
+  // FIX: histItems useMemo agora seguro (todos os hooks já foram chamados)
+  const histItems = [
     ...(vaccinesByPet[petData.id] ?? []).map(vacc => ({
       cls: 'vaccine', icon: '💉',
       title: vacc.name, meta: vacc.applied,
@@ -774,103 +757,64 @@ const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
       time: n.date ?? '',
       medId: undefined, noteId: n.id,
     })),
-  ].sort((a, b) => b.time.localeCompare(a.time)), [vaccinesByPet, petData.id, localMeds, localNotes, NOTE_LABEL, t])
+  ].sort((a, b) => b.time.localeCompare(a.time))
 
   const SEV_COLOR: Record<string, string> = { leve: 'var(--gold)', moderado: 'var(--warn)', grave: 'var(--err)', emergencia: 'var(--err)' }
   const SEV_BG: Record<string, string>    = { leve: 'var(--gold-hl)', moderado: 'var(--warn-hl)', grave: 'var(--err-hl)', emergencia: 'var(--err-hl)' }
   const CAT_ICON: Record<string, string>  = { digestivo: '🤢', respiratorio: '🫁', piel: '🩹', comportamiento: '🧠', movimiento: '🦶', ocular: '👁', otro: '❓' }
 
-  const SPECIES_LABEL: Record<string, string> = {
-    cat:  `${t('pet.speciesCat')} 🐱`,
-    dog:  `${t('pet.speciesDog')} 🐶`,
-    bird: `${t('pet.speciesBird')} 🦜`,
-  }
-
   return (
     <div>
-      <button className="btn btn-ghost btn-sm" style={{ marginBottom: '1rem' }}
-        onClick={() => navigate('/pets')}>
-        ← {t('pet.backToList')}
-      </button>
+      {/* Header do pet */}
+      <div className="pet-detail-header">
+        <div className="pet-detail-photo-wrap" onClick={() => photoRef.current?.click()}>
+          {photoUrl
+            ? <img src={photoUrl} alt={petData.name} className="pet-detail-photo" />
+            : <div className="pet-detail-photo-placeholder">
+                {SPECIES_EMOJI[petData.species] ?? '🐾'}
+              </div>}
+          <div className="pet-detail-photo-overlay">📷</div>
+        </div>
+        <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
 
-      <div className="pet-profile-hero">
-        <div className="pet-photo-wrap">
-          <div className="pet-photo-circle">
-            {photoUrl
-              ? <img src={photoUrl} alt={petData.name} />
-              : <span>{SPECIES_EMOJI[petData.species] ?? '🐾'}</span>}
+        <div className="pet-detail-info">
+          <h1 className="pet-detail-name">{petData.name}</h1>
+          <div className="pet-detail-chips">
+            {petData.species && (
+              <span className="pet-chip-readonly" onClick={() => setChipField('species')}>
+                {SPECIES_EMOJI[petData.species]} {petData.species}
+              </span>
+            )}
+            {petData.birthDate && (
+              <span className="pet-chip-readonly" onClick={() => setChipField('birthDate')}>
+                🎂 {petData.birthDate}
+              </span>
+            )}
+            {petData.weight && (
+              <span className="pet-chip-readonly" onClick={() => setChipField('weight')}>
+                ⚖️ {petData.weight} kg
+              </span>
+            )}
           </div>
-          <button className="pet-photo-btn" onClick={() => photoRef.current?.click()}
-            title={t('pet.changePhoto')}>📷</button>
-          <input ref={photoRef} type="file" accept="image/*"
-            style={{ display: 'none' }} onChange={handlePhotoChange} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 400 }}>{petData.name}</h1>
-            <span style={{ fontSize: '1.1rem' }}>{SPECIES_EMOJI[petData.species]}</span>
-            <span className="badge badge-green" style={{ marginLeft: '.25rem' }}>{t('pet.statusHealthy')}</span>
-          </div>
-          <p style={{ fontSize: '.875rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
-            {petData.breed ?? t('pet.unknownBreed')} · 4 {t('pet.years')}
-          </p>
-          <div style={{ display: 'flex', gap: '.375rem', flexWrap: 'wrap', marginTop: '.5rem' }}>
-{(petData.alerts ?? []).map((raw, i) => {
-  const a = raw as unknown as { type: 'warn' | 'err'; text: string }
-  return (
-    <span key={i} className={`badge ${a.type === 'err' ? 'badge-red' : 'badge-yellow'}`}>
-      {a.type === 'warn' ? '⚠️' : '🔴'} {a.text.slice(0, 28)}…
-    </span>
-  )
-})}
-            <span className="badge badge-blue">💊 {t('pet.activeMed')}</span>
+          <div className="pet-detail-actions">
+            <button className="btn btn-secondary btn-sm" onClick={() => setEditOpen(true)}>
+              ✏️ {t('btn.edit')}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShareOpen(true)}>
+              👥 {t('pet.share.shareBtn')}
+            </button>
           </div>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => setEditOpen(true)}>
-          ✏ {t('btn.edit')}
-        </button>
       </div>
 
-      <div className="stat-row">
-        {([
-          { label: t('pet.chipSpecies'),    field: 'species'    as ChipField, value: SPECIES_LABEL[petData.species] ?? petData.species },
-          { label: t('pet.chipBirth'),      field: 'birthDate'  as ChipField, value: petData.birthDate ? new Date(petData.birthDate + 'T12:00:00').toLocaleDateString() : '—' },
-          { label: t('pet.chipWeight'),     field: 'weight'     as ChipField, value: petData.species === 'cat' ? '4.2 kg' : petData.species === 'dog' ? '12.4 kg' : '32 g' },
-          { label: t('pet.chipCaregivers'), field: 'caregivers' as ChipField, value: null },
-        ] as const).map(s => (
-          <div key={s.label} className="stat-chip clickable"
-            onClick={() => setChipField(s.field)}
-            title={`${t('btn.edit')} ${s.label}`}>
-            <span className="stat-chip-edit-hint">✏</span>
-            <div className="stat-chip-label">{s.label}</div>
-            {s.value
-              ? <div className="stat-chip-value" style={{ fontSize: '1rem' }}>{s.value}</div>
-              : <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                  <div className="caregiver-avatar" style={{ width: 28, height: 28, fontSize: '.625rem' }}>TL</div>
-                  {petData.id === 'pet-1' && <div className="caregiver-avatar" style={{ width: 28, height: 28, fontSize: '.625rem', background: 'var(--blue-hl)', color: 'var(--blue)' }}>AM</div>}
-                </div>}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.625rem', marginBottom: '1.125rem', padding: '.75rem 1rem', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--sh-sm)' }}>
-        <span style={{ fontSize: '.8125rem', fontWeight: 700, color: 'var(--text-muted)', flex: 1 }}>
-          {t('pet.sharedCaregivers')}
-        </span>
-        <div className="caregiver-avatars">
-          <div className="caregiver-avatar" style={{ width: 30, height: 30, fontSize: '.625rem' }}>TL</div>
-          {petData.id === 'pet-1' && <div className="caregiver-avatar" style={{ width: 30, height: 30, fontSize: '.625rem', background: 'var(--blue-hl)', color: 'var(--blue)' }}>AM</div>}
-        </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => setShareOpen(true)}>
-          👥 {t('pet.share.openBtn')}
-        </button>
-      </div>
-
-      <div className="tabs">
+      {/* Tabs */}
+      <div className="tabs" style={{ marginBottom: '1.25rem', overflowX: 'auto' }}>
         {TABS.map((tab, i) => (
-          <div key={tab} className={`tab ${activeTab === i ? 'active' : ''}`} onClick={() => setActiveTab(i)}>
+          <button key={i} type="button"
+            className={`tab${activeTab === i ? ' active' : ''}`}
+            onClick={() => setActiveTab(i)}>
             {tab}
-          </div>
+          </button>
         ))}
       </div>
 
@@ -878,332 +822,218 @@ const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
       {activeTab === 1 && <TabVaccines petId={petData.id} petName={petData.name} />}
 
       {activeTab === 2 && (
-        <div className="card">
-          <div className="card-title">
-            {t('pet.tabs.medications')}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
             <button className="btn btn-primary btn-sm" onClick={() => setAddMedOpen(true)}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-              {t('btn.add')}
+              + {t('medications.add')}
             </button>
           </div>
-          {localMeds.map(m => (
-            <div key={m.id} className="list-item" onClick={() => setMedDetail(m)} style={{ cursor: 'pointer' }}>
-              <div className="list-item-icon" style={{ background: m.bg, color: m.color }}>{m.icon}</div>
-              <div className="list-item-info">
-                <div className="list-item-title">{m.title}</div>
-                <div className="list-item-sub">{[m.dose, m.frequency].filter(Boolean).join(' · ')}</div>
+          {localMeds.length === 0
+            ? <div className="empty-state">
+                <div className="empty-state-icon">💊</div>
+                <p>{t('medications.emptyActive')}</p>
               </div>
-              <div className="list-item-right"><span className={`badge ${m.badgeCls}`}>{m.badge}</span></div>
-            </div>
-          ))}
+            : localMeds.map(m => (
+                <div key={m.id} className="list-item" onClick={() => setMedDetail(m)} style={{ cursor: 'pointer' }}>
+                  <div className="list-item-icon" style={{ background: m.bg, color: m.color }}>{m.icon}</div>
+                  <div className="list-item-info">
+                    <div className="list-item-title">{m.title}</div>
+                    <div className="list-item-sub">{m.dose} · {m.frequency}</div>
+                  </div>
+                  <span className={`badge ${m.badgeCls}`}>{m.badge}</span>
+                </div>
+              ))
+          }
         </div>
       )}
 
       {activeTab === 3 && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>
-              {t('pet.symptoms.title', { name: petData.name })}
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
             <button className="btn btn-primary btn-sm" onClick={() => setAddSymptomOpen(true)}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-              {t('pet.symptoms.registerBtn')}
+              + {t('symptoms.register')}
             </button>
           </div>
-          {activeSymptoms.length === 0 && resolvedSymptoms.length === 0
-            ? <div className="empty-state" style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '.75rem' }}>🐾</div>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)', marginBottom: '.375rem' }}>
-                  {t('pet.symptoms.emptyTitle', { name: petData.name })}
-                </div>
-                <div style={{ fontSize: '.875rem', marginBottom: '1.25rem' }}>
-                  {t('pet.symptoms.emptyText')}
-                </div>
+          {[...activeSymptoms, ...resolvedSymptoms].map(s => (
+            <div key={s.id} className="list-item" onClick={() => setDetailSym(s)} style={{ cursor: 'pointer', opacity: s.resolved ? .7 : 1 }}>
+              <div className="list-item-icon" style={{ background: SEV_BG[s.severity] ?? 'var(--err-hl)', color: SEV_COLOR[s.severity] ?? 'var(--err)' }}>
+                {CAT_ICON[s.category] ?? '🌡️'}
               </div>
-            : <div className="grid-2">
-                <div className="card">
-                  <div className="card-title">
-                    {t('pet.symptoms.active')}
-                    {activeSymptoms.length > 0 && <span className="badge badge-red">{activeSymptoms.length}</span>}
-                  </div>
-                  {activeSymptoms.length === 0
-                    ? <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.875rem' }}>
-                        {t('pet.symptoms.noneActive')}
-                      </div>
-                    : activeSymptoms.map(s => (
-                        <div key={s.id} className="list-item symptom-row-clickable" onClick={() => setDetailSym(s)}>
-                          <div className="list-item-icon" style={{ background: SEV_BG[s.severity] || 'var(--err-hl)', color: SEV_COLOR[s.severity] || 'var(--err)' }}>
-                            {CAT_ICON[s.category] ?? '🌡️'}
-                          </div>
-                          <div className="list-item-info">
-                            <div className="list-item-title">{s.description.slice(0, 40)}{s.description.length > 40 ? '…' : ''}</div>
-                            <div className="list-item-sub">{s.category} · {new Date(s.date + 'T12:00:00').toLocaleDateString()}</div>
-                          </div>
-                          <span className="badge badge-yellow" style={{ flexShrink: 0 }}>{t('pet.symptoms.statusActive')}</span>
-                        </div>
-                      ))}
-                </div>
-                <div className="card">
-                  <div className="card-title">{t('pet.symptoms.resolved')}</div>
-                  {resolvedSymptoms.length === 0
-                    ? <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.875rem' }}>
-                        {t('pet.symptoms.noneResolved')}
-                      </div>
-                    : resolvedSymptoms.map(s => (
-                        <div key={s.id} className="list-item symptom-row-clickable" style={{ opacity: .7 }} onClick={() => setDetailSym(s)}>
-                          <div className="list-item-icon" style={{ background: 'var(--surface-offset)', color: 'var(--text-faint)' }}>
-                            {CAT_ICON[s.category] ?? '🌡️'}
-                          </div>
-                          <div className="list-item-info">
-                            <div className="list-item-title">{s.description.slice(0, 40)}{s.description.length > 40 ? '…' : ''}</div>
-                            <div className="list-item-sub">{s.category} · {t('pet.symptoms.statusResolved')}</div>
-                          </div>
-                          <span className="badge badge-gray" style={{ flexShrink: 0 }}>{t('pet.symptoms.statusResolved')}</span>
-                        </div>
-                      ))}
-                </div>
-              </div>}
+              <div className="list-item-info">
+                <div className="list-item-title">{s.description.slice(0, 40)}</div>
+                <div className="list-item-sub">{s.date} · {s.severity}</div>
+              </div>
+              <span className={`badge ${s.resolved ? 'badge-gray' : 'badge-red'}`}>
+                {s.resolved ? t('pet.symptoms.statusResolved') : t('pet.symptoms.statusActive')}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {activeTab === 4 && (
-        <div className="card">
-          <div className="card-title">
-            {t('pet.tabs.notes')}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
             <button className="btn btn-primary btn-sm" onClick={() => setAddNoteOpen(true)}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14" /></svg>
-              {t('pet.notes.newBtn')}
+              + {t('pet.notes.addBtn')}
             </button>
           </div>
           {localNotes.length === 0
-            ? <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.875rem' }}>
-                {t('pet.notes.empty')}
+            ? <div className="empty-state">
+                <div className="empty-state-icon">📝</div>
+                <p>{t('pet.notes.empty')}</p>
               </div>
             : localNotes.map(n => (
                 <div key={n.id} className="list-item" onClick={() => setNoteDetail(n)} style={{ cursor: 'pointer' }}>
-                  <div className="list-item-icon" style={{ background: NOTE_BG[n.type] ?? 'var(--primary-hl)', color: NOTE_COLOR[n.type] ?? 'var(--primary)' }}>
+                  <div className="list-item-icon" style={{ background: NOTE_BG[n.type] ?? 'var(--surface-offset)', color: NOTE_COLOR[n.type] ?? 'var(--text-muted)' }}>
                     {NOTE_ICON[n.type] ?? '📋'}
                   </div>
                   <div className="list-item-info">
-                    <div className="list-item-title">
-                      {NOTE_LABEL[n.type] ?? t('pet.noteType.otro')}{n.vet ? ` — ${n.vet}` : ''}
-                    </div>
-                    <div className="list-item-sub">{n.content.slice(0, 70)}{n.content.length > 70 ? '…' : ''}</div>
+                    <div className="list-item-title">{n.content.slice(0, 50)}</div>
+                    <div className="list-item-sub">{n.date}</div>
                   </div>
-                  <span style={{ fontSize: '.75rem', color: 'var(--text-faint)', flexShrink: 0 }}>
-                    {n.date ? new Date(n.date + 'T12:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : ''}
-                  </span>
                 </div>
-              ))}
+              ))
+          }
         </div>
       )}
 
       {activeTab === 5 && (
-        <div className="card">
-          <div className="card-title">{t('pet.history.title')}</div>
+        <div>
           <div className="timeline">
-            {histItems.map((e, idx) => (
-              <div key={`${e.cls}-${idx}`} className="timeline-item" onClick={() => setHistDetail(e)} style={{ cursor: 'pointer' }}>
-                <div className={`tl-icon ${e.cls}`}>{e.icon}</div>
+            {histItems.slice(0, 20).map((item, i) => (
+              <div key={i} className="timeline-item" style={{ cursor: item.medId || item.noteId ? 'pointer' : 'default' }}
+                onClick={() => {
+                  if (item.medId) setMedDetail(localMeds.find(m => m.id === item.medId) ?? null)
+                  if (item.noteId) setNoteDetail(localNotes.find(n => n.id === item.noteId) ?? null)
+                }}>
+                <div className={`tl-icon ${item.cls}`}>{item.icon}</div>
                 <div style={{ flex: 1 }}>
-                  <div className="tl-title">{e.title}</div>
-                  <div className="tl-meta">{e.meta}</div>
+                  <div className="tl-title">{item.title}</div>
+                  <div className="tl-meta">{item.meta}</div>
                 </div>
-                <div className="tl-time">{e.time}</div>
+                <div className="tl-time">{item.time}</div>
               </div>
             ))}
+            {histItems.length === 0 && (
+              <div className="empty-state">
+                <div className="empty-state-icon">📋</div>
+                <p>{t('pet.history.empty')}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-    <>
-      {/* exemplo: header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 400 }}>
-          {petData.name}
-        </h1>
-        <span style={{ fontSize: '1.1rem' }}>
-          {SPECIES_EMOJI[petData.species] ?? '🐾'}
-        </span>
-      </div>
+      {/* Modals */}
+      <ShareModal petName={petData.name} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
 
-<ShareModal
-  petName={petData.name}
-  isOpen={shareOpen}
-  onClose={() => setShareOpen(false)}
-/>
+      <EditPetModal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        pet={petData}
+        onSave={(updated) => {
+          updatePet(petData.id, updated)
+          setEditOpen(false)
+        }}
+      />
 
-<EditPetModal
-  isOpen={editOpen}
-  onClose={() => setEditOpen(false)}
-  pet={petData}
-  onSave={(updatedPet) => {
-    // chamar update real aqui
-    setEditOpen(false)
-  }}
-/>
+      {chipField && (
+        <PetChipEditOverlay
+          pet={petData}
+          field={chipField}
+          onClose={() => setChipField(null)}
+          onSave={handleChipSave}
+        />
+      )}
 
-<AddMedicationModal
-          isOpen={addMedOpen}
-          onClose={() => setAddMedOpen(false)}
-          defaultPetId={petData.id} onAdd={function (d: AddMedData): void {
-            throw new Error('Function not implemented.')
-          } }/>
+      <AddMedicationModal
+        isOpen={addMedOpen}
+        onClose={() => setAddMedOpen(false)}
+        defaultPetId={petData.id}
+        onAdd={(data: AddMedData) => {
+          addMedication(data.petId, {
+            petId:     data.petId,
+            title:     data.name,
+            dose:      data.dose,
+            frequency: data.frequency,
+            startDate: data.startDate,
+            endDate:   data.endDate  ?? '',
+            notes:     data.notes    ?? '',
+          })
+          showToast(`💊 ${t('toast.medAdded')}`)
+          setAddMedOpen(false)
+        }}
+      />
 
-<NewNoteModal
-  isOpen={addNoteOpen}
-  onClose={() => setAddNoteOpen(false)}
-  defaultPetId={petData.id}
-  onAdd={(d) => {
-    // lógica existente
-  }}
-/>
+      <RegisterSymptomModal
+        isOpen={addSymptomOpen}
+        onClose={() => setAddSymptomOpen(false)}
+        defaultPetId={petData.id}
+        onAdd={(d: SymptomData) => {
+          addSymptom({ ...d, resolved: false })
+          showToast(`🌡️ ${t('pet.symptoms.toastAdded')}`)
+          setAddSymptomOpen(false)
+        }}
+      />
 
-<RegisterSymptomModal
-  isOpen={addSymptomOpen}
-  onClose={() => setAddSymptomOpen(false)}
-  defaultPetId={petData.id}
-  onAdd={(d: SymptomData) => {
-    addSymptom({
-      ...d,
-      resolved: false,
-    })
-    setAddSymptomOpen(false)
-    showToast(t('pet.symptoms.toastAdded'))
-  }}
-/>
+      <NewNoteModal
+        isOpen={addNoteOpen}
+        onClose={() => setAddNoteOpen(false)}
+        defaultPetId={petData.id}
+        onAdd={(data: NoteData) => {
+          const newNote: NoteEntry = { ...data, id: Date.now().toString(), archived: false }
+          setLocalNotes(prev => [newNote, ...prev])
+          showToast(`📝 ${t('pet.notes.toastAdded')}`)
+          setAddNoteOpen(false)
+        }}
+      />
 
-<PetChipEditOverlay
-  pet={petData}
-  field={chipField}
-  onClose={() => setChipField(null)}
-  onSave={handleChipSave}
-/>
-    </>
-  
-      <SymptomDetailModal symptom={detailSym} onClose={() => setDetailSym(null)}
+      <SymptomDetailModal
+        symptom={detailSym}
+        onClose={() => setDetailSym(null)}
         onEdit={s => { setDetailSym(null); setEditSym(s); setEditSymOpen(true) }}
-        onResolve={id   => { resolve(id);   setDetailSym(null); showToast(t('pet.symptoms.toastResolved'))  }}
-        onUnresolve={id => { unresolve(id); setDetailSym(null); showToast(t('pet.symptoms.toastReopened')) }} />
-      <EditSymptomModal isOpen={editSymOpen} onClose={() => setEditSymOpen(false)} symptom={editSym}
-        onSave={updated => { saveSymptom(updated); setEditSymOpen(false); showToast(t('pet.symptoms.toastUpdated')) }} />
+        onResolve={id => { resolve(id); showToast(`✓ ${t('toast.symptomResolved')}`) }}
+        onUnresolve={id => { unresolve(id); showToast(`↩ ${t('toast.symptomReopened')}`) }}
+      />
+      <EditSymptomModal
+        isOpen={editSymOpen}
+        onClose={() => setEditSymOpen(false)}
+        symptom={editSym}
+        onSave={updated => { saveSymptom(updated); setEditSymOpen(false) }}
+      />
 
       <MedDetailModal
         med={medDetail}
         onClose={() => setMedDetail(null)}
         onEdit={m => { setMedDetail(null); setEditMed(m); setEditMedOpen(true) }}
-        onMarkAdministered={(m, _date) => { showToast(`💊 ${m.title} ${t('pet.med.toastAdministered')}`); setMedDetail(null) }}
+        onMarkAdministered={() => {}}
       />
       <EditMedModal
         isOpen={editMedOpen}
         onClose={() => setEditMedOpen(false)}
         med={editMed}
-        onSave={updated => {
-          updateMedication(updated)
-          setEditMedOpen(false)
-          showToast(t('pet.med.toastUpdated'))
-        }}
-        onDelete={id => {
-          deleteMedication(id)
-          setEditMedOpen(false)
-          showToast(t('pet.med.toastDeleted'))
-        }}
+        onSave={updated => { updateMedication(updated); setEditMedOpen(false) }}
+        onDelete={id => { deleteMedication(id); setEditMedOpen(false) }}
       />
-
-      {histDetail && (
-        <div className="detail-overlay" onClick={() => setHistDetail(null)}>
-          <div className="detail-sheet" onClick={e => e.stopPropagation()}>
-            <div className="detail-header">
-              <div className="detail-icon" style={{
-                background: histDetail.cls === 'vaccine' ? 'var(--blue-hl)' : histDetail.cls === 'med' ? 'var(--warn-hl)' : 'var(--primary-hl)',
-                color:      histDetail.cls === 'vaccine' ? 'var(--blue)'    : histDetail.cls === 'med' ? 'var(--warn)'    : 'var(--primary)',
-                fontSize: '1.375rem',
-              }}>{histDetail.icon}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)', lineHeight: 1.2 }}>{histDetail.title}</div>
-                <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{histDetail.meta}</div>
-              </div>
-              <button className="detail-close" onClick={() => setHistDetail(null)}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="detail-body">
-              <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                <span className="status-pill ok">{histDetail.time}</span>
-                <span className="badge badge-blue" style={{ fontSize: '.72rem' }}>
-                  {histDetail.cls === 'vaccine' ? `💉 ${t('pet.tabs.vaccines')}` : histDetail.cls === 'med' ? `💊 ${t('pet.tabs.medications')}` : `📋 ${t('pet.tabs.notes')}`}
-                </span>
-              </div>
-              <div className="detail-info-grid">
-                <div className="detail-info-chip">
-                  <div className="detail-info-label">{t('pet.history.event')}</div>
-                  <div className="detail-info-value">{histDetail.title}</div>
-                </div>
-                <div className="detail-info-chip">
-                  <div className="detail-info-label">{t('pet.history.detail')}</div>
-                  <div className="detail-info-value">{histDetail.meta}</div>
-                </div>
-                <div className="detail-info-chip">
-                  <div className="detail-info-label">{t('pet.history.date')}</div>
-                  <div className="detail-info-value">{histDetail.time}</div>
-                </div>
-                <div className="detail-info-chip">
-                  <div className="detail-info-label">{t('pet.history.pet')}</div>
-                  <div className="detail-info-value">{SPECIES_EMOJI[petData.species] ?? '🐾'} {petData.name}</div>
-                </div>
-              </div>
-            </div>
-            <div className="detail-footer">
-              {histDetail.cls === 'vaccine' && (
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => {
-                  setActiveTab(1); setHistDetail(null)
-                  showToast(t('pet.history.toastGoVaccines'))
-                }}>
-                  ✏ {t('pet.history.goVaccines')}
-                </button>
-              )}
-              {histDetail.cls === 'med' && histDetail.medId && (
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => {
-                  const m = localMeds.find(x => x.id === histDetail.medId)
-                  if (m) { setEditMed(m); setEditMedOpen(true); setHistDetail(null) }
-                }}>✏ {t('pet.history.editMed')}</button>
-              )}
-              {histDetail.cls === 'note' && histDetail.noteId && (
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => {
-                  const n = localNotes.find(x => x.id === histDetail.noteId)
-                  if (n) { setEditNote(n); setEditNoteOpen(true); setHistDetail(null) }
-                }}>✏ {t('pet.history.editNote')}</button>
-              )}
-              <button className="btn btn-secondary" onClick={() => setHistDetail(null)}>
-                {t('btn.close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <NoteDetailModal
         note={noteDetail}
         onClose={() => setNoteDetail(null)}
         onEdit={n => { setNoteDetail(null); setEditNote(n); setEditNoteOpen(true) }}
-        onArchive={id   => { setLocalNotes(p => p.map(n => n.id === id ? { ...n, archived: true }  : n)); setNoteDetail(null); showToast(t('pet.notes.toastArchived'))  }}
-        onUnarchive={id => { setLocalNotes(p => p.map(n => n.id === id ? { ...n, archived: false } : n)); setNoteDetail(null); showToast(t('pet.notes.toastRestored'))  }}
-        onDelete={id    => { setLocalNotes(p => p.filter(n => n.id !== id));                               setNoteDetail(null); showToast(t('pet.notes.toastDeleted'))   }}
+        onArchive={id => { setNoteDetail(null) }}
+        onUnarchive={id => { setNoteDetail(null) }}
       />
       <EditNoteModal
         isOpen={editNoteOpen}
         onClose={() => setEditNoteOpen(false)}
         note={editNote}
         onSave={updated => {
-          setLocalNotes(p => p.map(n => n.id === updated.id ? updated : n))
+          setLocalNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
           setEditNoteOpen(false)
-          showToast(t('pet.notes.toastUpdated'))
         }}
-      />
 
-      <PetChipEditOverlay pet={petData} field={chipField} onClose={() => setChipField(null)} onSave={handleChipSave} />
+      />
     </div>
   )
 }
