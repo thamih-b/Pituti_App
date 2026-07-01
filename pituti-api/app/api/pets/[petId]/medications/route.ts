@@ -6,12 +6,13 @@ import { findOwnedPetById } from '@/lib/pets';
 import { mapMedication } from '@/lib/mappers/medication';
 
 const CreateMedicationSchema = z.object({
-  name: z.string().min(1).max(100),
-  dosage: z.string().min(1).max(100),
+  name:      z.string().min(1).max(100),
+  dosage:    z.string().min(1).max(100),
   frequency: z.string().min(1).max(100),
+  // FIX: startDate era NOT NULL no schema original — usamos hoje como default
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
-  notes: z.string().max(500).nullish(),
+  endDate:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  notes:     z.string().max(500).nullish(),
 });
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ petId: string }> }) {
@@ -48,12 +49,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
 
     const { name, dosage, frequency, startDate, endDate, notes } = result.data;
+
+    // FIX: garante que start_date nunca é NULL (usa hoje como fallback)
+    const startDateValue = startDate ?? new Date().toISOString().substring(0, 10);
+
     const [row] = await query(
-      `INSERT INTO medications (
-        pet_id, name, dosage, frequency, start_date, end_date, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, pet_id, name, dosage, frequency, start_date, end_date, notes, created_at`,
-      [petId, name, dosage, frequency, startDate ?? null, endDate ?? null, notes ?? null]
+      `INSERT INTO medications (pet_id, name, dosage, frequency, start_date, end_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, pet_id, name, dosage, frequency, start_date, end_date, notes, created_at`,
+      [petId, name, dosage, frequency, startDateValue, endDate ?? null, notes ?? null]
     );
 
     return NextResponse.json({ data: mapMedication(row) }, { status: 201 });

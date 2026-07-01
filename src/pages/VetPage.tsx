@@ -86,10 +86,26 @@ export default function VetPage() {
     { key: 'prescriptions', label: t('vet.tabs.prescriptions') },
   ] as const;
 
-const pet = useMemo(() => {
-  if (!pets || pets.length === 0) return null;
-  return pets.find((item) => item.id === selectedPetId) ?? pets[0] ?? null;
-}, [selectedPetId, pets]);
+  const pet = useMemo(() => {
+    if (!pets || pets.length === 0) return null;
+    return pets.find((item) => item.id === selectedPetId) ?? pets[0] ?? null;
+  }, [selectedPetId, pets]);
+
+  // FIX: useMemo DEVE ficar ANTES dos returns condicionais (Regra dos Hooks).
+  // Antes estavam depois de `if (petsLoading)` e `if (!pet)`, quebrando a ordem
+  // dos hooks entre renders → React error #310.
+  const petPrescriptions = useMemo(
+    () => getPrescriptionsByPetId(pet?.id ?? ''),
+    [pet?.id, getPrescriptionsByPetId],
+  );
+
+  const medicationOptions: MedicationOption[] = useMemo(
+    () => getActiveMedicationsByPetId(pet?.id ?? '').map((med) => ({
+      id: med.id, name: med.title, dosage: med.dose,
+      frequency: med.frequency, petId: pet?.id ?? '', endDate: med.endDate ?? null,
+    })),
+    [pet?.id, getActiveMedicationsByPetId],
+  );
 
   // ── Estado de carga ────────────────────────────────────────
   if (petsLoading) {
@@ -111,6 +127,7 @@ const pet = useMemo(() => {
   }
 
   // ── Sin mascotas registradas ───────────────────────────────
+  // FIX: removido o bloco `if (!pet)` duplicado que existia logo abaixo
   if (!pet) {
     return (
       <div>
@@ -136,23 +153,7 @@ const pet = useMemo(() => {
     );
   }
 
-  if (!pet) {
-  return (
-    <div>
-      <BackButton />
-      <div className="empty-state">
-        <div className="empty-state-icon" style={{ fontSize: '2.5rem' }}>🐾</div>
-        <h3>{t('pets.noPets')}</h3>
-        <p>{t('pets.noPetsHint')}</p>
-        <button className="btn btn-primary" onClick={() => navigate('/pets')}>
-          {t('pets.addPet')}
-        </button>
-      </div>
-    </div>
-  );
-}
-
- const profile = getMedicalProfile(pet?.id ?? '');
+  const profile = getMedicalProfile(pet?.id ?? '');
 
   const hasProfileData = Boolean(
     profile.bloodType || profile.allergies ||
@@ -164,19 +165,6 @@ const pet = useMemo(() => {
 
   const petAppointments = appointments.filter((item) => item.petId === (pet?.id ?? ''))
   .sort((a, b) => b.date.localeCompare(a.date));
-
-const petPrescriptions = useMemo(
-  () => getPrescriptionsByPetId(pet?.id ?? ''),
-  [pet?.id, getPrescriptionsByPetId],
-);
-
- const medicationOptions: MedicationOption[] = useMemo(
-  () => getActiveMedicationsByPetId(pet?.id ?? '').map((med) => ({
-    id: med.id, name: med.title, dosage: med.dose,
-    frequency: med.frequency, petId: pet?.id ?? '', endDate: med.endDate ?? null,
-  })),
-  [pet?.id, getActiveMedicationsByPetId],
-);
 
   const petVaccines: VaccineRecord[] = vaccinesByPet[pet?.id ?? ''] ?? [];
   const petMedications               = getMedicationsByPetId(pet?.id ?? '');
@@ -286,8 +274,7 @@ const petPrescriptions = useMemo(
           onDelete={deleteDocument}
           showToast={showToast}
         />
-      )}   
-      
+      )}
 
       {activeTab === 'prescriptions' && (
         <TabPrescriptions
@@ -613,6 +600,8 @@ function TabVets({
             {vets.map((item: VetContact) => {
               const typeInfo  = VET_TYPES.find((vt) => vt.value === item.type);
               const typeLabel = typeInfo ? t(`vet.vetTypes.${typeInfo.key}`) : '';
+              // FIX: guard defensivo para petIds
+              const safePetIds = item.petIds ?? [];
 
               return (
                 <div key={item.id} className="vet-card">
@@ -635,11 +624,11 @@ function TabVets({
                       {item.address && (
                         <div className="vet-card-detail">{item.address}</div>
                       )}
-                      {item.petIds.length > 0 && (
+                      {safePetIds.length > 0 && (
                         <div className="vet-card-detail">
                           {t('vet.contacts.sectionPets')}:{' '}
                           {pets
-                            .filter((p) => item.petIds.includes(p.id))
+                            .filter((p) => safePetIds.includes(p.id))
                             .map((p) => p.name)
                             .join(', ')}
                         </div>

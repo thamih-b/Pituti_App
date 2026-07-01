@@ -1,5 +1,4 @@
-// traduzido e mock
-
+// traduzido e sem mock
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { showToast } from '../components/AppLayout'
@@ -17,12 +16,16 @@ const CAT_ICON:  Record<string, string> = { digestivo:'🤢', respiratorio:'🫁
 const SEV_COLOR: Record<string, string> = { leve:'var(--gold)', moderado:'var(--warn)', grave:'var(--err)', emergencia:'var(--err)' }
 const SEV_BG:    Record<string, string> = { leve:'var(--gold-hl)', moderado:'var(--warn-hl)', grave:'var(--err-hl)', emergencia:'var(--err-hl)' }
 
-const PET_EMOJI_SPECIES: Record<string, string> = {
+const PET_EMOJI: Record<string, string> = {
   cat:'🐱', dog:'🐶', bird:'🦜', rabbit:'🐰', reptile:'🦎', fish:'🐟', other:'🐾',
 }
 
 function PencilIcon({ size = 13 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+    </svg>
+  )
 }
 
 export default function SymptomsPage() {
@@ -30,19 +33,25 @@ export default function SymptomsPage() {
   const { symptoms, addSymptom, saveSymptom, resolve, unresolve } = useSymptoms()
   const { pets } = usePetsContext()
 
-  const [addOpen,   setAddOpen]   = useState(false)
-  const [detailSym, setDetailSym] = useState<SymptomEntry | null>(null)
-  const [editSym,   setEditSym]   = useState<SymptomEntry | null>(null)
-  const [editOpen,  setEditOpen]  = useState(false)
+  const [addOpen,       setAddOpen]     = useState(false)
+  const [detailSym,     setDetailSym]   = useState<SymptomEntry | null>(null)
+  const [editSym,       setEditSym]     = useState<SymptomEntry | null>(null)
+  const [editOpen,      setEditOpen]    = useState(false)
+  // FIX: seletor de pet — null = todos
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null)
 
-  const active   = symptoms.filter(s => !s.resolved)
-  const resolved = symptoms.filter(s =>  s.resolved)
+  // FIX: filtra por pet selecionado
+  const visibleSymptoms = selectedPetId
+    ? symptoms.filter(s => s.petId === selectedPetId)
+    : symptoms
+
+  const active   = visibleSymptoms.filter(s => !s.resolved)
+  const resolved = visibleSymptoms.filter(s =>  s.resolved)
 
   const openEdit = (s: SymptomEntry) => { setEditSym(s); setEditOpen(true) }
 
-  // ✅ lookup dinâmico via contexto
-  const getPet = (petId: string) => pets.find(p => p.id === petId)
-  const getPetEmoji = (petId: string) => PET_EMOJI_SPECIES[getPet(petId)?.species ?? ''] ?? '🐾'
+  const getPet      = (petId: string) => pets.find(p => p.id === petId)
+  const getPetEmoji = (petId: string) => PET_EMOJI[getPet(petId)?.species ?? ''] ?? '🐾'
   const getPetName  = (petId: string) => getPet(petId)?.name ?? petId
 
   const handleAdd = (d: SymptomData) => {
@@ -53,14 +62,16 @@ export default function SymptomsPage() {
   const SymptomRow = ({ s, dim = false }: { s: SymptomEntry; dim?: boolean }) => (
     <div className="list-item symptom-row-clickable" style={{ opacity: dim ? .7 : 1 }} onClick={() => setDetailSym(s)}>
       <div className="list-item-icon" style={{
-        background: dim ? 'var(--surface-offset)' : SEV_BG[s.severity]  || 'var(--err-hl)',
+        background: dim ? 'var(--surface-offset)' : SEV_BG[s.severity]    || 'var(--err-hl)',
         color:      dim ? 'var(--text-faint)'      : SEV_COLOR[s.severity] || 'var(--err)',
       }}>
         {CAT_ICON[s.category] ?? '🌡️'}
       </div>
       <div className="list-item-info">
         <div className="list-item-title">
-          {SEV_ICON[s.severity]} {s.description.slice(0, 40)}{s.description.length > 40 ? '…' : ''} — {getPetEmoji(s.petId)} {getPetName(s.petId)}
+          {SEV_ICON[s.severity]} {s.description.slice(0, 40)}{s.description.length > 40 ? '…' : ''}
+          {/* Mostra o nome do pet quando estão a ser mostrados todos */}
+          {!selectedPetId && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> — {getPetEmoji(s.petId)} {getPetName(s.petId)}</span>}
         </div>
         <div className="list-item-sub">
           {new Date(s.date + 'T12:00:00').toLocaleDateString(t('dates.locale'))} · {t(`symptoms.categoryOptions.${s.category}` as any)}
@@ -93,11 +104,33 @@ export default function SymptomsPage() {
         </button>
       </div>
 
+      {/* FIX: seletor de pet */}
+      {pets.length > 1 && (
+        <div className="pet-selector" style={{ marginBottom: '1rem' }}>
+          <button
+            type="button"
+            className={`pet-chip${selectedPetId === null ? ' active' : ''}`}
+            onClick={() => setSelectedPetId(null)}
+          >
+            🐾 {t('common.all', 'Todos')}
+          </button>
+          {pets.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              className={`pet-chip${selectedPetId === p.id ? ' active' : ''}`}
+              onClick={() => setSelectedPetId(p.id)}
+            >
+              {PET_EMOJI[p.species] ?? '🐾'} {p.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid-2">
         <div className="card">
           <div className="card-title">
             {t('symptoms.active')}
-            {/* ✅ chave existente: pet.symptoms.statusActive */}
             {active.length > 0 && (
               <span className="badge badge-red">
                 {active.length} {t('pet.symptoms.statusActive')}
@@ -131,10 +164,10 @@ export default function SymptomsPage() {
               <div className="tl-icon symptom">{CAT_ICON[s.category] ?? '🌡️'}</div>
               <div style={{ flex:1 }}>
                 <div className="tl-title">
-                  {s.description.slice(0, 50)}{s.description.length > 50 ? '…' : ''} · {getPetEmoji(s.petId)} {getPetName(s.petId)}
+                  {s.description.slice(0, 50)}{s.description.length > 50 ? '…' : ''}
+                  {!selectedPetId && <span style={{ color:'var(--text-muted)', fontWeight:400 }}> · {getPetEmoji(s.petId)} {getPetName(s.petId)}</span>}
                 </div>
                 <div className="tl-meta">
-                  {/* ✅ chaves existentes em todos os JSONs */}
                   {s.resolved ? t('pet.symptoms.statusResolved') : t('pet.symptoms.statusActive')} · {t(`symptoms.categoryOptions.${s.category}` as any)}
                 </div>
               </div>
@@ -152,7 +185,12 @@ export default function SymptomsPage() {
         </div>
       </div>
 
-      <RegisterSymptomModal isOpen={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd}/>
+      <RegisterSymptomModal
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={handleAdd}
+        defaultPetId={selectedPetId ?? undefined}
+      />
 
       <SymptomDetailModal
         symptom={detailSym}
