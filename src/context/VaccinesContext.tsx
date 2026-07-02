@@ -173,7 +173,7 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
 
     // 2. Cria no servidor
     try {
-      const res     = await vaccinesApi.create(petId, { ...data, date: data.applied })
+      const res     = await vaccinesApi.create(petId, data)
       const fromApi = toVaccineRecord(res.data as unknown as Record<string, unknown>)
       const realId  = fromApi.id || tempId
 
