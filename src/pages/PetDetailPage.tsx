@@ -37,6 +37,8 @@ import { useVaccinesContext } from '../context/VaccinesContext'
 import { useTranslation } from 'react-i18next'
 import { usePetsContext } from '../context/PetsContext'
 import { useMedications } from '../context/MedicationsContext'
+import RegisterVaccineModal from '../components/RegisterVaccineModal'
+import type { RegisterVaccineData } from '../components/RegisterVaccineModal'
 
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
@@ -60,107 +62,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
       onClick={() => onChange(!on)}>
       <span className="toggle-pill-thumb" style={{ left: on ? 22 : 2 }} />
     </button>
-  )
-}
-
-// ─── Register Vaccine Modal ───────────────────────────────────────────────────
-
-export function RegisterVaccineModal({ petName, isOpen, onClose, vaccines, onRegister }: {
-  petName: string; isOpen: boolean; onClose: () => void
-  vaccines: VaccineRecord[]
-  onRegister: (v: { name: string; date: string; nextDate: string; vet: string; notes: string }) => void
-}) {
-  const { t } = useTranslation()
-  const today = new Date().toISOString().split('T')[0]
-  const [form, setForm]       = useState({ selected: '', date: today, nextDate: '', vet: '', notes: '' })
-  const [errors, setErrors]   = useState<Record<string, string>>({})
-  const [success, setSuccess] = useState(false)
-
-  const set = (k: keyof typeof form, v: string) => {
-    setForm(f => ({ ...f, [k]: v }))
-    setErrors(e => ({ ...e, [k]: '' }))
-  }
-
-  const validate = () => {
-    const e: Record<string, string> = {}
-    if (!form.selected) e.selected = t('pet.vacc.errSelect')
-    if (!form.date)     e.date     = t('pet.vacc.errDate')
-    if (!form.nextDate) e.next     = t('pet.vacc.errNext')
-    else if (new Date(form.nextDate) <= new Date(form.date)) e.next = t('pet.vacc.errNextAfter')
-    return e
-  }
-
-  const handleSave = () => {
-    const e = validate()
-    if (Object.keys(e).length) { setErrors(e); return }
-    setSuccess(true)
-    setTimeout(() => {
-      onRegister({ name: form.selected, date: form.date, nextDate: form.nextDate, vet: form.vet, notes: form.notes })
-      showToast(`💉 "${form.selected}" ${t('pet.vacc.toastRegistered')}`)
-      setSuccess(false)
-      setForm({ selected: '', date: today, nextDate: '', vet: '', notes: '' })
-      setErrors({})
-      onClose()
-    }, 1000)
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}
-      title={t('pet.vacc.modalTitle')}
-      subtitle={t('pet.vacc.modalSubtitle', { name: petName })}
-      icon="💉" accentBg="var(--blue-hl)" accentFg="var(--blue)"
-      footer={!success
-        ? <PfFooter><PfBtn variant="register" onClick={handleSave}>{t('pet.vacc.registerBtn')}</PfBtn></PfFooter>
-        : <></>}>
-      {success
-        ? <div className="modal-success">
-            <div className="modal-success-icon">✓</div>
-            <div className="modal-success-title">{t('pet.vacc.successTitle')}</div>
-            <div className="modal-success-sub">{t('pet.vacc.successSub', { name: petName })}</div>
-          </div>
-        : <>
-            <div className="modal-section">{t('pet.vacc.sectionVaccine')}</div>
-            <div className="form-group">
-              <label className="form-label">{t('pet.vacc.selectLabel')} *</label>
-              <select className={['form-input', errors.selected ? 'form-input--err' : ''].join(' ')}
-                value={form.selected} onChange={e => set('selected', e.target.value)}>
-                <option value="">{t('pet.vacc.selectPh')}</option>
-                {vaccines.map(vacc => <option key={vacc.name} value={vacc.name}>{vacc.name}</option>)}
-              </select>
-              {errors.selected && <span className="form-hint-err">{errors.selected}</span>}
-            </div>
-            <div className="modal-section">{t('pet.vacc.sectionDates')}</div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">{t('pet.vacc.dateApplied')} *</label>
-                <input type="date" className={['form-input', errors.date ? 'form-input--err' : ''].join(' ')}
-                  value={form.date} onChange={e => set('date', e.target.value)} />
-                {errors.date && <span className="form-hint-err">{errors.date}</span>}
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('pet.vacc.dateNext')} *</label>
-                <input type="date" className={['form-input', errors.next ? 'form-input--err' : ''].join(' ')}
-                  value={form.nextDate} onChange={e => set('nextDate', e.target.value)} />
-                {errors.next && <span className="form-hint-err">{errors.next}</span>}
-              </div>
-            </div>
-            <div className="modal-section">{t('pet.vacc.sectionExtra')}</div>
-            <div className="form-group">
-              <label className="form-label">{t('field.vet')} ({t('btn.optional')})</label>
-              <div className="field-icon-wrap">
-                <span className="field-icon">🩺</span>
-                <input className="form-input" placeholder={t('pet.vacc.vetPh')}
-                  value={form.vet} onChange={e => set('vet', e.target.value)} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t('field.notes')} ({t('btn.optional')})</label>
-              <textarea className="form-input" rows={2} value={form.notes}
-                onChange={e => set('notes', e.target.value)}
-                style={{ resize: 'vertical', minHeight: 60, fontFamily: 'inherit' }} />
-            </div>
-          </>}
-    </Modal>
   )
 }
 
@@ -475,7 +376,9 @@ function TabCares({ petId, petName }: { petId: string; petName: string }) {
 
 // ─── Tab Vaccines ─────────────────────────────────────────────────────────────
 
-function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
+function TabVaccines({ petId, petName, petSpecies }: {
+  petId: string; petName: string; petSpecies: string
+}) {
   const { t } = useTranslation()
   const { vaccinesByPet, addVaccine, updateVaccine } = useVaccinesContext()
   const [registerOpen, setRegisterOpen] = useState(false)
@@ -499,14 +402,14 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
     late: { badge: t('pet.vacc.badgeLate'), cls: 'badge-red'    },
   }
 
-  const handleRegister = (v: { name: string; date: string; nextDate: string; vet: string; notes: string }) => {
-    const lbl = new Date(v.date + 'T12:00:00').toLocaleDateString(undefined, {
-      day: '2-digit', month: 'short', year: 'numeric',
-    })
-    const cls = getVaccStatus(v.nextDate) as 'ok' | 'soon' | 'late'
+  // FIX: chama addVaccine com AddVaccineInput (datas ISO brutas, não formatadas)
+  const handleRegister = (v: RegisterVaccineData) => {
     addVaccine(petId, {
-      id: '', name: v.name, applied: lbl, nextDate: v.nextDate,
-      badge: VACC_BADGE[cls].badge, badgeCls: VACC_BADGE[cls].cls,
+      name:     v.name,
+      date:     v.date,     // ISO
+      nextDate: v.nextDate, // ISO
+      vet:      v.vet,
+      notes:    v.notes,
     })
   }
 
@@ -570,11 +473,16 @@ function TabVaccines({ petId, petName }: { petId: string; petName: string }) {
         </div>
       </div>
 
-      <RegisterVaccineModal petName={petName} isOpen={registerOpen}
-        onClose={() => setRegisterOpen(false)} vaccines={vaccines} onRegister={handleRegister} />
+      <RegisterVaccineModal
+        isOpen={registerOpen}
+        onClose={() => setRegisterOpen(false)}
+        petName={petName}
+        petSpecies={petSpecies}
+        onRegister={handleRegister}
+      />
 
       <VaccineDetailModal
-        vaccine={vaccDetail ? { ...vaccDetail, petName, petEmoji: SPECIES_EMOJI[petId] ?? '🐾' } : null}
+        vaccine={vaccDetail ? { ...vaccDetail, petName, petEmoji: SPECIES_EMOJI[petSpecies] ?? '🐾' } : null}
         onClose={() => setVaccDetail(null)}
         onEdit={vacc => { setVaccDetail(null); setEditVacc(vacc); setEditVaccOpen(true) }}
         onMarkApplied={(vacc, appliedDate, nextDate) => {
@@ -885,7 +793,13 @@ export default function PetDetailPage() {
 
       {/* ── Tab content ── */}
       {activeTab === 0 && <TabCares petId={petData.id} petName={petData.name} />}
-      {activeTab === 1 && <TabVaccines petId={petData.id} petName={petData.name} />}
+      {activeTab === 1 && (
+        <TabVaccines
+          petId={petData.id}
+          petName={petData.name}
+          petSpecies={petData.species}
+        />
+      )}
 
       {activeTab === 2 && (
         <div className="card">
