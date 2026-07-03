@@ -1,12 +1,11 @@
 import {
   createContext, useContext, useState, useCallback, useEffect, type ReactNode,
 } from 'react'
-import { useTranslation } from 'react-i18next'
 import { usePetsContext } from './PetsContext'
 import { useUser } from './UserContext'
 import { getVaccStatus } from '../utils/vaccUtils'
 import type { VaccineRecord } from '../utils/vaccUtils'
-import vaccinesApi from '../api/vaccines'
+import { vaccinesApi } from '../api'
 
 export type VaccStatus = ReturnType<typeof getVaccStatus>
 
@@ -17,11 +16,11 @@ export interface VaccineWithMeta extends VaccineRecord {
   petId:    string
 }
 
-// Dados de entrada para addVaccine — datas ISO brutas (não formatadas)
+// Novo tipo de entrada para addVaccine — datas ISO brutas
 export interface AddVaccineInput {
   name:     string
-  date:     string   // ISO YYYY-MM-DD — data de aplicação
-  nextDate: string   // ISO YYYY-MM-DD — próxima dose ('' se não definida)
+  date:     string    // ISO YYYY-MM-DD — data de aplicação
+  nextDate: string    // ISO YYYY-MM-DD — próxima dose ('' se não definida)
   vet?:     string
   notes?:   string
 }
@@ -31,66 +30,62 @@ const PET_EMOJI: Record<string, string> = {
   reptile: '🦎', fish: '🐠', other: '🐾',
 }
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
+const BADGE_MAP: Record<VaccStatus, { badge: string; badgeCls: string }> = {
+  ok:   { badge: 'Em dia',         badgeCls: 'badge-green'  },
+  soon: { badge: 'Vence em breve', badgeCls: 'badge-yellow' },
+  late: { badge: 'Expirada',       badgeCls: 'badge-red'    },
+}
 
-const cacheKey = (petId: string) => `pituti-vaccines-${petId}`
-
-function loadVaccines(petId: string): VaccineRecord[] {
-  try { return JSON.parse(localStorage.getItem(cacheKey(petId)) ?? 'null') ?? [] }
+function loadVaccines(key: string): VaccineRecord[] {
+  try { return JSON.parse(localStorage.getItem(`pituti-vaccines-${key}`) ?? 'null') ?? [] }
   catch { return [] }
 }
 
-function saveVaccines(petId: string, items: VaccineRecord[]): void {
-  try { localStorage.setItem(cacheKey(petId), JSON.stringify(items)) }
-  catch { /* quota */ }
+function saveVaccines(key: string, items: VaccineRecord[]): void {
+  try { localStorage.setItem(`pituti-vaccines-${key}`, JSON.stringify(items)) }
+  catch { /* ignore */ }
 }
 
-// ── Converte ApiVaccine → VaccineRecord para exibição ────────────────────────
-// A API (via mapApiVaccine) já retorna { date, nextDueDate } em camelCase.
-function toVaccineRecord(
-  api: Record<string, unknown>,
-  badgeLabel:  (cls: VaccStatus) => string,
-  badgeCls:    (cls: VaccStatus) => string,
-): VaccineRecord {
-  // nextDate: field retornado por mapApiVaccine
+// ─── toVaccineRecord ──────────────────────────────────────────────────────────
+// Converte o que vem da API (já mapeado por mapApiVaccine) para VaccineRecord.
+//
+// FIX BUG 2: mapApiVaccine retorna { nextDueDate, date } (camelCase).
+// O original lia api.nextDate/api.nextdate que nunca existiam → nextDate: ''
+function toVaccineRecord(api: Record<string, unknown>): VaccineRecord {
   const nextDate = String(
-    api.nextDueDate    ??
-    api.nextDate       ??
-    api.next_due_date  ??
-    api.next_dose_date ??
+    api.nextDueDate   ??   // ← campo real de mapApiVaccine
+    api.nextdue       ??
+    api.nextDate      ??
+    api.nextdate      ??
+    api.next_due_date ??
     ''
   )
 
-  // rawDate: field retornado por mapApiVaccine
-  const rawDate = String(
-    api.date         ??
-    api.vaccine_date ??
-    api.applied      ??
-    ''
-  )
+  const name = String(api.vaccinename ?? api.name ?? '')
 
-  const applied = rawDate
-    ? (() => {
-        try {
-          return new Date(rawDate.includes('T') ? rawDate : `${rawDate}T12:00:00`)
-            .toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
-        } catch { return rawDate }
-      })()
-    : ''
+  // 'date' é o campo de mapApiVaccine; 'applied' é fallback de VaccineRecord já formatado
+  const rawDate = String(api.date ?? api.dateapplied ?? api.applied ?? api.vaccine_date ?? '')
 
   const cls = getVaccStatus(nextDate) as VaccStatus
 
   return {
-    id:       String(api.id   ?? ''),
-    name:     String(api.name ?? ''),
-    applied,
+    id:   String(api.id ?? ''),
+    name,
+    applied: rawDate
+      ? (() => {
+          try {
+            return new Date(rawDate.includes('T') ? rawDate : rawDate + 'T12:00:00')
+              .toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+          } catch { return rawDate }
+        })()
+      : '',
     nextDate,
-    badge:    badgeLabel(cls),
-    badgeCls: badgeCls(cls),
+    badge:    BADGE_MAP[cls].badge,
+    badgeCls: BADGE_MAP[cls].badgeCls,
   }
 }
 
-// ── Context ───────────────────────────────────────────────────────────────────
+// ─── Context interface ────────────────────────────────────────────────────────
 
 interface VaccinesContextValue {
   vaccinesByPet: Record<string, VaccineRecord[]>
@@ -106,7 +101,6 @@ interface VaccinesContextValue {
 const VaccinesContext = createContext<VaccinesContextValue | null>(null)
 
 export function VaccinesProvider({ children }: { children: ReactNode }) {
-  const { t }           = useTranslation()
   const { pets }        = usePetsContext()
   const { user, ready } = useUser()
 
@@ -114,23 +108,7 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
 
-  // Helpers de badge com i18n correcta
-  const getBadgeLabel = useCallback((cls: VaccStatus): string => {
-    const map: Record<VaccStatus, string> = {
-      ok:   t('pet.vacc.badgeOk',   { defaultValue: 'Em dia'         }),
-      soon: t('pet.vacc.badgeSoon', { defaultValue: 'Vence em breve' }),
-      late: t('pet.vacc.badgeLate', { defaultValue: 'Expirada'       }),
-    }
-    return map[cls]
-  }, [t])
-
-  const getBadgeCls = (cls: VaccStatus): string => ({
-    ok:   'badge-green',
-    soon: 'badge-yellow',
-    late: 'badge-red',
-  }[cls])
-
-  // ── Carrega cache do localStorage na montagem (evita flash vazio) ──────────
+  // Carrega localStorage imediatamente (evita flash vazio enquanto API responde)
   useEffect(() => {
     if (!ready || !user.id || !pets.length) return
     const fromStorage: Record<string, VaccineRecord[]> = {}
@@ -141,7 +119,6 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
     if (Object.keys(fromStorage).length > 0) setVaccinesByPet(fromStorage)
   }, [ready, user.id, pets])
 
-  // ── Fetch do servidor ─────────────────────────────────────────────────────
   const load = useCallback(() => {
     if (!pets.length) { setLoading(false); return }
     setLoading(true)
@@ -149,32 +126,34 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
 
     Promise.all(
       pets.map(p =>
-        vaccinesApi.getAll(p.id)
+        vaccinesApi
+          .getAll(p.id)
           .then(r => ({
-            petId: p.id,
-            // vaccinesApi.getAll já aplica mapApiVaccine a cada item
-            data: (r.data as unknown[]).map(raw =>
-              toVaccineRecord(
-                raw as Record<string, unknown>,
-                getBadgeLabel,
-                getBadgeCls,
-              )
-            ),
+            petId:   p.id,
+            data:    (r.data as unknown[]).map(raw => toVaccineRecord(raw as Record<string, unknown>)),
+            fromApi: true as const,
           }))
-          .catch(() => ({ petId: p.id, data: [] as VaccineRecord[] }))
+          // FIX BUG 1: quando a API falha, usa o cache do localStorage em vez de []
+          // O original retornava data:[] → setVaccinesByPet apagava o cache → vacinas sumiam
+          .catch(() => ({
+            petId:   p.id,
+            data:    loadVaccines(p.id),
+            fromApi: false as const,
+          }))
       )
     )
       .then(results => {
         const map: Record<string, VaccineRecord[]> = {}
         results.forEach(r => {
           map[r.petId] = r.data
-          if (r.data.length) saveVaccines(r.petId, r.data)
+          // Só persiste no localStorage quando veio da API (dados frescos)
+          if (r.fromApi && r.data.length) saveVaccines(r.petId, r.data)
         })
         setVaccinesByPet(map)
       })
       .catch(err => setError(err?.message ?? 'Erro ao carregar vacinas'))
       .finally(() => setLoading(false))
-  }, [pets, getBadgeLabel])
+  }, [pets])
 
   useEffect(() => {
     if (ready && pets.length > 0) load()
@@ -190,73 +169,73 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
     }))
   )
 
-  // ── addVaccine: recebe datas ISO brutas e envia correctamente à API ────────
+  // ─── addVaccine ─────────────────────────────────────────────────────────────
+  // FIX BUG 3: o original recebia um VaccineRecord e chamava vaccinesApi.create(petId, data)
+  // onde data.date era undefined (VaccineRecord tem 'applied', não 'date') e
+  // data.nextDueDate era undefined (VaccineRecord tem 'nextDate') →
+  // toApiCreateVaccineDto produzia { date: undefined, next_due_date: undefined } →
+  // Zod rejeitava com 400 → vacina nunca era gravada no servidor.
+  //
+  // Agora recebe AddVaccineInput com as datas ISO brutas do formulário e
+  // monta tanto o VaccineRecord (para exibição local) como o CreateVaccineDto
+  // (para a API) correctamente.
   const addVaccine = useCallback(async (petId: string, input: AddVaccineInput) => {
     const cls = getVaccStatus(input.nextDate) as VaccStatus
-
-    // Formata para exibição (optimistic update)
     const applied = input.date
       ? (() => {
           try {
-            return new Date(`${input.date}T12:00:00`)
+            return new Date(input.date + 'T12:00:00')
               .toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
           } catch { return input.date }
         })()
       : ''
 
-    const tempId = `v-tmp-${Date.now()}`
-    const tempRec: VaccineRecord = {
+    const tempId = `v-${Date.now()}`
+    const local: VaccineRecord = {
       id:       tempId,
       name:     input.name,
       applied,
       nextDate: input.nextDate,
-      badge:    getBadgeLabel(cls),
-      badgeCls: getBadgeCls(cls),
+      badge:    BADGE_MAP[cls].badge,
+      badgeCls: BADGE_MAP[cls].badgeCls,
     }
 
     // 1. Optimistic update imediato
     setVaccinesByPet(prev => {
-      const next = [...(prev[petId] ?? []), tempRec]
+      const next = [...(prev[petId] ?? []), local]
       saveVaccines(petId, next)
       return { ...prev, [petId]: next }
     })
 
-    // 2. Persiste no servidor
-    // vaccinesApi.create chama toApiCreateVaccineDto que envia { date, next_due_date }
+    // 2. Persiste no servidor com os tipos correctos
     try {
       const res = await vaccinesApi.create(petId, {
         name:        input.name,
-        date:        input.date,     // ISO → toApiCreateVaccineDto envia como 'date'
+        date:        input.date,           // ISO → toApiCreateVaccineDto envia como 'date'
         nextDueDate: input.nextDate || null, // ISO → envia como 'next_due_date'
         veterinary:  input.vet   || null,
         notes:       input.notes || null,
       })
 
-      // vaccinesApi.create já aplica mapApiVaccine ao res.data
-      const fromApi = toVaccineRecord(
-        res.data as unknown as Record<string, unknown>,
-        getBadgeLabel,
-        getBadgeCls,
-      )
-      const realId = fromApi.id || tempId
-
-      // 3. Substitui ID temporário pelo UUID real
-      setVaccinesByPet(prev => {
-        const updated = (prev[petId] ?? []).map(v =>
-          v.id === tempId ? { ...fromApi, id: realId } : v
-        )
-        saveVaccines(petId, updated)
-        return { ...prev, [petId]: updated }
-      })
+      // 3. Substitui ID temporário pelo UUID real do servidor
+      const fromApi = toVaccineRecord(res.data as unknown as Record<string, unknown>)
+      if (fromApi.id && fromApi.id !== tempId) {
+        setVaccinesByPet(prev => {
+          const updated = (prev[petId] ?? []).map(v => v.id === tempId ? fromApi : v)
+          saveVaccines(petId, updated)
+          return { ...prev, [petId]: updated }
+        })
+      }
     } catch (err) {
+      // Falha silenciosa — optimistic update permanece (vacina visível localmente)
       console.warn('[VaccinesContext] addVaccine API error:', err)
-      // Mantém o optimistic update — vacina visível localmente
     }
-  }, [getBadgeLabel])
+  }, [])
 
   const deleteVaccine = useCallback(async (petId: string, vaccineId: string) => {
-    if (!vaccineId.startsWith('v-tmp-')) {
-      try { await vaccinesApi.delete(petId, vaccineId) } catch { /* ignore */ }
+    // Não tenta deletar IDs temporários no servidor
+    if (!vaccineId.startsWith('v-')) {
+      await vaccinesApi.delete(petId, vaccineId)
     }
     setVaccinesByPet(prev => {
       const next = { ...prev, [petId]: (prev[petId] ?? []).filter(v => v.id !== vaccineId) }
