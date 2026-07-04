@@ -1157,7 +1157,13 @@
         "memberSince":   "Membro desde janeiro 2026 · {{count}} animais"},
   "activeAccount": "Conta ativa",
   "petsCount":     "animais",
-  "deleteToast":   "Até logo."
+  "deleteToast":   "Até logo.",
+  "logout":          "Sair",
+"logoutHint":      "Você precisará entrar novamente",
+"saving":          "Salvando…",
+"photoHint2":      "Toque no avatar para trocar a foto",
+"dataTitle":       "Informações pessoais",
+"dataSub":         "Visível somente para você"
     
   },
   "topbar": {

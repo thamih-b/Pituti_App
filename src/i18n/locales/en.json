@@ -1151,7 +1151,13 @@
         "memberSince":   "Member since January 2026 · {{count}} pets",
   "activeAccount": "Active account",
   "petsCount":     "pets",
-  "deleteToast":   "Goodbye."
+  "deleteToast":   "Goodbye.",
+  "logout":          "Sign out",
+"logoutHint":      "You will need to log in again",
+"saving":          "Saving…",
+"photoHint2":      "Click the avatar to change photo",
+"dataTitle":       "Personal info",
+"dataSub":         "Visible only to you"
     
   },
   "topbar": {

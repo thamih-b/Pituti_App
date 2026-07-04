@@ -1168,7 +1168,13 @@
       "memberSince":   "Miembro desde enero 2026 · {{count}} mascotas",
   "activeAccount": "Cuenta activa",
   "petsCount":     "mascotas",
-  "deleteToast":   "Hasta pronto."
+  "deleteToast":   "Hasta pronto.",
+  "logout":          "Cerrar sesión",
+"logoutHint":      "Tendrás que iniciar sesión de nuevo",
+"saving":          "Guardando…",
+"photoHint2":      "Toca el avatar para cambiar la foto",
+"dataTitle":       "Información personal",
+"dataSub":         "Solo visible para ti"
   },
   "topbar": {
     "searchPlaceholder": "Buscar mascota, registro…",
