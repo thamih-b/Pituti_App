@@ -1,74 +1,506 @@
-import { useState, useRef, useEffect } from 'react'
+/**
+ * SettingsPage.tsx
+ *
+ * Requires: npm install libphonenumber-js
+ *
+ * Features:
+ *  - Phone: country flag selector + flexible input + libphonenumber-js validation
+ *    Stored as E.164 international format (+5511988880000)
+ *  - City: Nominatim (OpenStreetMap) autocomplete — no API key needed
+ *  - Full i18n: en / es / pt
+ *  - Professional card layout
+ */
+
+import {
+  useState, useRef, useEffect, useCallback, type ReactNode,
+  type ChangeEvent, type KeyboardEvent,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  parsePhoneNumber,
+  isValidPhoneNumber,
+  type CountryCode,
+} from 'libphonenumber-js'
 import { showToast } from '../components/AppLayout'
 import BackButton from '../components/BackButton'
 import DeleteAccountModal from '../components/DeleteAccountModal'
 import { useUser, deriveAvatar } from '../context/UserContext'
 import { usersApi } from '../api'
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════
+
+interface CountryEntry {
+  code: CountryCode
+  flag: string
+  name: string
+  dial: string
+}
+
+/** Top-50 countries sorted by global phone usage */
+const COUNTRIES: CountryEntry[] = [
+  { code: 'CN', flag: '🇨🇳', name: 'China',          dial: '+86'  },
+  { code: 'IN', flag: '🇮🇳', name: 'India',          dial: '+91'  },
+  { code: 'US', flag: '🇺🇸', name: 'United States',  dial: '+1'   },
+  { code: 'BR', flag: '🇧🇷', name: 'Brasil',         dial: '+55'  },
+  { code: 'ID', flag: '🇮🇩', name: 'Indonesia',      dial: '+62'  },
+  { code: 'PK', flag: '🇵🇰', name: 'Pakistan',       dial: '+92'  },
+  { code: 'NG', flag: '🇳🇬', name: 'Nigeria',        dial: '+234' },
+  { code: 'BD', flag: '🇧🇩', name: 'Bangladesh',     dial: '+880' },
+  { code: 'RU', flag: '🇷🇺', name: 'Russia',         dial: '+7'   },
+  { code: 'MX', flag: '🇲🇽', name: 'México',         dial: '+52'  },
+  { code: 'ET', flag: '🇪🇹', name: 'Ethiopia',       dial: '+251' },
+  { code: 'JP', flag: '🇯🇵', name: 'Japan',          dial: '+81'  },
+  { code: 'PH', flag: '🇵🇭', name: 'Philippines',    dial: '+63'  },
+  { code: 'EG', flag: '🇪🇬', name: 'Egypt',          dial: '+20'  },
+  { code: 'CD', flag: '🇨🇩', name: 'DR Congo',       dial: '+243' },
+  { code: 'VN', flag: '🇻🇳', name: 'Vietnam',        dial: '+84'  },
+  { code: 'TR', flag: '🇹🇷', name: 'Turkey',         dial: '+90'  },
+  { code: 'DE', flag: '🇩🇪', name: 'Germany',        dial: '+49'  },
+  { code: 'TH', flag: '🇹🇭', name: 'Thailand',       dial: '+66'  },
+  { code: 'GB', flag: '🇬🇧', name: 'United Kingdom', dial: '+44'  },
+  { code: 'FR', flag: '🇫🇷', name: 'France',         dial: '+33'  },
+  { code: 'ES', flag: '🇪🇸', name: 'España',         dial: '+34'  },
+  { code: 'PT', flag: '🇵🇹', name: 'Portugal',       dial: '+351' },
+  { code: 'IT', flag: '🇮🇹', name: 'Italia',         dial: '+39'  },
+  { code: 'AR', flag: '🇦🇷', name: 'Argentina',      dial: '+54'  },
+  { code: 'CO', flag: '🇨🇴', name: 'Colombia',       dial: '+57'  },
+  { code: 'CL', flag: '🇨🇱', name: 'Chile',          dial: '+56'  },
+  { code: 'PE', flag: '🇵🇪', name: 'Perú',           dial: '+51'  },
+  { code: 'CA', flag: '🇨🇦', name: 'Canada',         dial: '+1'   },
+  { code: 'AU', flag: '🇦🇺', name: 'Australia',      dial: '+61'  },
+  { code: 'ZA', flag: '🇿🇦', name: 'South Africa',   dial: '+27'  },
+  { code: 'KR', flag: '🇰🇷', name: 'South Korea',    dial: '+82'  },
+  { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia',   dial: '+966' },
+  { code: 'AE', flag: '🇦🇪', name: 'UAE',            dial: '+971' },
+  { code: 'PL', flag: '🇵🇱', name: 'Poland',         dial: '+48'  },
+  { code: 'NL', flag: '🇳🇱', name: 'Netherlands',    dial: '+31'  },
+  { code: 'CH', flag: '🇨🇭', name: 'Switzerland',    dial: '+41'  },
+  { code: 'SE', flag: '🇸🇪', name: 'Sweden',         dial: '+46'  },
+  { code: 'NO', flag: '🇳🇴', name: 'Norway',         dial: '+47'  },
+  { code: 'DK', flag: '🇩🇰', name: 'Denmark',        dial: '+45'  },
+  { code: 'FI', flag: '🇫🇮', name: 'Finland',        dial: '+358' },
+  { code: 'BE', flag: '🇧🇪', name: 'Belgium',        dial: '+32'  },
+  { code: 'AT', flag: '🇦🇹', name: 'Austria',        dial: '+43'  },
+  { code: 'GR', flag: '🇬🇷', name: 'Greece',         dial: '+30'  },
+  { code: 'UA', flag: '🇺🇦', name: 'Ukraine',        dial: '+380' },
+  { code: 'PO', flag: '🇵🇹', name: 'Portugal',       dial: '+351' },
+  { code: 'NZ', flag: '🇳🇿', name: 'New Zealand',    dial: '+64'  },
+  { code: 'SG', flag: '🇸🇬', name: 'Singapore',      dial: '+65'  },
+  { code: 'HK', flag: '🇭🇰', name: 'Hong Kong',      dial: '+852' },
+  { code: 'IL', flag: '🇮🇱', name: 'Israel',         dial: '+972' },
+]
+
+// Detecta país inicial a partir de um número E.164
+function detectCountryFromE164(e164: string): CountryEntry {
+  if (!e164) return COUNTRIES.find(c => c.code === 'BR') ?? COUNTRIES[0]
+  // Ordena por comprimento do dial desc para evitar ambiguidade (+1 vs +1xxx)
+  const sorted = [...COUNTRIES].sort((a, b) => b.dial.length - a.dial.length)
+  return sorted.find(c => e164.startsWith(c.dial)) ?? COUNTRIES[0]
+}
+
+// Remove tudo que não é dígito
+function digitsOnly(s: string): string { return s.replace(/\D/g, '') }
+
+// ═══════════════════════════════════════════════════════════════════
+// PHONE INPUT
+// ═══════════════════════════════════════════════════════════════════
+
+interface PhoneInputProps {
+  value: string           // E.164 stored value, e.g. "+5511988880000"
+  onChange: (e164: string, isValid: boolean) => void
+}
+
+function PhoneInput({ value, onChange }: PhoneInputProps) {
+  const { t } = useTranslation()
+  const [country,      setCountry]      = useState<CountryEntry>(() => detectCountryFromE164(value))
+  const [localDigits,  setLocalDigits]  = useState<string>(() => {
+    if (!value) return ''
+    const c = detectCountryFromE164(value)
+    return digitsOnly(value.slice(c.dial.length))
+  })
+  const [dropOpen,     setDropOpen]     = useState(false)
+  const [search,       setSearch]       = useState('')
+  const [phoneValid,   setPhoneValid]   = useState(true)
+  const dropRef   = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  // Fecha o dropdown ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropOpen(false); setSearch('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Foca search ao abrir
+  useEffect(() => {
+    if (dropOpen) setTimeout(() => searchRef.current?.focus(), 60)
+  }, [dropOpen])
+
+  const validate = useCallback((digits: string, cc: CountryEntry): boolean => {
+    if (!digits) return true
+    try { return isValidPhoneNumber(`${cc.dial}${digits}`, cc.code) }
+    catch { return digits.length >= 6 && digits.length <= 15 }
+  }, [])
+
+  const emit = useCallback((digits: string, cc: CountryEntry) => {
+    const valid = validate(digits, cc)
+    setPhoneValid(valid)
+    // Armazena como E.164 limpo: +<código><dígitos>
+    onChange(digits ? `${cc.dial}${digits}` : '', valid)
+  }, [validate, onChange])
+
+  const handleNumberChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Sem máscara rígida — aceita espaços e hifens mas armazena só dígitos
+    const digits = digitsOnly(e.target.value)
+    if (digits.length > 15) return   // limite E.164 máximo
+    setLocalDigits(digits)
+    emit(digits, country)
+  }
+
+  const handleCountrySelect = (c: CountryEntry) => {
+    setCountry(c); setDropOpen(false); setSearch('')
+    emit(localDigits, c)
+  }
+
+  const filtered = search
+    ? COUNTRIES.filter(c =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.dial.includes(search) ||
+        c.code.toLowerCase().includes(search.toLowerCase())
+      )
+    : COUNTRIES
+
+  const errMsg = !phoneValid && localDigits
+    ? t('settings.phoneInvalid', { defaultValue: 'Número inválido para este país' })
+    : ''
+
+  return (
+    <div style={{ position: 'relative' }} ref={dropRef}>
+      <div style={{ display: 'flex', gap: '.5rem', alignItems: 'stretch' }}>
+
+        {/* ── Selector de país ── */}
+        <button
+          type="button"
+          onClick={() => setDropOpen(d => !d)}
+          aria-label="Select country"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '.375rem',
+            padding: '0 .75rem', borderRadius: 'var(--r-md)',
+            border: `1.5px solid ${dropOpen ? 'var(--primary)' : 'var(--border)'}`,
+            background: 'var(--surface)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: '.875rem', fontWeight: 600,
+            color: 'var(--text)', whiteSpace: 'nowrap', minHeight: 42, flexShrink: 0,
+            transition: 'border-color var(--trans)',
+          }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>{country.flag}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{country.dial}</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+            style={{ color: 'var(--text-faint)', transform: dropOpen ? 'rotate(180deg)' : 'none', transition: 'transform 200ms' }}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {/* ── Campo de número ── */}
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="tel"
+            inputMode="numeric"
+            className={`form-input${!phoneValid && localDigits ? ' input-error' : ''}`}
+            value={localDigits}
+            onChange={handleNumberChange}
+            maxLength={20}
+            placeholder={t('settings.phonePlaceholder', { defaultValue: '11 98888 0000' })}
+            autoComplete="tel-national"
+            style={{ paddingRight: localDigits ? '2rem' : undefined }}
+          />
+          {/* Ícone de validade */}
+          {localDigits && (
+            <span style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              fontSize: '.9rem', color: phoneValid ? 'var(--success)' : 'var(--err)',
+              pointerEvents: 'none',
+            }}>
+              {phoneValid ? '✓' : '✗'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Mensagem de erro */}
+      {errMsg && (
+        <p style={{ fontSize: '.72rem', color: 'var(--err)', marginTop: '.25rem', marginLeft: 0 }}>
+          {errMsg}
+        </p>
+      )}
+
+      {/* ── Dropdown de países ── */}
+      {dropOpen && (
+        <div style={{
+          position: 'absolute', top: '110%', left: 0,
+          width: 280, maxHeight: 280,
+          background: 'var(--surface)', border: '1.5px solid var(--border)',
+          borderRadius: 'var(--r-xl)', boxShadow: 'var(--sh-lg)', zIndex: 200,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          {/* Search */}
+          <div style={{ padding: '.5rem .75rem', borderBottom: '1px solid var(--divider)' }}>
+            <input
+              ref={searchRef}
+              className="form-input"
+              placeholder={t('btn.loading', { defaultValue: 'Buscar país…' })}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ height: 34, fontSize: '.8125rem' }}
+            />
+          </div>
+          {/* List */}
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '.8125rem' }}>
+                —
+              </div>
+            ) : filtered.map(c => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => handleCountrySelect(c)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '.625rem',
+                  width: '100%', padding: '.5rem .875rem',
+                  background: c.code === country.code ? 'var(--primary-hl)' : 'transparent',
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: '.8125rem', textAlign: 'left',
+                  color: c.code === country.code ? 'var(--primary)' : 'var(--text)',
+                  fontWeight: c.code === country.code ? 700 : 400,
+                  transition: 'background 100ms',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{c.flag}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.name}
+                </span>
+                <span style={{ color: 'var(--text-faint)', fontSize: '.75rem', flexShrink: 0 }}>
+                  {c.dial}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CITY AUTOCOMPLETE (Nominatim / OpenStreetMap — sem API key)
+// ═══════════════════════════════════════════════════════════════════
+
+interface CityResult { display: string; city: string; country: string }
+
+interface CityAutocompleteProps {
+  value: string
+  onChange: (city: string) => void
+  placeholder?: string
+  lang: string
+}
+
+function CityAutocomplete({ value, onChange, placeholder, lang }: CityAutocompleteProps) {
+  const [query,    setQuery]    = useState(value)
+  const [results,  setResults]  = useState<CityResult[]>([])
+  const [open,     setOpen]     = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const timerRef  = useRef<ReturnType<typeof setTimeout>>()
+  const wrapRef   = useRef<HTMLDivElement>(null)
+
+  // Sync quando o valor externo muda (ex: discard)
+  useEffect(() => { setQuery(value) }, [value])
+
+  // Fecha ao clicar fora
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) { setResults([]); setOpen(false); return }
+    setFetching(true)
+    try {
+      const url =
+        `https://nominatim.openstreetmap.org/search` +
+        `?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1`
+      const res  = await fetch(url, {
+        headers: {
+          'Accept-Language': lang,
+          'User-Agent':       'PitutiApp/1.0 (contact@pituti.app)',
+        },
+      })
+      const data: any[] = await res.json()
+      const cities = data
+        .filter(d => ['city', 'town', 'village', 'municipality', 'administrative'].includes(d.type))
+        .slice(0, 6)
+        .map(d => ({
+          display: d.display_name,
+          city:    d.address?.city ?? d.address?.town ?? d.address?.village ?? d.name ?? '',
+          country: d.address?.country ?? '',
+        }))
+        .filter((c, i, arr) => arr.findIndex(x => x.city === c.city && x.country === c.country) === i)
+      setResults(cities)
+      setOpen(cities.length > 0)
+    } catch { setResults([]) }
+    setFetching(false)
+  }, [lang])
+
+  const handleChange = (v: string) => {
+    setQuery(v)
+    onChange(v)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => search(v), 420)
+  }
+
+  const handleSelect = (item: CityResult) => {
+    const label = item.country ? `${item.city}, ${item.country}` : item.city
+    setQuery(label)
+    onChange(label)
+    setOpen(false)
+    setResults([])
+  }
+
+  const handleKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { setOpen(false); setResults([]) }
+  }
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
+        <input
+          className="form-input"
+          value={query}
+          onChange={e => handleChange(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          onKeyDown={handleKey}
+          placeholder={placeholder}
+          autoComplete="off"
+          aria-autocomplete="list"
+          aria-expanded={open}
+        />
+        {fetching && (
+          <span style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            fontSize: '.8rem', color: 'var(--text-faint)', animation: 'spin 1s linear infinite',
+          }}>
+            ⏳
+          </span>
+        )}
+      </div>
+
+      {open && results.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: 'var(--surface)', border: '1.5px solid var(--border)',
+          borderRadius: 'var(--r-xl)', boxShadow: 'var(--sh-lg)', zIndex: 200,
+          overflow: 'hidden',
+        }}>
+          {results.map((r, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => handleSelect(r)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '.5rem',
+                width: '100%', padding: '.5rem .875rem',
+                background: 'transparent', border: 'none',
+                cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: '.8375rem', textAlign: 'left', transition: 'background 100ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span style={{ flexShrink: 0, color: 'var(--text-muted)' }}>📍</span>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.city}</span>
+              {r.country && (
+                <span style={{ color: 'var(--text-faint)', fontSize: '.75rem', marginLeft: 'auto', flexShrink: 0 }}>
+                  {r.country}
+                </span>
+              )}
+            </button>
+          ))}
+          <div style={{
+            fontSize: '.65rem', color: 'var(--text-faint)', textAlign: 'right',
+            padding: '.2rem .75rem .4rem', borderTop: '1px solid var(--divider)',
+          }}>
+            © OpenStreetMap contributors
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS — Layout sub-components
+// ═══════════════════════════════════════════════════════════════════
 
 function Toggle({ initial = true }: { initial?: boolean }) {
   const [on, setOn] = useState(initial)
   return (
     <button
-      type="button"
-      role="switch"
-      aria-checked={on}
+      type="button" role="switch" aria-checked={on}
       onClick={() => setOn(v => !v)}
       style={{
-        width: 40, height: 22, borderRadius: 99, padding: 0,
+        width: 40, height: 22, borderRadius: 99,
         background: on ? 'var(--primary)' : 'var(--border)',
         cursor: 'pointer', position: 'relative', flexShrink: 0,
-        transition: 'background 200ms', border: 'none',
+        transition: 'background 200ms', border: 'none', padding: 0,
       }}
     >
       <div style={{
         width: 16, height: 16, borderRadius: '50%', background: '#fff',
-        position: 'absolute', top: 3,
-        left: on ? 'calc(100% - 19px)' : 3,
-        transition: 'left 200ms',
-        boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+        position: 'absolute', top: 3, left: on ? 21 : 3,
+        transition: 'left 200ms', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
       }} />
     </button>
   )
 }
 
-// ── LanguageSelector ──────────────────────────────────────────────────────────
-
 function LanguageSelector() {
-  const { t, i18n } = useTranslation()
+  const { i18n } = useTranslation()
   const langs = [
     { code: 'es', flag: '🇪🇸', label: 'Español'   },
     { code: 'en', flag: '🇬🇧', label: 'English'   },
     { code: 'pt', flag: '🇧🇷', label: 'Português' },
   ]
   return (
-    <div style={{ display: 'flex', gap: '.375rem', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', paddingTop: '.25rem' }}>
       {langs.map(l => (
         <button
-          key={l.code}
-          type="button"
-          onClick={() => {
-            i18n.changeLanguage(l.code)
-            localStorage.setItem('lang', l.code)
-            showToast('✓')
-          }}
+          key={l.code} type="button"
+          onClick={() => { i18n.changeLanguage(l.code); localStorage.setItem('lang', l.code) }}
           style={{
             display: 'flex', alignItems: 'center', gap: '.375rem',
-            padding: '.4rem .875rem', borderRadius: 'var(--r-full)',
+            padding: '.45rem .9rem', borderRadius: 'var(--r-full)',
             border: `1.5px solid ${i18n.language === l.code ? 'var(--primary)' : 'var(--border)'}`,
-            background: i18n.language === l.code ? 'var(--primary-hl)' : 'var(--surface-offset)',
-            color:      i18n.language === l.code ? 'var(--primary)'    : 'var(--text-muted)',
-            fontWeight: i18n.language === l.code ? 800 : 600,
+            background:  i18n.language === l.code ? 'var(--primary-hl)' : 'var(--surface-offset)',
+            color:       i18n.language === l.code ? 'var(--primary)'    : 'var(--text-muted)',
+            fontWeight:  i18n.language === l.code ? 800 : 600,
             fontSize: '.8125rem', cursor: 'pointer', fontFamily: 'inherit',
-            transition: 'all var(--trans)', minHeight: 40,
+            transition: 'all var(--trans)',
           }}
         >
           <span style={{ fontSize: '1rem' }}>{l.flag}</span>
           {l.label}
           {i18n.language === l.code && (
-            <span style={{ fontSize: '.65rem', opacity: .8 }}>✓</span>
+            <span style={{ fontSize: '.6rem', opacity: .7 }}>✓</span>
           )}
         </button>
       ))}
@@ -76,136 +508,113 @@ function LanguageSelector() {
   )
 }
 
-// ── SectionCard ───────────────────────────────────────────────────────────────
-
-function SectionCard({
-  icon, title, subtitle, children, accent = false,
-}: {
-  icon: string; title: string; subtitle?: string
-  children: React.ReactNode; accent?: boolean
-}) {
+function Card({ children, style }: { children: ReactNode; style?: React.CSSProperties }) {
   return (
-    <div className="settings-card" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{
-        padding: '1rem 1.375rem .875rem',
-        borderBottom: '1.5px solid var(--divider)',
-        display: 'flex', alignItems: 'center', gap: '.75rem',
-        background: accent
-          ? 'linear-gradient(135deg, var(--primary-hl), var(--surface))'
-          : 'var(--surface)',
-      }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 'var(--r-md)',
-          background: accent ? 'var(--primary)' : 'var(--surface-offset)',
-          color: accent ? '#fff' : 'var(--text-muted)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1rem', flexShrink: 0,
-        }}>
-          {icon}
-        </div>
-        <div>
-          <div style={{ fontWeight: 800, fontSize: '.9375rem', color: 'var(--text)' }}>
-            {title}
-          </div>
-          {subtitle && (
-            <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.05rem' }}>
-              {subtitle}
-            </div>
-          )}
-        </div>
-      </div>
-      <div style={{ padding: '1.125rem 1.375rem' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ── FormRow ───────────────────────────────────────────────────────────────────
-
-function FormRow({
-  icon, label, required, hint, children,
-}: {
-  icon: string; label: string; required?: boolean; hint?: string; children: React.ReactNode
-}) {
-  return (
-    <div style={{ marginBottom: '1rem' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '.375rem',
-        marginBottom: '.375rem',
-      }}>
-        <span style={{ fontSize: '.9rem' }}>{icon}</span>
-        <label style={{
-          fontWeight: 700, fontSize: '.8125rem', color: 'var(--text)',
-        }}>
-          {label}
-          {required && (
-            <span style={{ color: 'var(--primary)', marginLeft: '.2rem' }}>*</span>
-          )}
-        </label>
-        {hint && (
-          <span style={{ fontSize: '.72rem', color: 'var(--text-faint)', marginLeft: '.25rem' }}>
-            · {hint}
-          </span>
-        )}
-      </div>
+    <div style={{
+      background: 'var(--surface)', border: '1.5px solid var(--border)',
+      borderRadius: 'var(--r-xl)', boxShadow: 'var(--sh-xs)',
+      overflow: 'hidden', ...style,
+    }}>
       {children}
     </div>
   )
 }
 
-// ── NotifRow ──────────────────────────────────────────────────────────────────
+function CardHeader({ icon, title, subtitle }: { icon: string; title: string; subtitle?: string }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '.75rem',
+      padding: '1rem 1.5rem',
+      borderBottom: '1.5px solid var(--divider)',
+      background: 'var(--surface)',
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 'var(--r-md)',
+        background: 'var(--surface-offset)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '1.1rem', flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontWeight: 800, fontSize: '.9375rem', color: 'var(--text)' }}>{title}</div>
+        {subtitle && (
+          <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.05rem' }}>
+            {subtitle}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CardBody({ children }: { children: ReactNode }) {
+  return <div style={{ padding: '1.25rem 1.5rem' }}>{children}</div>
+}
+
+function FieldLabel({ label, hint }: { label: string; hint?: string }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'center', gap: '.375rem',
+      fontWeight: 700, fontSize: '.8125rem', color: 'var(--text)',
+      marginBottom: '.375rem',
+    }}>
+      {label}
+      {hint && (
+        <span style={{ fontWeight: 400, color: 'var(--text-faint)', fontSize: '.72rem' }}>
+          · {hint}
+        </span>
+      )}
+    </label>
+  )
+}
 
 function NotifRow({ label, sub, initial }: { label: string; sub: string; initial: boolean }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '1rem',
-      padding: '.625rem 0', borderBottom: '1px solid var(--divider)',
+      padding: '.75rem 0', borderBottom: '1px solid var(--divider)',
     }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: '.875rem', color: 'var(--text)' }}>{label}</div>
-        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>{sub}</div>
+        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.15rem' }}>{sub}</div>
       </div>
       <Toggle initial={initial} />
     </div>
   )
 }
 
-// ── exportCSV ─────────────────────────────────────────────────────────────────
-
 function exportCSV(name: string, email: string) {
-  const rows = [
-    ['name', name],
-    ['email', email],
-    ['exported', new Date().toLocaleString()],
-  ]
-  const csv  = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url; a.download = 'pituti-dados.csv'; a.click()
-  URL.revokeObjectURL(url)
+  const csv  = [['name', name], ['email', email], ['date', new Date().toLocaleString()]]
+    .map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+  const a    = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
+    download: 'pituti-data.csv',
+  })
+  a.click()
 }
 
-// ── SettingsPage ──────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// SETTINGS PAGE
+// ═══════════════════════════════════════════════════════════════════
 
 export default function SettingsPage() {
-  const { t }                   = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user, setUser, logout } = useUser()
 
-  const [name,       setName]       = useState('')
-  const [email,      setEmail]      = useState('')
-  const [phone,      setPhone]      = useState('')
-  const [city,       setCity]       = useState('')
-  const [bio,        setBio]        = useState('')
-  const [photoUrl,   setPhotoUrl]   = useState<string | null>(null)
-  const [saving,     setSaving]     = useState(false)
-  const [saved,      setSaved]      = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-
+  const [name,        setName]        = useState(user.name     ?? '')
+  const [email,       setEmail]       = useState(user.email    ?? '')
+  const [phone,       setPhone]       = useState(user.phone    ?? '')
+  const [phoneValid,  setPhoneValid]  = useState(true)
+  const [city,        setCity]        = useState(user.city     ?? '')
+  const [bio,         setBio]         = useState(user.bio      ?? '')
+  const [photoUrl,    setPhotoUrl]    = useState<string | null>(user.photoUrl ?? null)
+  const [saving,      setSaving]      = useState(false)
+  const [saved,       setSaved]       = useState(false)
+  const [deleteOpen,  setDeleteOpen]  = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
 
-  // Sincroniza estado local com dados do user
+  // Sync quando o user muda (ex: após login)
   useEffect(() => {
     setName(user.name     ?? '')
     setEmail(user.email   ?? '')
@@ -215,13 +624,13 @@ export default function SettingsPage() {
     setPhotoUrl(user.photoUrl ?? null)
   }, [user])
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
     reader.onload = ev => {
       const r = ev.target?.result as string
-      if (r) { setPhotoUrl(r); showToast(t('settings.changePhoto') + ' ✓') }
+      if (r) setPhotoUrl(r)
     }
     reader.readAsDataURL(file)
   }
@@ -230,194 +639,151 @@ export default function SettingsPage() {
     if (!name.trim()) return
     setSaving(true)
 
-    // 1. Actualiza contexto e localStorage imediatamente (não depende da API)
-    const updatedUser = {
-      ...user,
-      name: name.trim(),
-      email,
-      phone,
-      city,
-      bio,
-      photoUrl,
-      avatar: deriveAvatar(name.trim()),
-    }
-    setUser(updatedUser)
+    const updated = { ...user, name: name.trim(), email, phone, city, bio, photoUrl, avatar: deriveAvatar(name.trim()) }
+    setUser(updated)
 
-    const storageKey = 'pitutiuser'
-    const useLocal   = !!localStorage.getItem(storageKey) || !!localStorage.getItem('pitutitoken')
-    const storage    = useLocal ? localStorage : sessionStorage
-    storage.setItem(storageKey, JSON.stringify({
-      id: user.id, name: name.trim(), email, phone, city, bio, photoUrl,
-    }))
+    const key      = 'pitutiuser'
+    const storage  = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
+      ? localStorage : sessionStorage
+    storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
 
-    // 2. Tenta persistir no servidor (falha silenciosa — dados já salvos localmente)
     try {
       if (user.id) {
-        await usersApi.update(user.id, {
-          name:      name.trim(),
-          photo_url: photoUrl ?? null,
-          phone:     phone    || null,
-          bio:       bio      || null,
-          city:      city     || null,
-        } as any)
+        await usersApi.update(user.id, { name: name.trim(), photo_url: photoUrl, phone: phone || null, bio: bio || null, city: city || null } as any)
       }
-    } catch { /* silencioso */ }
+    } catch { /* silencioso — dados salvos localmente */ }
 
-    setSaved(true)
+    setSaving(false); setSaved(true)
     showToast(t('toast.changesSaved'))
     setTimeout(() => setSaved(false), 3000)
-    setSaving(false)
   }
 
   const handleDiscard = () => {
-    setName(user.name     ?? '')
-    setEmail(user.email   ?? '')
-    setPhone(user.phone   ?? '')
-    setCity(user.city     ?? '')
-    setBio(user.bio       ?? '')
-    setPhotoUrl(user.photoUrl ?? null)
+    setName(user.name ?? ''); setEmail(user.email ?? '')
+    setPhone(user.phone ?? ''); setCity(user.city ?? '')
+    setBio(user.bio ?? ''); setPhotoUrl(user.photoUrl ?? null)
   }
 
   const handleDeleteAccount = () => {
     setDeleteOpen(false)
-    showToast(t('settings.deleteToast'), 'err')
-    setTimeout(() => {
-      try { localStorage.clear(); sessionStorage.clear() } catch {}
-      window.location.href = '/login'
-    }, 2000)
+    showToast(t('settings.deleteToast', { defaultValue: 'Goodbye.' }), 'err')
+    setTimeout(() => { try { localStorage.clear(); sessionStorage.clear() } catch {} ; window.location.href = '/login' }, 2000)
   }
 
-  // Iniciais para avatar
-  const initials = name.split(' ').filter(Boolean).slice(0, 2)
-    .map(w => w[0].toUpperCase()).join('')
+  const initials = name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 
   return (
-    <div>
+    <div style={{ maxWidth: 720, margin: '0 auto' }}>
       <BackButton />
 
-      <div className="page-header">
+      {/* ── Page header ── */}
+      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <div>
           <h1 className="page-title">{t('settings.title')}</h1>
           <p className="page-subtitle">{t('settings.subtitle')}</p>
         </div>
       </div>
 
-      {/* ── Hero de perfil ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '1.25rem',
-        padding: '1.25rem 1.5rem',
-        background: 'linear-gradient(135deg, var(--primary-hl) 0%, var(--surface) 100%)',
-        borderRadius: 'var(--r-xl)',
-        border: '1.5px solid var(--border)',
-        boxShadow: 'var(--sh-sm)',
-        marginBottom: '1.25rem',
-        flexWrap: 'wrap',
-        gap: '1rem',
-      }}>
-        {/* Avatar clicável */}
-        <div
-          style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
-          onClick={() => photoRef.current?.click()}
-          title={t('settings.changePhoto')}
-        >
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%',
-            overflow: 'hidden',
-            border: '3px solid var(--primary)',
-            boxShadow: '0 0 0 3px var(--primary-hl)',
-            background: 'var(--surface-offset)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)',
-          }}>
-            {photoUrl
-              ? <img
-                  src={photoUrl}
-                  alt={name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              : <span>{initials || '🐾'}</span>}
-          </div>
-          {/* Badge de câmera */}
-          <div style={{
-            position: 'absolute', bottom: 0, right: 0,
-            width: 22, height: 22, borderRadius: '50%',
-            background: 'var(--primary)', color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '.7rem', border: '2px solid var(--surface)',
-          }}>
-            📷
-          </div>
-          <input
-            ref={photoRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handlePhotoChange}
-          />
-        </div>
-
-        {/* Info de nome e email */}
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <div style={{
-            fontWeight: 800, fontSize: '1.125rem', color: 'var(--text)', lineHeight: 1.2,
-          }}>
-            {name || t('settings.fullNamePlaceholder')}
-          </div>
-          <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>
-            {email}
-          </div>
-          {city && (
-            <div style={{ fontSize: '.75rem', color: 'var(--text-faint)', marginTop: '.15rem' }}>
-              📍 {city}
+      {/* ══════════════════════════════════════════════════
+          HERO — Avatar + nome + logout
+      ══════════════════════════════════════════════════ */}
+      <Card style={{ marginBottom: '1.25rem' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '1.25rem',
+          padding: '1.5rem',
+          background: 'linear-gradient(130deg, var(--primary-hl) 0%, var(--surface) 65%)',
+          flexWrap: 'wrap',
+        }}>
+          {/* Avatar */}
+          <div
+            style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+            onClick={() => photoRef.current?.click()}
+            title={t('settings.changePhoto')}
+          >
+            <div style={{
+              width: 80, height: 80, borderRadius: '50%', overflow: 'hidden',
+              border: '3px solid var(--primary)',
+              boxShadow: '0 0 0 4px var(--primary-hl)',
+              background: 'var(--surface-offset)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary)',
+            }}>
+              {photoUrl
+                ? <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+                : <span>{initials || '🐾'}</span>}
             </div>
-          )}
-          <div style={{ display: 'flex', gap: '.375rem', marginTop: '.5rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-green" style={{ fontSize: '.7rem' }}>
-              ✓ {t('settings.activeAccount')}
-            </span>
+            <div style={{
+              position: 'absolute', bottom: 1, right: 1,
+              width: 24, height: 24, borderRadius: '50%',
+              background: 'var(--primary)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '.65rem', border: '2px solid var(--surface)',
+              boxShadow: '0 1px 4px rgba(0,0,0,.2)',
+            }}>📷</div>
+            <input ref={photoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
           </div>
+
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontWeight: 800, fontSize: '1.1875rem', color: 'var(--text)', lineHeight: 1.2 }}>
+              {name || t('settings.fullNamePlaceholder')}
+            </div>
+            <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{email}</div>
+            {(city || phone) && (
+              <div style={{ fontSize: '.75rem', color: 'var(--text-faint)', marginTop: '.2rem' }}>
+                {city && `📍 ${city}`}{city && phone && ' · '}{phone && `📱 ${phone}`}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '.375rem', marginTop: '.5rem', flexWrap: 'wrap' }}>
+              <span className="badge badge-green" style={{ fontSize: '.7rem' }}>
+                ✓ {t('settings.activeAccount', { defaultValue: 'Active account' })}
+              </span>
+            </div>
+          </div>
+
+          {/* Logout */}
+          <button
+            type="button" onClick={logout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '.375rem',
+              padding: '.45rem 1rem', borderRadius: 'var(--r-full)',
+              border: '1.5px solid var(--border)', background: 'var(--surface)',
+              color: 'var(--text-muted)', fontWeight: 600, fontSize: '.8125rem',
+              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+              transition: 'all var(--trans)',
+            }}
+          >
+            🚪 {t('settings.logout', { defaultValue: 'Sign out' })}
+          </button>
         </div>
+      </Card>
 
-        {/* Botão de sair */}
-        <button
-          type="button"
-          onClick={logout}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '.375rem',
-            padding: '.4rem .875rem', borderRadius: 'var(--r-full)',
-            border: '1.5px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--text-muted)',
-            fontWeight: 600, fontSize: '.8125rem',
-            cursor: 'pointer', fontFamily: 'inherit',
-            transition: 'all var(--trans)', minHeight: 36, flexShrink: 0,
-          }}
-        >
-          🚪 {t('settings.logout', { defaultValue: 'Sair' })}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-        {/* ── Dados pessoais ── */}
-        <SectionCard
+      {/* ══════════════════════════════════════════════════
+          DADOS PESSOAIS
+      ══════════════════════════════════════════════════ */}
+      <Card style={{ marginBottom: '1.25rem' }}>
+        <CardHeader
           icon="👤"
           title={t('settings.personalData')}
           subtitle={t('settings.personalSubtitle')}
-          accent
-        >
+        />
+        <CardBody>
           {/* Nome */}
-          <FormRow icon="👤" label={t('settings.fullName')} required>
+          <div style={{ marginBottom: '1.125rem' }}>
+            <FieldLabel label={t('settings.fullName')} />
             <input
               className="form-input"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder={t('settings.fullNamePlaceholder')}
+              autoComplete="name"
+              maxLength={80}
             />
-          </FormRow>
+          </div>
 
           {/* Email */}
-          <FormRow icon="✉️" label={t('settings.email')} required>
+          <div style={{ marginBottom: '1.125rem' }}>
+            <FieldLabel label={t('settings.email')} />
             <input
               type="email"
               className="form-input"
@@ -426,131 +792,169 @@ export default function SettingsPage() {
               placeholder="email@exemplo.com"
               autoComplete="email"
             />
-          </FormRow>
+          </div>
 
-          {/* Telefone e cidade numa linha */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
-            <FormRow icon="📱" label={t('settings.phone')}>
-              <input
-                type="tel"
-                className="form-input"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder={t('settings.phonePlaceholder')}
-                autoComplete="tel"
-              />
-            </FormRow>
-            <FormRow icon="📍" label={t('settings.city')}>
-              <input
-                className="form-input"
-                value={city}
-                onChange={e => setCity(e.target.value)}
-                placeholder={t('settings.cityPlaceholder')}
-              />
-            </FormRow>
+          {/* Telefone */}
+          <div style={{ marginBottom: '1.125rem' }}>
+            <FieldLabel
+              label={t('settings.phone')}
+              hint={t('btn.optional', { defaultValue: 'optional' })}
+            />
+            <PhoneInput
+              value={phone}
+              onChange={(e164, valid) => { setPhone(e164); setPhoneValid(valid) }}
+            />
+          </div>
+
+          {/* Cidade */}
+          <div style={{ marginBottom: '1.125rem' }}>
+            <FieldLabel
+              label={t('settings.city', { defaultValue: 'City' })}
+              hint={t('btn.optional', { defaultValue: 'optional' })}
+            />
+            <CityAutocomplete
+              value={city}
+              onChange={setCity}
+              placeholder={t('settings.cityPlaceholder', { defaultValue: 'Start typing…' })}
+              lang={i18n.language}
+            />
           </div>
 
           {/* Bio */}
-          <FormRow
-            icon="📝"
-            label={t('settings.about')}
-            hint={t('btn.optional')}
-          >
+          <div>
+            <FieldLabel
+              label={t('settings.about')}
+              hint={t('btn.optional', { defaultValue: 'optional' })}
+            />
             <textarea
               className="form-input"
               rows={3}
               value={bio}
-              onChange={e => setBio(e.target.value)}
+              onChange={e => setBio(e.target.value.slice(0, 300))}
               placeholder={t('settings.aboutPlaceholder')}
-              style={{ resize: 'vertical', minHeight: 68, fontFamily: 'inherit', lineHeight: 1.5 }}
+              style={{ resize: 'vertical', minHeight: 72, fontFamily: 'inherit', lineHeight: 1.5 }}
             />
-            <div style={{
-              fontSize: '.7rem', color: 'var(--text-faint)',
-              marginTop: '.25rem', textAlign: 'right',
-            }}>
-              {bio.length}/300
+            <div style={{ fontSize: '.7rem', color: bio.length > 270 ? 'var(--warn)' : 'var(--text-faint)', textAlign: 'right', marginTop: '.2rem' }}>
+              {bio.length} / 300
             </div>
-          </FormRow>
-        </SectionCard>
+          </div>
+        </CardBody>
+      </Card>
 
-        {/* ── Idioma ── */}
-        <SectionCard icon="🌍" title={t('settings.language')} subtitle={t('settings.languageHint')}>
-          <LanguageSelector />
-        </SectionCard>
+      {/* ══════════════════════════════════════════════════
+          IDIOMA + APARÊNCIA (2 colunas)
+      ══════════════════════════════════════════════════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+        <Card>
+          <CardHeader icon="🌍" title={t('settings.language')} />
+          <CardBody>
+            <LanguageSelector />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader icon="🎨" title={t('settings.appearance', { defaultValue: 'Appearance' })} subtitle={t('settings.themeHint')} />
+          <CardBody>
+            <p style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginBottom: '.75rem' }}>
+              {t('settings.theme')}
+            </p>
+            <div style={{ display: 'flex', gap: '.5rem' }}>
+              {['☀️', '🌙'].map((icon, i) => (
+                <button
+                  key={i} type="button"
+                  style={{
+                    flex: 1, padding: '.6rem', borderRadius: 'var(--r-lg)',
+                    border: `1.5px solid ${i === 0 ? 'var(--primary)' : 'var(--border)'}`,
+                    background: i === 0 ? 'var(--primary-hl)' : 'var(--surface)',
+                    cursor: 'pointer', fontSize: '1.25rem', transition: 'all var(--trans)',
+                  }}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
 
-        {/* ── Notificações ── */}
-        <SectionCard icon="🔔" title={t('settings.notifications')}>
+      {/* ══════════════════════════════════════════════════
+          NOTIFICAÇÕES
+      ══════════════════════════════════════════════════ */}
+      <Card style={{ marginBottom: '1.25rem' }}>
+        <CardHeader icon="🔔" title={t('settings.notifications')} />
+        <CardBody>
           <NotifRow label={t('settings.vaccineAlert')}  sub={t('settings.vaccineAlertHint')}  initial={true}  />
           <NotifRow label={t('settings.medAlert')}      sub={t('settings.medAlertHint')}      initial={true}  />
           <NotifRow label={t('settings.symptomAlert')}  sub={t('settings.symptomAlertHint')}  initial={true}  />
           <NotifRow label={t('settings.weeklyDigest')}  sub={t('settings.weeklyDigestHint')}  initial={false} />
           <NotifRow label={t('settings.urgentAlerts')}  sub={t('settings.urgentAlertsHint')}  initial={true}  />
-        </SectionCard>
+        </CardBody>
+      </Card>
 
-        {/* ── Dados & privacidade ── */}
-        <SectionCard icon="🔒" title={t('settings.dangerZone')}>
-          <div style={{ marginBottom: '.75rem' }}>
-            <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginBottom: '.5rem' }}>
-              {t('settings.exportHint')}
+      {/* ══════════════════════════════════════════════════
+          DADOS & PRIVACIDADE
+      ══════════════════════════════════════════════════ */}
+      <Card style={{ marginBottom: '2rem' }}>
+        <CardHeader icon="🔒" title={t('settings.dangerZone', { defaultValue: 'Data & Privacy' })} />
+        <CardBody>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.875rem' }}>
+            <div style={{
+              padding: '1rem', borderRadius: 'var(--r-lg)',
+              background: 'var(--surface-offset)', border: '1.5px solid var(--border)',
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '.875rem', marginBottom: '.375rem' }}>
+                📦 {t('settings.exportData')}
+              </div>
+              <p style={{ fontSize: '.775rem', color: 'var(--text-muted)', marginBottom: '.75rem', lineHeight: 1.4 }}>
+                {t('settings.exportHint')}
+              </p>
+              <button type="button" className="btn btn-secondary" style={{ width: '100%', fontSize: '.8125rem' }}
+                onClick={() => exportCSV(name, email)}>
+                ⬇ {t('settings.exportBtn')}
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%' }}
-              onClick={() => exportCSV(name, email)}
-            >
-              ⬇ {t('settings.exportBtn')}
-            </button>
-          </div>
-          <div style={{ borderTop: '1px solid var(--divider)', paddingTop: '.75rem' }}>
-            <div style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginBottom: '.5rem' }}>
-              {t('settings.deleteHint')}
+            <div style={{
+              padding: '1rem', borderRadius: 'var(--r-lg)',
+              background: 'var(--err-hl)', border: '1.5px solid color-mix(in oklab, var(--err) 20%, transparent)',
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '.875rem', marginBottom: '.375rem', color: 'var(--err)' }}>
+                🗑 {t('settings.deleteAccount')}
+              </div>
+              <p style={{ fontSize: '.775rem', color: 'var(--text-muted)', marginBottom: '.75rem', lineHeight: 1.4 }}>
+                {t('settings.deleteHint')}
+              </p>
+              <button type="button" className="btn btn-ghost" style={{ width: '100%', fontSize: '.8125rem', color: 'var(--err)', borderColor: 'var(--err)' }}
+                onClick={() => setDeleteOpen(true)}>
+                {t('settings.deleteBtn')}
+              </button>
             </div>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ width: '100%', color: 'var(--err)', borderColor: 'var(--err-hl)' }}
-              onClick={() => setDeleteOpen(true)}
-            >
-              🗑 {t('settings.deleteBtn')}
-            </button>
           </div>
-        </SectionCard>
-      </div>
+        </CardBody>
+      </Card>
 
-      {/* ── Botões de acção ── */}
+      {/* ══════════════════════════════════════════════════
+          SAVE BAR
+      ══════════════════════════════════════════════════ */}
       <div style={{
         display: 'flex', gap: '.75rem', justifyContent: 'flex-end',
-        marginTop: '1.5rem', paddingBottom: '2rem',
+        paddingBottom: '3rem',
       }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={handleDiscard}
-          disabled={saving}
-        >
+        <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={saving}>
           {t('btn.discard')}
         </button>
         <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={saving}
-          style={{ minWidth: 140 }}
+          type="button" className="btn btn-primary" onClick={handleSave}
+          disabled={saving || !name.trim()}
+          style={{ minWidth: 148 }}
         >
           {saving
-            ? t('settings.saving', { defaultValue: 'Guardando…' })
+            ? t('settings.saving', { defaultValue: 'Saving…' })
             : saved
             ? `✓ ${t('settings.saved')}`
             : t('btn.saveChanges')}
         </button>
       </div>
 
-      <DeleteAccountModal
-        isOpen={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onConfirm={handleDeleteAccount}
-      />
+      <DeleteAccountModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDeleteAccount} />
     </div>
   )
 }
