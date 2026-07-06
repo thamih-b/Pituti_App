@@ -1,3 +1,6 @@
+// pituti-api/app/api/pets/[petId]/cares/[id]/route.ts
+// FIX: este ficheiro tinha o conteúdo do route.ts (GET lista + POST).
+// Conteúdo correcto: GET (único) + PATCH (actualiza) + DELETE
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
@@ -6,19 +9,28 @@ import { findOwnedPetById } from '@/lib/pets';
 import { mapCare } from '@/lib/mappers/care';
 
 const UpdateCareSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  type: z.string().max(50).optional(),
-  frequency: z.number().int().positive().optional().nullable(),
-  periodType: z.enum(['day', 'week', 'month']).optional().nullable(),
-  time: z.string().nullish(),
-  notes: z.string().max(500).nullish(),
-  status: z.enum(['pending', 'done', 'skipped']).optional(),
+  name:       z.string().min(1).max(100).optional(),
+  type:       z.string().max(50).optional(),
+  frequency:  z.union([z.number().int().positive(), z.string()]).optional().nullable(),
+  periodType: z.string().optional().nullable(),
+  time:       z.string().max(10).nullish(),
+  notes:      z.string().max(500).nullish(),
+  status:     z.enum(['pending', 'done', 'skipped']).optional(),
 });
 
-// GET /api/pets/:petId/cares/:id — busca um cuidado específico
+const COLUMN_MAP: Record<string, string> = {
+  name:       'name',
+  type:       'type',
+  frequency:  'frequency',
+  periodType: 'period_type',
+  time:       'time',
+  notes:      'notes',
+  status:     'status',
+};
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ petId: string; id: string }> }
+  { params }: { params: Promise<{ petId: string; id: string }> },
 ) {
   try {
     const auth = await requireAuth(request);
@@ -27,24 +39,19 @@ export async function GET(
     if (!pet) return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
 
     const [row] = await query(
-      `SELECT id, pet_id, name, type, frequency, period_type, time, notes, status, created_at
-       FROM cares
-       WHERE id = $1 AND pet_id = $2`,
-      [id, petId]
+      `SELECT * FROM cares WHERE id = $1 AND pet_id = $2`,
+      [id, petId],
     );
     if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
-
     return NextResponse.json({ data: mapCare(row) });
   } catch (error: any) {
-    const status = error?.status ?? 500;
-    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status: error?.status ?? 500 });
   }
 }
 
-// PATCH /api/pets/:petId/cares/:id — actualiza um cuidado
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ petId: string; id: string }> }
+  { params }: { params: Promise<{ petId: string; id: string }> },
 ) {
   try {
     const auth = await requireAuth(request);
@@ -52,46 +59,34 @@ export async function PATCH(
     const pet = await findOwnedPetById(petId, auth.userId);
     if (!pet) return NextResponse.json({ error: 'Mascota não encontrada' }, { status: 404 });
 
-    const body = await request.json();
+    const body   = await request.json();
     const result = UpdateCareSchema.safeParse(body);
     if (!result.success) return NextResponse.json({ errors: result.error.issues }, { status: 400 });
 
-    const fields = Object.entries(result.data).filter(([, value]) => value !== undefined);
-    if (fields.length === 0) return NextResponse.json({ error: 'Nenhum campo para actualizar' }, { status: 400 });
+    const entries = Object.entries(result.data).filter(([, v]) => v !== undefined);
+    if (!entries.length) return NextResponse.json({ error: 'Nenhum campo' }, { status: 400 });
 
-    const columnMap: Record<string, string> = {
-      name: 'name',
-      type: 'type',
-      frequency: 'frequency',
-      periodType: 'period_type',
-      time: 'time',
-      notes: 'notes',
-      status: 'status',
-    };
-
-    const setClause = fields.map(([key], index) => `${columnMap[key]} = $${index + 1}`).join(', ');
-    const values = fields.map(([, value]) => value);
+    const setClause = entries
+      .map(([k], i) => `${COLUMN_MAP[k] ?? k} = $${i + 1}`)
+      .join(', ');
+    const values = entries.map(([, v]) => (typeof v === 'number' ? String(v) : v));
 
     const [row] = await query(
-      `UPDATE cares
-       SET ${setClause}
-       WHERE id = $${fields.length + 1} AND pet_id = $${fields.length + 2}
-       RETURNING id, pet_id, name, type, frequency, period_type, time, notes, status, created_at`,
-      [...values, id, petId]
+      `UPDATE cares SET ${setClause}
+       WHERE id = $${entries.length + 1} AND pet_id = $${entries.length + 2}
+       RETURNING *`,
+      [...values, id, petId],
     );
     if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
-
     return NextResponse.json({ data: mapCare(row) });
   } catch (error: any) {
-    const status = error?.status ?? 500;
-    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status: error?.status ?? 500 });
   }
 }
 
-// DELETE /api/pets/:petId/cares/:id — elimina um cuidado
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ petId: string; id: string }> }
+  { params }: { params: Promise<{ petId: string; id: string }> },
 ) {
   try {
     const auth = await requireAuth(request);
@@ -101,13 +96,11 @@ export async function DELETE(
 
     const [row] = await query(
       'DELETE FROM cares WHERE id = $1 AND pet_id = $2 RETURNING id',
-      [id, petId]
+      [id, petId],
     );
     if (!row) return NextResponse.json({ error: 'Cuidado não encontrado' }, { status: 404 });
-
     return new NextResponse(null, { status: 204 });
   } catch (error: any) {
-    const status = error?.status ?? 500;
-    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status });
+    return NextResponse.json({ error: error?.message ?? 'Erro interno' }, { status: error?.status ?? 500 });
   }
 }

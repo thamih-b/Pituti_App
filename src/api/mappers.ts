@@ -54,22 +54,24 @@ export function toApiUpdatePetDto(dto: UpdatePetDto) {
   }
 }
 
+
+// FIX: 'date' e 'next_due_date' — nomes correctos para a rota de vaccines
 export function toApiCreateVaccineDto(dto: CreateVaccineDto) {
   return {
-    name: dto.name,
-    vaccinedate: dto.date,
-    nextdosedate: dto.nextDueDate,
-    veterinarian: dto.veterinary,
-    notes: dto.notes,
+    name:          dto.name,
+    date:          dto.date,
+    next_due_date: dto.nextDueDate,
+    veterinary:    dto.veterinary,
+    notes:         dto.notes,
   }
 }
 
 export function toApiUpdateVaccineDto(dto: UpdateVaccineDto) {
   return {
     name: dto.name,
-    vaccinedate: dto.date,
-    nextdosedate: dto.nextDueDate,
-    veterinarian: dto.veterinary,
+    date: dto.date,
+    next_due_date: dto.nextDueDate,
+    veterinary: dto.veterinary,
     notes: dto.notes,
   }
 }
@@ -154,13 +156,16 @@ export function toApiUpdateCareDto(dto: UpdateCareDto) {
   }
 }
 
+// FIX: envia 'veterinary' em vez de 'vet' — nome correcto no schema do DB
 export function toApiCreateNoteDto(dto: CreateNoteDto) {
   return {
-    content: dto.content,
-    title: dto.type,
-    notedate: new Date().toISOString().split('T')[0],
+    type:       dto.type,
+    content:    dto.content,
+    date:       dto.date,
+    veterinary: dto.vet,  // ← FIX: 'vet' do frontend → 'veterinary' na DB
   }
 }
+
 
 export function toApiUpdateNoteDto(dto: UpdateNoteDto) {
   return {
@@ -301,18 +306,16 @@ export function mapApiCare(apiCare: any): ApiCare {
   }
 }
 
-export function mapApiNote(apiNote: any): ApiNote {
+export function mapApiNote(raw: any): ApiNote {
   return {
-    id: apiNote.id,
-    petId: apiNote.petId ?? apiNote.petid,
-    content: apiNote.content,
-    veterinary: apiNote.veterinary ?? null,
-    type: apiNote.type ?? apiNote.title ?? undefined,
-    createdAt:
-      apiNote.createdAt ??
-      apiNote.createdat ??
-      apiNote.noteDate ??
-      apiNote.notedate,
+    id:        raw.id,
+    petId:     raw.petId   ?? raw.pet_id,
+    type:      raw.type,
+    content:   raw.content,
+    date:      raw.date    ?? null,
+    // FIX: aceita tanto 'vet' como 'veterinary' da API
+    vet:       raw.vet     ?? raw.veterinary ?? null,
+    createdAt: raw.createdAt ?? raw.created_at,
   }
 }
 
