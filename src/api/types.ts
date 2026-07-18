@@ -177,6 +177,8 @@ export interface CreateCareDto {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  // FIX (sync): intervalo customizado ("a cada X dias"), usado quando periodType é null
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
@@ -187,14 +189,19 @@ export interface UpdateCareDto {
   type?: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  // FIX (sync): intervalo customizado ("a cada X dias"), usado quando periodType é null
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
+  // FIX (sync): estado diário de conclusão, persistido no servidor
+  doneDates?: Record<string, { done: number; doneState: boolean }>
 }
 
 // ── Notes DTOs ────────────────────────────────────────────────────────────────
 
 export interface CreateNoteDto {
+  [x: string]: any
   content: string
   veterinary?: string | null
   type?: NoteType
@@ -361,9 +368,13 @@ export interface ApiCare {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  // FIX (sync): intervalo customizado ("a cada X dias"), persistido no servidor
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
+  // FIX (sync): estado diário de conclusão, persistido no servidor
+  doneDates?: Record<string, { done: number; doneState: boolean }>
   createdAt: string
 }
 

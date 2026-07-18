@@ -1,6 +1,4 @@
 // lib/mappers/care.ts
-// FIX: frequency pode ser VARCHAR (schema original) ou INTEGER (schema novo)
-// FIX: time e status podem não existir antes da migration V2
 export function mapCare(row: any) {
   return {
     id:         row.id,
@@ -13,10 +11,17 @@ export function mapCare(row: any) {
           ? row.frequency
           : (isNaN(Number(row.frequency)) ? row.frequency : Number(row.frequency)))
       : null,
-    periodType: row.period_type ?? null,
-    time:       row.time       ?? null,
-    notes:      row.notes      ?? null,
-    status:     row.status     ?? 'pending',
+    periodType:   row.period_type ?? null,
+    // FIX (sync): intervalo customizado ("a cada X dias") persistido no servidor
+    intervalDays: row.interval_days != null ? Number(row.interval_days) : null,
+    time:         row.time       ?? null,
+    notes:        row.notes      ?? null,
+    status:       row.status     ?? 'pending',
+    // FIX (sync): estado diário de conclusão persistido no servidor.
+    // done_dates vem como objeto (jsonb) ou, nalguns drivers, como string JSON.
+    doneDates: typeof row.done_dates === 'string'
+      ? JSON.parse(row.done_dates || '{}')
+      : (row.done_dates ?? {}),
     createdAt:  row.created_at,
   };
 }

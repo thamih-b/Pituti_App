@@ -8,7 +8,7 @@ import {
 } from 'react'
 import type { CareEditData } from '../components/EditCareModal'
 import { petsApi, caresApi } from '../api'
-import type { ApiCare } from '../api'
+import type { ApiCare, UpdateCareDto } from '../api'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useUser } from './UserContext'
@@ -37,6 +37,7 @@ interface CaresContextValue {
   items: CareItem[]
   loading: boolean
   error: string | null
+  refresh: () => Promise<void>
   setCareProgress: (id: string, dateStr: string, done: number, doneState: boolean) => void
   editCare: (care: CareItem) => void
   updateCare: (updated: CareEditData) => void
@@ -96,25 +97,6 @@ function buildSub(u: CareEditData, t: TFunction): string {
   return u.total > 1 && u.quantity?.trim() ? u.quantity.trim() : freq
 }
 
-// Persistência localStorage
-function loadCares(userId: string): CareItem[] {
-  if (!userId) return []
-  try {
-    return JSON.parse(localStorage.getItem(`pituti-cares-${userId}`) ?? 'null') ?? []
-  } catch {
-    return []
-  }
-}
-
-function saveCares(userId: string, items: CareItem[]): void {
-  if (!userId) return
-  try {
-    localStorage.setItem(`pituti-cares-${userId}`, JSON.stringify(items))
-  } catch {
-    // ignore
-  }
-}
-
 const CARE_EMOJI: Record<string, string> = {
   food: '🍽️', water: '💧', walk: '🦮', bath: '🛁',
   brush: '🪮', medication: '💊', other: '⭐',
@@ -128,26 +110,57 @@ const CARE_BG: Record<string, string> = {
   other: 'linear-gradient(135deg,#F5F5F5,#E0E0E0)',
 }
 
+// FIX (sync): inverso de CARE_EMOJI, necessário para reconstruir o `type`
+// (campo obrigatório na API) a partir do emoji guardado localmente.
+function emojiToType(emoji: string): string {
+  const found = Object.entries(CARE_EMOJI).find(([, e]) => e === emoji)
+  return found?.[0] ?? 'other'
+}
+
 const todayStr = new Date().toISOString().split('T')[0]
 
+// FIX (sync): antes, esta função ignorava por completo o período (day/week/month),
+// o intervalo customizado e o estado diário de conclusão vindos da API — devolvia
+// sempre period:'day', intervalDays:1 e doneByDate:{}. Isso fazia com que, ao abrir
+// a app noutro aparelho, os cuidados voltassem sempre ao valor por omissão em vez
+// de mostrarem o que foi realmente configurado/concluído.
 function mapApiCare(c: ApiCare, petId: string, t: TFunction): CareItem {
   const freq = typeof c.frequency === 'number' ? c.frequency : 1
+
+  let period = 'day'
+  let intervalDays = 1
+  if (c.periodType === 'week') {
+    period = 'week'
+    intervalDays = 7
+  } else if (c.periodType === 'month') {
+    period = 'month'
+    intervalDays = 30
+  } else if (c.periodType === 'day') {
+    period = 'day'
+    intervalDays = 1
+  } else if (c.intervalDays != null && c.intervalDays > 1) {
+    // periodType não guardado no servidor → período "personalizado" (a cada X dias)
+    period = 'custom'
+    intervalDays = c.intervalDays
+  }
+
   return {
     id: c.id,
     petId,
     emoji: CARE_EMOJI[c.type ?? 'other'] ?? '⭐',
     title: c.name,
-    sub: freq > 1 ? t('cares.sub.perDay') : t('cares.sub.perDay'),
+    sub: buildSub({ period, intervalDays, total: freq, quantity: c.notes ?? '' } as CareEditData, t),
     total: freq,
-    period: 'day',
-    intervalDays: 1,
+    period,
+    intervalDays,
     startDate: (c as any).createdAt?.split('T')[0] ?? todayStr,
     quantity: c.notes ?? '',
     notify: true,
-    time: (c as any).time ?? '',
+    time: c.time ?? '',
     recurring: true,
     bg: CARE_BG[c.type ?? 'other'] ?? CARE_BG.other,
-    doneByDate: {},
+    // FIX (sync): estado diário de conclusão, agora persistido no servidor
+    doneByDate: c.doneDates ?? {},
   }
 }
 
@@ -163,169 +176,186 @@ export function CaresProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // FIX: aguardar ready antes de qualquer acesso ao localStorage ou API
+  // FIX (sync): `refresh` passou a ser a única fonte de verdade — sem
+  // localStorage. Segue o mesmo padrão já validado em PetsContext.
+  const refresh = useCallback(async () => {
     if (!ready || !isAuthenticated || !user.id) return
-
-    let cancelled = false
     setLoading(true)
     setError(null)
-
-    // 1. localStorage imediato (chave correcta com user.id real)
-    const stored = loadCares(user.id)
-    if (stored.length) setItems(stored)
-
-    // 2. API em background
-    petsApi
-      .getAll(user.id)
-      .then(async res => {
-        const pets = res.data as any[]
-        const results = await Promise.all(
-          pets.map(p =>
-            caresApi
-              .getAll(p.id)
-              .then(r => (r.data as any[]).map(c => mapApiCare(c, p.id, t)))
-              .catch(() => [] as CareItem[])
-          )
+    try {
+      const petsRes = await petsApi.getAll(user.id)
+      const pets = petsRes.data as any[]
+      const results = await Promise.all(
+        pets.map(p =>
+          caresApi
+            .getAll(p.id)
+            .then(r => (r.data as any[]).map(c => mapApiCare(c, p.id, t)))
+            .catch(() => [] as CareItem[])
         )
-        if (!cancelled) {
-          const apiCares = results.flat()
-          if (apiCares.length) {
-            setItems(apiCares)
-            saveCares(user.id, apiCares)
-          }
-        }
-      })
-      .catch(err => {
-        if (!cancelled) setError(err?.message ?? t('cares.errorLoading'))
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      )
+      setItems(results.flat())
+    } catch (e: any) {
+      setError(e?.message ?? t('cares.errorLoading'))
+    } finally {
+      setLoading(false)
+    }
+  }, [isAuthenticated, user.id, ready, t])
 
-    return () => { cancelled = true }
-  }, [ready, isAuthenticated, user.id, t])
+  useEffect(() => {
+    if (ready && isAuthenticated && user.id) {
+      refresh()
+    } else if (ready && !isAuthenticated) {
+      setItems([])
+    }
+  }, [isAuthenticated, user.id, ready, refresh])
 
+  // FIX (sync): antes só gravava em localStorage. Agora persiste o estado
+  // diário de conclusão no servidor (coluna done_dates), para aparecer igual
+  // em qualquer aparelho onde o utilizador entre.
   const setCareProgress = useCallback(
     (id: string, dateStr: string, done: number, doneState: boolean) => {
-      setItems(prev => {
-        const next = prev.map(item =>
-          item.id !== id
-            ? item
-            : { ...item, doneByDate: { ...item.doneByDate, [dateStr]: { done, doneState } } }
-        )
-        if (user.id) saveCares(user.id, next)
-        return next
+      const care = items.find(c => c.id === id)
+      if (!care) return
+      const nextDoneByDate = { ...care.doneByDate, [dateStr]: { done, doneState } }
+
+      // Atualização otimista local
+      setItems(prev => prev.map(item => (item.id !== id ? item : { ...item, doneByDate: nextDoneByDate })))
+
+      caresApi.update(care.petId, id, { doneDates: nextDoneByDate }).catch(e => {
+        // reverte em caso de falha e avisa
+        setItems(prev => prev.map(item => (item.id !== id ? item : { ...item, doneByDate: care.doneByDate })))
+        setError(e?.message ?? t('cares.errorLoading'))
       })
     },
-    [user.id]
+    [items, t]
   )
 
-  const editCare = useCallback((care: CareItem) => {
-    setItems(prev => prev.map(c => (c.id !== care.id ? c : { ...c, ...care })))
-  }, [])
+  // FIX (sync): editCare (usado no ecrã de Cuidados) agora grava na API —
+  // antes só alterava o estado em memória do aparelho atual.
+  const editCare = useCallback(
+    (care: CareItem) => {
+      const dto: UpdateCareDto = {
+        name: care.title,
+        type: emojiToType(care.emoji),
+        frequency: care.total,
+        periodType: (care.period === 'day' || care.period === 'week' || care.period === 'month' ? care.period : null) as any,
+        intervalDays: care.period === 'custom' ? care.intervalDays : null,
+        time: care.time || null,
+        notes: care.quantity || null,
+      }
 
+      setItems(prev => prev.map(c => (c.id !== care.id ? c : { ...c, ...care })))
+
+      caresApi
+        .update(care.petId, care.id, dto)
+        .then(res => {
+          const updated = mapApiCare(res.data, care.petId, t)
+          setItems(prev => prev.map(c => (c.id !== care.id ? c : { ...updated, doneByDate: c.doneByDate })))
+        })
+        .catch(e => setError(e?.message ?? t('cares.errorLoading')))
+    },
+    [t]
+  )
+
+  // FIX (sync): updateCare (usado no Dashboard/EditCareModal) agora grava na
+  // API — antes só persistia em localStorage.
   const updateCare = useCallback(
     (u: CareEditData) => {
-      setItems(prev => {
-        const next = prev.map(c =>
-          c.id !== u.id
-            ? c
-            : {
-                ...c,
-                emoji: u.emoji,
-                title: u.title,
-                total: Math.max(1, Number(u.total)),
-                period: u.period ?? 'day',
-                intervalDays: resolveIntervalDays(u),
-                quantity: u.quantity ?? '',
-                notify: u.notify ?? true,
-                time: u.time ?? c.time,
-                recurring: (u as any).recurring ?? c.recurring,
-                sub: buildSub(u, t),
-                bg: u.bg ?? c.bg,
-              }
-        )
-        if (user.id) saveCares(user.id, next)
-        return next
-      })
+      const current = items.find(c => c.id === u.id)
+      if (!current) return
+
+      const intervalDays = resolveIntervalDays(u)
+      const nextLocal: CareItem = {
+        ...current,
+        emoji: u.emoji,
+        title: u.title,
+        total: Math.max(1, Number(u.total)),
+        period: u.period ?? 'day',
+        intervalDays,
+        quantity: u.quantity ?? '',
+        notify: u.notify ?? true,
+        time: u.time ?? current.time,
+        recurring: (u as any).recurring ?? current.recurring,
+        sub: buildSub(u, t),
+        bg: u.bg ?? current.bg,
+      }
+
+      setItems(prev => prev.map(c => (c.id !== u.id ? c : nextLocal)))
+
+      const dto: UpdateCareDto = {
+        name: u.title,
+        type: emojiToType(u.emoji),
+        frequency: Math.max(1, Number(u.total)),
+        periodType: (u.period === 'day' || u.period === 'week' || u.period === 'month' ? u.period : null) as any,
+        intervalDays: u.period === 'custom' ? intervalDays : null,
+        time: u.time || null,
+        notes: u.quantity || null,
+      }
+
+      caresApi
+        .update(current.petId, u.id, dto)
+        .then(res => {
+          const updated = mapApiCare(res.data, current.petId, t)
+          setItems(prev => prev.map(c => (c.id !== u.id ? c : { ...updated, doneByDate: c.doneByDate })))
+        })
+        .catch(e => setError(e?.message ?? t('cares.errorLoading')))
     },
-    [t, user.id]
+    [items, t]
   )
 
   const deleteCare = useCallback(
     async (id: string) => {
       const care = items.find(c => c.id === id)
-      if (care) {
-        try {
-          await caresApi.delete(care.petId, id)
-        } catch {
-          // silencia
-        }
+      if (!care) return
+      // Atualização otimista: remove já da lista local
+      setItems(prev => prev.filter(c => c.id !== id))
+      try {
+        await caresApi.delete(care.petId, id)
+      } catch (e: any) {
+        // falhou no servidor → repõe o item localmente
+        setItems(prev => [...prev, care])
+        setError(e?.message ?? t('cares.errorLoading'))
       }
-      setItems(prev => {
-        const next = prev.filter(c => c.id !== id)
-        if (user.id) saveCares(user.id, next)
-        return next
-      })
     },
-    [items, user.id]
+    [items, t]
   )
 
+  // FIX (sync): addCare deixou de ter um "modo local" — todo o cuidado tem de
+  // existir no servidor para poder ser visto noutros aparelhos. Se a API
+  // falhar, o item NÃO é criado localmente (evita fantasmas que nunca
+  // existiram no servidor e desaparecem ao mudar de aparelho).
   const addCare = useCallback(
     async (item: NewCareItem) => {
       if (!item.petId) {
-        setItems(prev => {
-          const next = [...prev, { ...item, id: `care-${Date.now()}`, doneByDate: {} }]
-          if (user.id) saveCares(user.id, next)
-          return next
-        })
+        setError(t('cares.errorLoading'))
         return
       }
       try {
         const dto = {
           name: item.title,
-          type:
-            item.emoji === '🍽️' ? 'food'
-            : item.emoji === '💧' ? 'water'
-            : item.emoji === '🦮' ? 'walk'
-            : item.emoji === '🛁' ? 'bath'
-            : item.emoji === '🪮' ? 'brush'
-            : item.emoji === '💊' ? 'medication'
-            : 'other',
+          type: emojiToType(item.emoji),
           frequency: item.total,
-          periodType: item.period as any,
-          time: item.time,
-          notes: item.quantity,
+          periodType: (item.period === 'day' || item.period === 'week' || item.period === 'month' ? item.period : null) as any,
+          intervalDays: item.period === 'custom' ? item.intervalDays : null,
+          time: item.time || null,
+          notes: item.quantity || null,
           status: 'pending' as const,
-          startDate: item.startDate,
         }
         const res = await caresApi.create(item.petId, dto)
         const created = mapApiCare(res.data, item.petId, t)
-        setItems(prev => {
-          const next = [...prev, { ...created, doneByDate: {} }]
-          if (user.id) saveCares(user.id, next)
-          return next
-        })
-      } catch {
-        // fallback local se API falhar
-        setItems(prev => {
-          const next = [
-            ...prev,
-            { ...item, id: item.id ?? `care-${Date.now()}`, doneByDate: item.doneByDate ?? {} },
-          ]
-          if (user.id) saveCares(user.id, next)
-          return next
-        })
+        setItems(prev => [...prev, created])
+      } catch (e: any) {
+        setError(e?.message ?? t('cares.errorLoading'))
       }
     },
-    [t, user.id]
+    [t]
   )
 
   const value: CaresContextValue = {
     items,
     loading,
     error,
+    refresh,
     setCareProgress,
     editCare,
     updateCare,

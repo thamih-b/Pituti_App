@@ -1,6 +1,4 @@
 // pituti-api/app/api/pets/[petId]/cares/[id]/route.ts
-// FIX: este ficheiro tinha o conteúdo do route.ts (GET lista + POST).
-// Conteúdo correcto: GET (único) + PATCH (actualiza) + DELETE
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { z } from 'zod';
@@ -13,20 +11,29 @@ const UpdateCareSchema = z.object({
   type:       z.string().max(50).optional(),
   frequency:  z.union([z.number().int().positive(), z.string()]).optional().nullable(),
   periodType: z.string().optional().nullable(),
+  // FIX (sync): intervalo customizado ("a cada X dias")
+  intervalDays: z.number().int().positive().optional().nullable(),
   time:       z.string().max(10).nullish(),
   notes:      z.string().max(500).nullish(),
   status:     z.enum(['pending', 'done', 'skipped']).optional(),
+  // FIX (sync): estado diário de conclusão { "YYYY-MM-DD": { done, doneState } }
+  doneDates:  z.record(z.string(), z.object({ done: z.number(), doneState: z.boolean() })).optional(),
 });
 
 const COLUMN_MAP: Record<string, string> = {
-  name:       'name',
-  type:       'type',
-  frequency:  'frequency',
-  periodType: 'period_type',
-  time:       'time',
-  notes:      'notes',
-  status:     'status',
+  name:         'name',
+  type:         'type',
+  frequency:    'frequency',
+  periodType:   'period_type',
+  intervalDays: 'interval_days',
+  time:         'time',
+  notes:        'notes',
+  status:       'status',
+  doneDates:    'done_dates',
 };
+
+// Colunas cujo valor tem de ser serializado como JSON antes de ir para o Postgres (jsonb)
+const JSON_COLUMNS = new Set(['doneDates']);
 
 export async function GET(
   request: NextRequest,
@@ -69,7 +76,9 @@ export async function PATCH(
     const setClause = entries
       .map(([k], i) => `${COLUMN_MAP[k] ?? k} = $${i + 1}`)
       .join(', ');
-    const values = entries.map(([, v]) => (typeof v === 'number' ? String(v) : v));
+    const values = entries.map(([k, v]) =>
+      JSON_COLUMNS.has(k) ? JSON.stringify(v) : (typeof v === 'number' ? String(v) : v)
+    );;
 
     const [row] = await query(
       `UPDATE cares SET ${setClause}
