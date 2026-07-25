@@ -6,20 +6,25 @@ function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 const CONFIG = {
   vaccines: {
     table: 'vaccines',
+    // FIX (500 ao criar/editar vacina): as colunas reais da tabela `vaccines`
+    // (ver pituti-api/sql/schema.sql) são `next_dose_date` e `veterinarian` —
+    // o código anterior escrevia em `next_due_date` e `veterinary`, colunas
+    // que não existem, e o Postgres rebentava com 500 em todo o INSERT/UPDATE.
     insert: (petId, d) => sql`
-      INSERT INTO vaccines (pet_id, name, vaccine_date, next_due_date, veterinary, notes)
+      INSERT INTO vaccines (pet_id, name, vaccine_date, next_dose_date, veterinarian, notes)
       VALUES (${petId}, ${d.name}, ${d.date}, ${d.nextDueDate ?? null},
               ${d.veterinary ?? null}, ${d.notes ?? null}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE vaccines SET
-        name          = COALESCE(${d.name ?? null}, name),
-        vaccine_date  = COALESCE(${d.date ?? null}::date, vaccine_date),
-        next_due_date = COALESCE(${d.nextDueDate ?? null}::date, next_due_date),
-        veterinary    = COALESCE(${d.veterinary ?? null}, veterinary),
-        notes         = COALESCE(${d.notes ?? null}, notes)
+        name           = COALESCE(${d.name ?? null}, name),
+        vaccine_date   = COALESCE(${d.date ?? null}::date, vaccine_date),
+        next_dose_date = COALESCE(${d.nextDueDate ?? null}::date, next_dose_date),
+        veterinarian   = COALESCE(${d.veterinary ?? null}, veterinarian),
+        notes          = COALESCE(${d.notes ?? null}, notes)
       WHERE id = ${id} RETURNING *`,
+    // FIX: mapear de volta a partir dos nomes reais das colunas
     fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, date: r.vaccine_date,
-      nextDueDate: r.next_due_date, veterinary: r.veterinary, notes: r.notes, createdAt: r.created_at }),
+      nextDueDate: r.next_dose_date, veterinary: r.veterinarian, notes: r.notes, createdAt: r.created_at }),
   },
   medications: {
     table: 'medications',
@@ -104,11 +109,9 @@ export function createSubResourceService(storeKey) {
   return {
     async getAllForPet(petId) {
       // FIX: `${sql(table)}` deixou de ser suportado pelo driver do Neon —
-      // agora só aceita chamadas como tagged-template (sql`...`) ou via
-      // sql.query(...). Para interpolar um identificador "cru" (nome de
-      // tabela) dentro do template usa-se sql.unsafe(). Isto é seguro aqui
-      // porque `table` vem sempre de CONFIG (lista fixa no código), nunca
-      // de input do utilizador.
+      // usa-se sql.unsafe() para interpolar um identificador "cru" (nome de
+      // tabela). Seguro aqui porque `table` vem sempre de CONFIG (lista fixa
+      // no código), nunca de input do utilizador.
       const rows = await sql`SELECT * FROM ${sql.unsafe(table)} WHERE pet_id = ${petId} ORDER BY created_at DESC`
       return rows.map(fromRow)
     },
