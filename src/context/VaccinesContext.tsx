@@ -244,12 +244,41 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const updateVaccine = useCallback((petId: string, v: VaccineRecord) => {
+// FIX (sync): tenta reconstruir uma data ISO (YYYY-MM-DD) a partir do texto
+// já formatado guardado em VaccineRecord.applied (ex.: "24 jul. 2026").
+// Se não conseguir, devolve undefined e o campo 'date' simplesmente não é
+// enviado na atualização (o backend aceita atualizações parciais).
+function tryParseIsoDate(display: string): string | undefined {
+  if (!display) return undefined
+  if (/^\d{4}-\d{2}-\d{2}$/.test(display)) return display
+  const parsed = new Date(display)
+  if (isNaN(parsed.getTime())) return undefined
+  return parsed.toISOString().split('T')[0]
+}
+
+const updateVaccine = useCallback((petId: string, v: VaccineRecord) => {
+    // 1. Atualização otimista local (mantém a UI responsiva)
     setVaccinesByPet(prev => {
       const updated = (prev[petId] ?? []).map(x => (x.id === v.id ? v : x))
       saveVaccines(petId, updated)
       return { ...prev, [petId]: updated }
     })
+
+    // IDs temporários (ainda não confirmados pelo servidor) não têm o que atualizar na API
+    if (v.id.startsWith('v-')) return
+
+    // FIX (sync): antes esta função nunca chamava vaccinesApi.update — a
+    // alteração ficava só no aparelho atual (localStorage) e desaparecia ao
+    // atualizar a página, porque o próximo load() vinha buscar a versão
+    // antiga (sem a alteração) ao servidor e substituía o estado local.
+    const isoDate = tryParseIsoDate(v.applied)
+    vaccinesApi
+      .update(petId, v.id, {
+        name: v.name,
+        ...(isoDate ? { date: isoDate } : {}),
+        nextDueDate: v.nextDate || null,
+      })
+      .catch(err => console.warn('[VaccinesContext] updateVaccine API error:', err))
   }, [])
 
   return (

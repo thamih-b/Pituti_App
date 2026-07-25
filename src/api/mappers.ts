@@ -58,11 +58,14 @@ export function toApiUpdatePetDto(dto: UpdatePetDto) {
 // FIX: 'date' e 'next_due_date' — nomes correctos para a rota de vaccines
 export function toApiCreateVaccineDto(dto: CreateVaccineDto) {
   return {
-    name:          dto.name,
-    date:          dto.date,
-    next_due_date: dto.nextDueDate,
-    veterinary:    dto.veterinary,
-    notes:         dto.notes,
+    name:        dto.name,
+    date:        dto.date,
+    // FIX (sync): a API (server/validators/vaccineValidators.js) espera 'nextDueDate'
+    // (camelCase) — 'next_due_date' era ignorado, então a data da próxima dose
+    // nunca era gravada no servidor.
+    nextDueDate: dto.nextDueDate,
+    veterinary:  dto.veterinary,
+    notes:       dto.notes,
   }
 }
 
@@ -70,7 +73,8 @@ export function toApiUpdateVaccineDto(dto: UpdateVaccineDto) {
   return {
     name: dto.name,
     date: dto.date,
-    next_due_date: dto.nextDueDate,
+    // FIX (sync): idem — camelCase, não snake_case
+    nextDueDate: dto.nextDueDate,
     veterinary: dto.veterinary,
     notes: dto.notes,
   }
@@ -119,25 +123,17 @@ export function toApiUpdateSymptomDto(dto: UpdateSymptomDto) {
 }
 
 export function toApiCreateCareDto(dto: CreateCareDto) {
-  const periodType =
-    dto.periodType === 'day'
-      ? 'daily'
-      : dto.periodType === 'week'
-      ? 'weekly'
-      : dto.periodType === 'month'
-      ? 'monthly'
-      : undefined
-
   return {
     name: dto.name,
     type: dto.type,
-    frequency: dto.frequency != null ? String(dto.frequency) : undefined,
-    // FIX (sync): a API espera 'periodType' (camelCase) — antes ia 'periodtype'
-    // em minúsculas e o servidor ignorava-o silenciosamente.
-    periodType,
-    // FIX (sync): intervalDays, time e status estavam a ser descartados aqui,
-    // por isso nunca chegavam ao servidor mesmo já vindo preenchidos do formulário.
-    intervalDays: dto.intervalDays ?? undefined,
+    frequency: dto.frequency != null ? Number(dto.frequency) : undefined,
+    // FIX (cares não registavam): a API (server/validators/careValidators.js)
+    // espera a chave 'periodType' (camelCase, não 'periodtype') com os valores
+    // exactos 'day' | 'week' | 'month' — enviar 'daily'/'weekly'/'monthly'
+    // fazia o Zod rejeitar o pedido inteiro (400), por isso nenhum cuidado
+    // chegava a ser criado no servidor.
+    periodType: dto.periodType ?? undefined,
+    // FIX: time e status estavam a ser descartados aqui e nunca chegavam à API
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
     notes: dto.notes,
@@ -145,30 +141,15 @@ export function toApiCreateCareDto(dto: CreateCareDto) {
 }
 
 export function toApiUpdateCareDto(dto: UpdateCareDto) {
-  const periodType =
-    dto.periodType === 'day'
-      ? 'daily'
-      : dto.periodType === 'week'
-      ? 'weekly'
-      : dto.periodType === 'month'
-      ? 'monthly'
-      : undefined
-
   return {
     name: dto.name,
     type: dto.type,
-    frequency: dto.frequency != null ? String(dto.frequency) : undefined,
-    // FIX (sync): a API espera 'periodType' (camelCase) — antes ia 'periodtype'
-    // em minúsculas e o servidor ignorava-o silenciosamente.
-    periodType,
-    // FIX (sync): intervalDays, time e status estavam a ser descartados aqui.
-    intervalDays: dto.intervalDays ?? undefined,
+    frequency: dto.frequency != null ? Number(dto.frequency) : undefined,
+    // FIX: mesma correção de periodType (ver toApiCreateCareDto)
+    periodType: dto.periodType ?? undefined,
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
     notes: dto.notes,
-    // FIX (sync): estado diário de conclusão — persiste no servidor em vez de
-    // ficar apenas em localStorage.
-    doneDates: dto.doneDates ?? undefined,
   }
 }
 
@@ -298,13 +279,13 @@ export function mapApiSymptom(apiSymptom: any): ApiSymptom {
 export function mapApiCare(apiCare: any): ApiCare {
   const rawPeriod = apiCare.periodType ?? apiCare.periodtype
 
+  // FIX (sync): o servidor (server/validators/careValidators.js) guarda e
+  // devolve exactamente 'day' | 'week' | 'month' — não 'daily'/'weekly'/'monthly'.
+  // A conversão antiga nunca reconhecia o valor real vindo da API e o período
+  // voltava sempre como null ao recarregar a página / mudar de aparelho.
   const periodType =
-    rawPeriod === 'daily'
-      ? 'day'
-      : rawPeriod === 'weekly'
-      ? 'week'
-      : rawPeriod === 'monthly'
-      ? 'month'
+    rawPeriod === 'day' || rawPeriod === 'week' || rawPeriod === 'month'
+      ? rawPeriod
       : null
 
   return {
@@ -315,26 +296,21 @@ export function mapApiCare(apiCare: any): ApiCare {
     frequency:
       apiCare.frequency == null ? null : Number(apiCare.frequency),
     periodType,
-    // FIX (sync): intervalo customizado ("a cada X dias") vindo do servidor
-    intervalDays: apiCare.intervalDays ?? apiCare.intervaldays ?? null,
     time: apiCare.time ?? null,
     notes: apiCare.notes ?? null,
     status: apiCare.status ?? undefined,
-    // FIX (sync): estado diário de conclusão vindo do servidor
-    doneDates: apiCare.doneDates ?? apiCare.donedates ?? {},
     createdAt: apiCare.createdAt ?? apiCare.createdat,
   }
 }
 
-export function mapApiNote(raw: any): ApiNote & { date?: string | null } {
+export function mapApiNote(raw: any): ApiNote {
   return {
     id:        raw.id,
     petId:     raw.petId   ?? raw.pet_id,
     type:      raw.type,
     content:   raw.content,
-    date:      raw.date    ?? null,
     // FIX: aceita tanto 'vet' como 'veterinary' da API
-    veterinary: raw.vet     ?? raw.veterinary ?? null,
+    veterinary:       raw.vet     ?? raw.veterinary ?? null,
     createdAt: raw.createdAt ?? raw.created_at,
   }
 }
