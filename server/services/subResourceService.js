@@ -103,11 +103,17 @@ export function createSubResourceService(storeKey) {
 
   return {
     async getAllForPet(petId) {
-      const rows = await sql`SELECT * FROM ${sql(table)} WHERE pet_id = ${petId} ORDER BY created_at DESC`
+      // FIX: `${sql(table)}` deixou de ser suportado pelo driver do Neon —
+      // agora só aceita chamadas como tagged-template (sql`...`) ou via
+      // sql.query(...). Para interpolar um identificador "cru" (nome de
+      // tabela) dentro do template usa-se sql.unsafe(). Isto é seguro aqui
+      // porque `table` vem sempre de CONFIG (lista fixa no código), nunca
+      // de input do utilizador.
+      const rows = await sql`SELECT * FROM ${sql.unsafe(table)} WHERE pet_id = ${petId} ORDER BY created_at DESC`
       return rows.map(fromRow)
     },
     async getById(petId, id) {
-      const rows = await sql`SELECT * FROM ${sql(table)} WHERE id = ${id} AND pet_id = ${petId}`
+      const rows = await sql`SELECT * FROM ${sql.unsafe(table)} WHERE id = ${id} AND pet_id = ${petId}`
       if (!rows[0]) notFound('Recurso no encontrado')
       return fromRow(rows[0])
     },
@@ -122,7 +128,7 @@ export function createSubResourceService(storeKey) {
     },
     async delete(petId, id) {
       await this.getById(petId, id)
-      await sql`DELETE FROM ${sql(table)} WHERE id = ${id}`
+      await sql`DELETE FROM ${sql.unsafe(table)} WHERE id = ${id}`
     },
   }
 }
