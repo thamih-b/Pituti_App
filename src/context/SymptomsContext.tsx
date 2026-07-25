@@ -33,6 +33,13 @@ interface SymptomsContextValue {
 }
 
 const SEVERITY_MAP: Record<string, string> = { mild: 'leve', moderate: 'moderado', severe: 'grave' }
+// FIX (sync): inverso de SEVERITY_MAP — garante que enviamos sempre o valor
+// em inglês que a API espera (mild/moderate/severe), mesmo que o valor local
+// já esteja traduzido para português.
+const SEVERITY_TO_API: Record<string, string> = {
+  leve: 'mild', moderado: 'moderate', grave: 'severe',
+  mild: 'mild', moderate: 'moderate', severe: 'severe',
+}
 
 function mapApiSymptom(s: ApiSymptom, petId: string): SymptomEntry {
   return {
@@ -107,12 +114,38 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
   const addSymptom = useCallback(async (s: Omit<SymptomEntry, 'id'>) => {
     const local = { ...s, id: `s-${Date.now()}` }
     setSymptoms(prev => { const next = [...prev, local]; if (user.id) saveSymptoms(user.id, next); return next })
-    symptomsApi.create(s.petId, { description: s.description, severity: s.severity as any, date: s.date, notes: s.notes || undefined, resolved: s.resolved as any }).catch(() => {})
+    // FIX: severidade sempre convertida para o valor em inglês esperado pela API
+    symptomsApi.create(s.petId, {
+      description: s.description,
+      severity: (SEVERITY_TO_API[s.severity] ?? s.severity) as any,
+      date: s.date,
+      notes: s.notes || undefined,
+      resolved: s.resolved as any,
+    }).catch(() => {})
   }, [user.id])
 
+  // FIX (sync): saveSymptom nunca chamava a API — só alterava o estado local
+  // (e nem sequer gravava em localStorage). Editar um sintoma nunca chegava
+  // a ser persistido, por isso desaparecia ao mudar de aparelho / atualizar.
   const saveSymptom = useCallback((updated: SymptomEntry) => {
-    setSymptoms(prev => prev.map(s => (s.id === updated.id ? updated : s)))
-  }, [])
+    setSymptoms(prev => {
+      const next = prev.map(s => (s.id === updated.id ? updated : s))
+      if (user.id) saveSymptoms(user.id, next)
+      return next
+    })
+
+    if (updated.id.startsWith('s-')) return // ID temporário, ainda sem correspondência no servidor
+
+    symptomsApi
+      .update(updated.petId, updated.id, {
+        description: updated.description,
+        severity: (SEVERITY_TO_API[updated.severity] ?? updated.severity) as any,
+        date: updated.date,
+        notes: updated.notes || undefined,
+        resolved: updated.resolved as any,
+      })
+      .catch(err => console.warn('[SymptomsContext] saveSymptom API error:', err))
+  }, [user.id])
 
   const resolve = useCallback(async (id: string) => {
     const s = symptoms.find(x => x.id === id)
