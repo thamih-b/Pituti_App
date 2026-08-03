@@ -6,25 +6,24 @@ function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 const CONFIG = {
   vaccines: {
     table: 'vaccines',
-    // FIX (500 ao criar/editar vacina): as colunas reais da tabela `vaccines`
-    // (ver pituti-api/sql/schema.sql) são `next_dose_date` e `veterinarian` —
-    // o código anterior escrevia em `next_due_date` e `veterinary`, colunas
-    // que não existem, e o Postgres rebentava com 500 em todo o INSERT/UPDATE.
+    // FIX (500 ao criar/editar vacina, confirmado via information_schema.columns):
+    // a coluna real chama-se apenas `date` — o código escrevia em `vaccine_date`,
+    // que não existe, e o Postgres rebentava com 500. next_due_date e veterinary
+    // já estavam corretos.
     insert: (petId, d) => sql`
-      INSERT INTO vaccines (pet_id, name, vaccine_date, next_dose_date, veterinarian, notes)
+      INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
       VALUES (${petId}, ${d.name}, ${d.date}, ${d.nextDueDate ?? null},
               ${d.veterinary ?? null}, ${d.notes ?? null}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE vaccines SET
-        name           = COALESCE(${d.name ?? null}, name),
-        vaccine_date   = COALESCE(${d.date ?? null}::date, vaccine_date),
-        next_dose_date = COALESCE(${d.nextDueDate ?? null}::date, next_dose_date),
-        veterinarian   = COALESCE(${d.veterinary ?? null}, veterinarian),
-        notes          = COALESCE(${d.notes ?? null}, notes)
+        name          = COALESCE(${d.name ?? null}, name),
+        date          = COALESCE(${d.date ?? null}::date, date),
+        next_due_date = COALESCE(${d.nextDueDate ?? null}::date, next_due_date),
+        veterinary    = COALESCE(${d.veterinary ?? null}, veterinary),
+        notes         = COALESCE(${d.notes ?? null}, notes)
       WHERE id = ${id} RETURNING *`,
-    // FIX: mapear de volta a partir dos nomes reais das colunas
-    fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, date: r.vaccine_date,
-      nextDueDate: r.next_dose_date, veterinary: r.veterinarian, notes: r.notes, createdAt: r.created_at }),
+    fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, date: r.date,
+      nextDueDate: r.next_due_date, veterinary: r.veterinary, notes: r.notes, createdAt: r.created_at }),
   },
   medications: {
     table: 'medications',
@@ -47,42 +46,54 @@ const CONFIG = {
   },
   symptoms: {
     table: 'symptoms',
+    // FIX (sintomas não persistiam, confirmado via information_schema.columns):
+    // a coluna real chama-se apenas `date` — o código escrevia em
+    // `observed_date`, que não existe, e o Postgres rebentava com 500 em
+    // todo o INSERT/UPDATE.
     insert: (petId, d) => sql`
-      INSERT INTO symptoms (pet_id, description, severity, observed_date, notes, resolved)
+      INSERT INTO symptoms (pet_id, description, severity, date, notes, resolved)
       VALUES (${petId}, ${d.description}, ${d.severity}, ${d.date},
               ${d.notes ?? null}, ${d.resolved ?? false}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE symptoms SET
-        description   = COALESCE(${d.description ?? null}, description),
-        severity      = COALESCE(${d.severity ?? null}, severity),
-        observed_date = COALESCE(${d.date ?? null}::date, observed_date),
-        notes         = COALESCE(${d.notes ?? null}, notes),
-        resolved      = COALESCE(${d.resolved ?? null}, resolved)
+        description = COALESCE(${d.description ?? null}, description),
+        severity    = COALESCE(${d.severity ?? null}, severity),
+        date        = COALESCE(${d.date ?? null}::date, date),
+        notes       = COALESCE(${d.notes ?? null}, notes),
+        resolved    = COALESCE(${d.resolved ?? null}, resolved)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, description: r.description,
-      severity: r.severity, date: r.observed_date, notes: r.notes,
+      severity: r.severity, date: r.date, notes: r.notes,
       resolved: r.resolved, createdAt: r.created_at }),
   },
   cares: {
     table: 'cares',
+    // FIX (sync completo dos cuidados): interval_days (intervalo "a cada X
+    // dias") e done_dates (estado diário de conclusão) já existem na tabela
+    // (confirmado via information_schema.columns) — antes não eram lidos
+    // nem escritos aqui, por isso ficavam só em localStorage do aparelho.
     insert: (petId, d) => sql`
-      INSERT INTO cares (pet_id, name, type, frequency, period_type, time, notes, status)
+      INSERT INTO cares (pet_id, name, type, frequency, period_type, interval_days, time, notes, status)
       VALUES (${petId}, ${d.name}, ${d.type}, ${d.frequency ?? null},
-              ${d.periodType ?? null}, ${d.time ?? null}, ${d.notes ?? null},
+              ${d.periodType ?? null}, ${d.intervalDays ?? null}, ${d.time ?? null}, ${d.notes ?? null},
               ${d.status ?? 'pending'}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE cares SET
-        name        = COALESCE(${d.name ?? null}, name),
-        type        = COALESCE(${d.type ?? null}, type),
-        frequency   = COALESCE(${d.frequency ?? null}, frequency),
-        period_type = COALESCE(${d.periodType ?? null}, period_type),
-        time        = COALESCE(${d.time ?? null}, time),
-        notes       = COALESCE(${d.notes ?? null}, notes),
-        status      = COALESCE(${d.status ?? null}, status)
+        name          = COALESCE(${d.name ?? null}, name),
+        type          = COALESCE(${d.type ?? null}, type),
+        frequency     = COALESCE(${d.frequency ?? null}, frequency),
+        period_type   = COALESCE(${d.periodType ?? null}, period_type),
+        interval_days = COALESCE(${d.intervalDays ?? null}, interval_days),
+        time          = COALESCE(${d.time ?? null}, time),
+        notes         = COALESCE(${d.notes ?? null}, notes),
+        status        = COALESCE(${d.status ?? null}, status),
+        done_dates    = COALESCE(${d.doneDates ? JSON.stringify(d.doneDates) : null}::jsonb, done_dates)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, type: r.type,
-      frequency: r.frequency, periodType: r.period_type, time: r.time,
-      notes: r.notes, status: r.status, createdAt: r.created_at }),
+      frequency: r.frequency, periodType: r.period_type, intervalDays: r.interval_days, time: r.time,
+      notes: r.notes, status: r.status,
+      doneDates: typeof r.done_dates === 'string' ? JSON.parse(r.done_dates || '{}') : (r.done_dates ?? {}),
+      createdAt: r.created_at }),
   },
   notes: {
     table: 'notes',

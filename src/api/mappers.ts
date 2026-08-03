@@ -127,13 +127,9 @@ export function toApiCreateCareDto(dto: CreateCareDto) {
     name: dto.name,
     type: dto.type,
     frequency: dto.frequency != null ? Number(dto.frequency) : undefined,
-    // FIX (cares não registavam): a API (server/validators/careValidators.js)
-    // espera a chave 'periodType' (camelCase, não 'periodtype') com os valores
-    // exactos 'day' | 'week' | 'month' — enviar 'daily'/'weekly'/'monthly'
-    // fazia o Zod rejeitar o pedido inteiro (400), por isso nenhum cuidado
-    // chegava a ser criado no servidor.
     periodType: dto.periodType ?? undefined,
-    // FIX: time e status estavam a ser descartados aqui e nunca chegavam à API
+    // FIX (sync): intervalo customizado, coluna interval_days já existe no servidor
+    intervalDays: dto.intervalDays ?? undefined,
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
     notes: dto.notes,
@@ -145,11 +141,13 @@ export function toApiUpdateCareDto(dto: UpdateCareDto) {
     name: dto.name,
     type: dto.type,
     frequency: dto.frequency != null ? Number(dto.frequency) : undefined,
-    // FIX: mesma correção de periodType (ver toApiCreateCareDto)
     periodType: dto.periodType ?? undefined,
+    intervalDays: dto.intervalDays ?? undefined,
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
     notes: dto.notes,
+    // FIX (sync): estado diário de conclusão, coluna done_dates já existe no servidor
+    doneDates: dto.doneDates ?? undefined,
   }
 }
 
@@ -296,9 +294,11 @@ export function mapApiCare(apiCare: any): ApiCare {
     frequency:
       apiCare.frequency == null ? null : Number(apiCare.frequency),
     periodType,
+    intervalDays: apiCare.intervalDays ?? apiCare.intervaldays ?? null,
     time: apiCare.time ?? null,
     notes: apiCare.notes ?? null,
     status: apiCare.status ?? undefined,
+    doneDates: apiCare.doneDates ?? apiCare.donedates ?? {},
     createdAt: apiCare.createdAt ?? apiCare.createdat,
   }
 }
@@ -309,8 +309,9 @@ export function mapApiNote(raw: any): ApiNote {
     petId:     raw.petId   ?? raw.pet_id,
     type:      raw.type,
     content:   raw.content,
+    date:      raw.date    ?? null,
     // FIX: aceita tanto 'vet' como 'veterinary' da API
-    veterinary:       raw.vet     ?? raw.veterinary ?? null,
+    vet:       raw.vet     ?? raw.veterinary ?? null,
     createdAt: raw.createdAt ?? raw.created_at,
   }
 }
