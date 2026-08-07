@@ -13,18 +13,24 @@ import { PfBtn, PfFooter } from '../components/FooterButtons'
 import { usePituti } from '../context/PitutiContext'
 
 function usePetPhotos() {
-  const [photos, setPhotos] = useState<Record<string, string>>(() => {
-    const m: Record<string, string> = {}
-    try {
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith('pet-photo-'))
-        .forEach((k) => {
-          const value = localStorage.getItem(k)
-          if (value) m[k.replace('pet-photo-', '')] = value
-        })
-    } catch {}
-    return m
+  const { pets } = usePets()
+
+  const initialPhotos: Record<string, string> = {}
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith('pet-photo-'))
+      .forEach((k) => {
+        const value = localStorage.getItem(k)
+        if (value) initialPhotos[k.replace('pet-photo-', '')] = value
+      })
+  } catch {}
+
+  // pet.photoUrl (API) has priority over local cache
+  pets.forEach((p) => {
+    if ((p as any).photoUrl) initialPhotos[p.id] = (p as any).photoUrl
   })
+
+  const [photos, setPhotos] = useState<Record<string, string>>(initialPhotos)
 
   const setPhoto = useCallback((petId: string, dataUrl: string) => {
     setPhotos((prev) => ({ ...prev, [petId]: dataUrl }))

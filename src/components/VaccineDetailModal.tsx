@@ -72,16 +72,18 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
               <div className="detail-info-label">{t('pet.vacc.detail.lastApplied')}</div>
               <div className="detail-info-value">{vaccine.applied}</div>
             </div>
-            <div className="detail-info-chip">
-              <div className="detail-info-label">{t('pet.vacc.detail.nextDose')}</div>
-              <div className="detail-info-value" style={{
-                color: cls === 'late' ? 'var(--err)' : cls === 'soon' ? 'var(--warn)' : 'var(--success)',
-              }}>
-                {new Date(vaccine.nextDate + 'T00:00:00').toLocaleDateString(i18n.language, {
-                  day: '2-digit', month: 'short', year: 'numeric',
-                })}
-              </div>
-            </div>
+<div className="detail-info-chip">
+  <div className="detail-info-label">{t('pet.vacc.detail.nextDose')}</div>
+  <div className="detail-info-value" style={{
+    color: cls === 'late' ? 'var(--err)' : cls === 'soon' ? 'var(--warn)' : 'var(--success)',
+  }}>
+    {vaccine.nextDate
+      ? new Date(vaccine.nextDate + 'T00:00:00').toLocaleDateString(i18n.language, {
+          day: '2-digit', month: 'short', year: 'numeric',
+        })
+      : '—'}
+  </div>
+</div>
           </div>
 
           {/* Formulário de registo de aplicação */}

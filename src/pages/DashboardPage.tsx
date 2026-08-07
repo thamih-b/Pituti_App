@@ -76,15 +76,19 @@ function PawLayout({
 }) {
   const { t } = useTranslation()
 
-  const photos: Record<string, string> = {}
-  try {
-    Object.keys(localStorage)
-      .filter(k => k.startsWith('pet-photo-'))
-      .forEach(k => {
-        const value = localStorage.getItem(k)
-        if (value) photos[k.replace('pet-photo-', '')] = value
-      })
-  } catch {}
+const photos: Record<string, string> = {}
+try {
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('pet-photo-'))
+    .forEach(k => {
+      const value = localStorage.getItem(k)
+      if (value) photos[k.replace('pet-photo-', '')] = value
+    })
+} catch {}
+
+pets.forEach(p => {
+  if ((p as any).photoUrl) photos[p.id] = (p as any).photoUrl
+})
 
   if (!pets.length) {
     return (

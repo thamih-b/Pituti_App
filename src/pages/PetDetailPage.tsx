@@ -1,6 +1,6 @@
 // traduzido — sem mock, sem extraVacc local
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { SPECIES_EMOJI } from '../hooks/usePets'
 import type { PetWithAlerts } from '../hooks/usePets'
@@ -39,6 +39,8 @@ import { usePetsContext } from '../context/PetsContext'
 import { useMedications } from '../context/MedicationsContext'
 import RegisterVaccineModal from '../components/RegisterVaccineModal'
 import type { RegisterVaccineData } from '../components/RegisterVaccineModal'
+import { medicalProfilesApi } from '../api'
+import type { ApiMedicalProfile } from '../api'
 
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
@@ -55,6 +57,8 @@ const NOTE_COLOR: Record<string, string> = {
   vacuna: 'var(--success)', cirugia: 'var(--warn)', otro: 'var(--text-muted)',
 }
 
+
+
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
     <button className="toggle-pill"
@@ -64,6 +68,8 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     </button>
   )
 }
+
+
 
 // ─── Share Modal ──────────────────────────────────────────────────────────────
 
@@ -401,6 +407,7 @@ function TabVaccines({ petId, petName, petSpecies }: {
     soon: { badge: t('pet.vacc.badgeSoon'), cls: 'badge-yellow' },
     late: { badge: t('pet.vacc.badgeLate'), cls: 'badge-red'    },
   }
+  
 
   // FIX: chama addVaccine com AddVaccineInput (datas ISO brutas, não formatadas)
   const handleRegister = (v: RegisterVaccineData) => {
@@ -519,7 +526,7 @@ export default function PetDetailPage() {
   const { t } = useTranslation()
   const { petId = '' } = useParams<{ petId: string }>()
   const navigate = useNavigate()
-  const { pets, loading } = usePetsContext()
+  const { pets, loading, updatePet } = usePetsContext()
 
   // ══════════════════════════════════════════════════════════════
   // TODOS os hooks ANTES de qualquer return condicional (Rules of
@@ -540,11 +547,18 @@ export default function PetDetailPage() {
     return (pets.find(p => p.id === petId) as PetWithAlerts | undefined) ?? null
   }, [pets, petId])
 
-  // FIX foto: lê do localStorage com petId seguro
-  const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
-    if (!petId) return null
-    try { return localStorage.getItem(`pet-photo-${petId}`) ?? null } catch { return null }
-  })
+const [photoUrl, setPhotoUrl] = useState<string | null>(() => {
+  if (!petId) return null
+  try { return localStorage.getItem(`pet-photo-${petId}`) ?? null } catch { return null }
+})
+
+useEffect(() => {
+  if (petData?.photoUrl) {
+    setPhotoUrl(petData.photoUrl)
+    try { localStorage.setItem(`pet-photo-${petData.id}`, petData.photoUrl) } catch {}
+  }
+}, [petData?.photoUrl, petData?.id])
+
 
   const { addSymptom, saveSymptom, resolve, unresolve } = useSymptoms()
   const safePetId = petData?.id ?? ''
@@ -578,6 +592,18 @@ export default function PetDetailPage() {
     cls: string; icon: string; title: string; meta: string; time: string
     medId?: string; noteId?: string
   } | null>(null)
+
+  const [medicalProfile, setMedicalProfile] = useState<ApiMedicalProfile | null>(null)
+
+useEffect(() => {
+  if (!petData?.id) return
+  let cancelled = false
+  medicalProfilesApi.get(petData.id)
+    .then(res => { if (!cancelled) setMedicalProfile(res.data) })
+    .catch(() => { if (!cancelled) setMedicalProfile(null) })
+  return () => { cancelled = true }
+}, [petData?.id])
+
 
   // FIX #310: estava DEPOIS dos returns condicionais
   const { vaccinesByPet } = useVaccinesContext()
@@ -664,24 +690,45 @@ export default function PetDetailPage() {
     })),
   ].sort((a, b) => b.time.localeCompare(a.time))
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const r = ev.target?.result as string
-      if (r) {
-        setPhotoUrl(r)
-        try { localStorage.setItem('pet-photo-' + petData.id, r) } catch {}
-        showToast(t('pet.toastPhoto'))
-      }
-    }
-    reader.readAsDataURL(file)
-  }
+const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file || !petData) return
+  const reader = new FileReader()
+  reader.onload = ev => {
+    const r = ev.target?.result as string
+    if (r) {
 
-  const handleChipSave = (_updated: Partial<PetWithAlerts>) => {
-    setChipField(null)
+      setPhotoUrl(r)
+      try { localStorage.setItem('pet-photo-' + petData.id, r) } catch {}
+      showToast(t('pet.toastPhoto'))
+
+      updatePet(petData.id, { photoUrl: r } as any).catch(() => {
+        showToast(t('pet.toastPhoto'), 'err')
+      })
+    }
   }
+  reader.readAsDataURL(file)
+}
+
+
+const handleChipSave = (updated: Partial<PetWithAlerts>) => {
+  if (petData && Object.keys(updated).length > 0) {
+    updatePet(petData.id, updated as any).catch(() => {
+      showToast(t('toast.error', { defaultValue: 'Erro ao guardar' }), 'err')
+    })
+  }
+  setChipField(null)
+}
+
+const handleChipSaveWeight = (weightKg: number | null) => {
+  if (!petData) return
+  medicalProfilesApi
+    .upsert(petData.id, { ...(medicalProfile ?? {}), weightKg })
+    .then(res => setMedicalProfile(res.data))
+    .catch(() => {
+      showToast(t('toast.error', { defaultValue: 'Erro ao guardar' }), 'err')
+    })
+}
 
   return (
     <div>
@@ -752,7 +799,11 @@ export default function PetDetailPage() {
         {([
           { label: t('pet.chipSpecies'),    field: 'species'    as ChipField, value: SPECIES_LABEL[petData.species] ?? petData.species },
           { label: t('pet.chipBirth'),      field: 'birthDate'  as ChipField, value: petData.birthDate ? new Date(petData.birthDate + 'T12:00:00').toLocaleDateString() : '—' },
-          { label: t('pet.chipWeight'),     field: 'weight'     as ChipField, value: petData.weight ? `${petData.weight} kg` : '—' },
+{
+  label: t('pet.chipWeight'),
+  field: 'weight' as ChipField,
+  value: medicalProfile?.weightKg != null ? `${medicalProfile.weightKg} kg` : '—',
+},
           { label: t('pet.chipCaregivers'), field: 'caregivers' as ChipField, value: null },
         ] as const).map(s => (
           <div key={s.label} className="stat-chip clickable"
@@ -960,12 +1011,14 @@ export default function PetDetailPage() {
         onSave={() => setEditOpen(false)}
       />
 
-      <PetChipEditOverlay
-        pet={petData}
-        field={chipField}
-        onClose={() => setChipField(null)}
-        onSave={handleChipSave}
-      />
+<PetChipEditOverlay
+     pet={petData}
+     field={chipField}
+     onClose={() => setChipField(null)}
+     onSave={handleChipSave}
+     currentWeightKg={medicalProfile?.weightKg}
+     onSaveWeight={handleChipSaveWeight}
+   />
 
       <AddMedicationModal
         isOpen={addMedOpen}
@@ -1001,8 +1054,8 @@ export default function PetDetailPage() {
         isOpen={addNoteOpen}
         onClose={() => setAddNoteOpen(false)}
         defaultPetId={petData.id}
-        onAdd={(d: NoteEntry) => {
-          setLocalNotes(prev => [d, ...prev])
+        onAdd={(d) => {
+          setLocalNotes(prev => [{ ...d, id: Date.now().toString(), archived: false }, ...prev])
           showToast(`📝 ${t('pet.notes.toastAdded')}`)
           setAddNoteOpen(false)
         }}

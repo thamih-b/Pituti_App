@@ -85,7 +85,7 @@ const COUNTRIES: CountryEntry[] = [
   { code: 'AT', flag: '🇦🇹', name: 'Austria',        dial: '+43'  },
   { code: 'GR', flag: '🇬🇷', name: 'Greece',         dial: '+30'  },
   { code: 'UA', flag: '🇺🇦', name: 'Ukraine',        dial: '+380' },
-  { code: 'PO', flag: '🇵🇹', name: 'Portugal',       dial: '+351' },
+  { code: 'PT', flag: '🇵🇹', name: 'Portugal',       dial: '+351' },
   { code: 'NZ', flag: '🇳🇿', name: 'New Zealand',    dial: '+64'  },
   { code: 'SG', flag: '🇸🇬', name: 'Singapore',      dial: '+65'  },
   { code: 'HK', flag: '🇭🇰', name: 'Hong Kong',      dial: '+852' },
@@ -317,7 +317,7 @@ function CityAutocomplete({ value, onChange, placeholder, lang }: CityAutocomple
   const [results,  setResults]  = useState<CityResult[]>([])
   const [open,     setOpen]     = useState(false)
   const [fetching, setFetching] = useState(false)
-  const timerRef  = useRef<ReturnType<typeof setTimeout>>()
+  const timerRef  = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const wrapRef   = useRef<HTMLDivElement>(null)
 
   // Sync quando o valor externo muda (ex: discard)
@@ -649,7 +649,14 @@ export default function SettingsPage() {
 
     try {
       if (user.id) {
-        await usersApi.update(user.id, { name: name.trim(), photo_url: photoUrl, phone: phone || null, bio: bio || null, city: city || null } as any)
+       await usersApi.update(user.id, {
+  name: name.trim(),
+  photoUrl: photoUrl,
+  phone: phone || null,
+  bio: bio || null,
+  city: city || null,
+} as any)
+
       }
     } catch { /* silencioso — dados salvos localmente */ }
 

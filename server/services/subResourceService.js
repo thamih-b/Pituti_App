@@ -97,18 +97,21 @@ const CONFIG = {
   },
   notes: {
     table: 'notes',
+    // FIX (data da nota): coluna note_date adicionada via migração 004 —
+    // antes a data escolhida no formulário era sempre descartada.
     insert: (petId, d) => sql`
-      INSERT INTO notes (pet_id, content, veterinary, type)
+      INSERT INTO notes (pet_id, content, veterinary, type, note_date)
       VALUES (${petId}, ${d.content}, ${d.veterinary ?? null},
-              ${d.type ?? 'observacion'}) RETURNING *`,
+              ${d.type ?? 'observacion'}, ${d.date ?? null}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE notes SET
         content    = COALESCE(${d.content ?? null}, content),
         veterinary = COALESCE(${d.veterinary ?? null}, veterinary),
-        type       = COALESCE(${d.type ?? null}, type)
+        type       = COALESCE(${d.type ?? null}, type),
+        note_date  = COALESCE(${d.date ?? null}::date, note_date)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, content: r.content,
-      veterinary: r.veterinary, type: r.type, createdAt: r.created_at }),
+      veterinary: r.veterinary, type: r.type, date: r.note_date, createdAt: r.created_at }),
   },
 }
 

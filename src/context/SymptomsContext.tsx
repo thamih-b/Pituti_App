@@ -85,9 +85,12 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
 
-    const stored = loadSymptoms(user.id)
-    if (stored.length) setSymptoms(stored)
-
+    // FIX (sync): antes líamos o localStorage primeiro e só substituíamos
+    // pelo resultado da API "se não viesse vazio" — isso escondia falhas
+    // reais da API (o aparelho continuava a mostrar só o que tinha gravado
+    // localmente) e é exactamente o que fazia sintomas parecerem persistir
+    // "só localmente". Agora a API é a única fonte de verdade, tal como em
+    // Pets/Cares.
     petsApi
       .getAll(user.id)
       .then(async res => {
@@ -102,7 +105,8 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
         )
         if (!cancelled) {
           const api = results.flat()
-          if (api.length) { setSymptoms(api); saveSymptoms(user.id, api) }
+          setSymptoms(api)
+          saveSymptoms(user.id, api) // apenas cache local, não fonte de verdade
         }
       })
       .catch(err => { if (!cancelled) setError(err?.message ?? 'Erro ao carregar sintomas') })

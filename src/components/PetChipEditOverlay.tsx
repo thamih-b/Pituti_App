@@ -10,10 +10,13 @@ import { PfBtn } from './FooterButtons'
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
 interface Props {
-  pet:     PetWithAlerts
-  field:   ChipField | null
-  onClose: () => void
-  onSave:  (updated: Partial<PetWithAlerts>) => void
+  pet:           PetWithAlerts
+  field:         ChipField | null
+  onClose:       () => void
+  onSave:        (updated: Partial<PetWithAlerts>) => void
+  // FIX (peso funcional): peso não é campo do Pet, vive no perfil médico
+  currentWeightKg?: number | null
+  onSaveWeight?: (weightKg: number | null) => void
 }
 
 const SPECIES_OPTIONS: { value: Species; emoji: string; color: string }[] = [
@@ -50,7 +53,9 @@ interface MockCaregiver {
   role: string; bg: string; color: string; removable: boolean
 }
 
-export default function PetChipEditOverlay({ pet, field, onClose, onSave }: Props) {
+export default function PetChipEditOverlay({
+  pet, field, onClose, onSave, currentWeightKg, onSaveWeight,
+}: Props) {
   const { t, i18n } = useTranslation()
   const today = new Date().toISOString().split('T')[0]
 
@@ -64,25 +69,29 @@ export default function PetChipEditOverlay({ pet, field, onClose, onSave }: Prop
   const [newEmail, setNewEmail] = useState('')
   const [emailErr, setEmailErr] = useState('')
 
-  useEffect(() => {
-    if (field) {
-      setSpecies(pet.species as Species)
-      setBirthDate(pet.birthDate ?? '')
-      setWeight('')
-      setEmailErr('')
-      setNewEmail('')
-    }
-  }, [field, pet])
+useEffect(() => {
+  if (field) {
+    setSpecies(pet.species as Species)
+    setBirthDate(pet.birthDate ?? '')
+    // FIX (peso funcional): inicializa com o peso atual em vez de ficar sempre vazio
+    setWeight(currentWeightKg != null ? String(currentWeightKg) : '')
+    setEmailErr('')
+    setNewEmail('')
+  }
+}, [field, pet, currentWeightKg])
+
 
   if (!field) return null
 
   const handleSave = () => {
     if (field === 'species')    onSave({ species })
     if (field === 'birthDate')  onSave({ birthDate: birthDate || undefined })
-    if (field === 'weight') {
-      showToast(`⚖️ ${t('pet.chip.weightUpdated')}${weight ? ': ' + weight + ' kg' : ''}`)
-      onClose(); return
-    }
+if (field === 'weight') {
+  const parsed = weight.trim() ? Number(weight) : null
+  onSaveWeight?.(parsed)
+  showToast(`⚖️ ${t('pet.chip.weightUpdated')}${weight ? ': ' + weight + ' kg' : ''}`)
+  onClose(); return
+}
     if (field === 'caregivers') {
       showToast(`👥 ${t('pet.chip.caregiversUpdated')}`)
       onClose(); return

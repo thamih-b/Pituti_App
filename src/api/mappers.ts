@@ -157,7 +157,7 @@ export function toApiCreateNoteDto(dto: CreateNoteDto) {
     type:       dto.type,
     content:    dto.content,
     date:       dto.date,
-    veterinary: dto.vet,  // ← FIX: 'vet' do frontend → 'veterinary' na DB
+    veterinary: dto.vet ?? dto.veterinary,
   }
 }
 
@@ -165,7 +165,10 @@ export function toApiCreateNoteDto(dto: CreateNoteDto) {
 export function toApiUpdateNoteDto(dto: UpdateNoteDto) {
   return {
     content: dto.content,
-    title: dto.type,
+    // FIX: a API espera 'type', não 'title' — o campo era sempre ignorado
+    type: dto.type,
+    veterinary: dto.vet ?? dto.veterinary,
+    date: dto.date,
   }
 }
 
@@ -206,9 +209,25 @@ export function toApiUpdateAppointmentDto(dto: UpdateAppointmentDto) {
 }
 
 export function toApiMedicalProfileDto(dto: UpsertMedicalProfileDto) {
+  // FIX (peso funcional, e perfil médico em geral): esta função só enviava
+  // 'bloodtype' e 'notes' — todos os outros campos do perfil médico (sexo,
+  // castração, alergias, condições, cirurgias, ambiente, etc.) eram
+  // descartados sempre que o utilizador guardava. Agora envia o perfil
+  // completo, tal como o servidor (server/validators/medicalProfileValidators.js)
+  // espera.
   return {
-    bloodtype: dto.bloodType,
-    notes: dto.vetQuestions,
+    sex: dto.sex,
+    neutered: dto.neutered,
+    neuteredAge: dto.neuteredAge,
+    weightKg: dto.weightKg,
+    bloodType: dto.bloodType,
+    allergies: dto.allergies,
+    conditions: dto.conditions,
+    surgeries: dto.surgeries,
+    environment: dto.environment,
+    livingWithAnimals: dto.livingWithAnimals,
+    behavioralNotes: dto.behavioralNotes,
+    vetQuestions: dto.vetQuestions,
   }
 }
 
@@ -349,6 +368,7 @@ export function mapApiMedicalProfile(apiProfile: any): ApiMedicalProfile {
     sex: apiProfile.sex,
     neutered: apiProfile.neutered ?? null,
     neuteredAge: apiProfile.neuteredAge ?? null,
+    weightKg: apiProfile.weightKg ?? apiProfile.weightkg ?? null,
     bloodType: apiProfile.bloodType ?? apiProfile.bloodtype ?? null,
     allergies: apiProfile.allergies ?? [],
     conditions: apiProfile.conditions ?? [],

@@ -98,6 +98,8 @@ export interface UpsertMedicalProfileDto {
   sex?: PetSex
   neutered?: boolean | null
   neuteredAge?: string | null
+  // FIX (peso funcional): coluna weight_kg já existe no servidor
+  weightKg?: number | null
   bloodType?: string | null
   allergies?: string[]
   conditions?: Array<{
@@ -202,12 +204,19 @@ export interface UpdateCareDto {
 export interface CreateNoteDto {
   content: string
   veterinary?: string | null
+  // FIX: 'vet' é o nome usado pelo formulário (NewNoteModal) e por
+  // toApiCreateNoteDto — o tipo estava dessincronizado da implementação real.
+  vet?: string | null
+  // FIX: data da nota, agora persistida (coluna note_date)
+  date?: string | null
   type?: NoteType
 }
 
 export interface UpdateNoteDto {
   content?: string
   veterinary?: string | null
+  vet?: string | null
+  date?: string | null
   type?: NoteType
 }
 
@@ -308,6 +317,7 @@ export interface ApiMedicalProfile {
   sex?: PetSex
   neutered?: boolean | null
   neuteredAge?: string | null
+  weightKg?: number | null
   bloodType?: string | null
   allergies?: string[]
   conditions?: Array<{
@@ -379,6 +389,11 @@ export interface ApiNote {
   petId: string
   content: string
   veterinary?: string | null
+  // FIX: mapApiNote já construía objetos com 'vet' e 'date' — o tipo não
+  // os tinha, causando erro de compilação ("Object literal may only
+  // specify known properties").
+  vet?: string | null
+  date?: string | null
   type?: NoteType
   createdAt: string
 }
