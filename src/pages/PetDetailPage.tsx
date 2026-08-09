@@ -41,6 +41,7 @@ import RegisterVaccineModal from '../components/RegisterVaccineModal'
 import type { RegisterVaccineData } from '../components/RegisterVaccineModal'
 import { medicalProfilesApi } from '../api'
 import type { ApiMedicalProfile } from '../api'
+import { resizeImageToDataUrl } from '../utils/imageResize'
 
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
@@ -448,10 +449,13 @@ function TabVaccines({ petId, petName, petSpecies }: {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className={`vaccine-next ${vacc.cls}`}>
-                      {vacc.cls === 'late'
-                        ? `${t('pet.vacc.expired')} · ${new Date(vacc.nextDate + 'T12:00:00').toLocaleDateString()}`
-                        : `${t('pet.vacc.next')} ${new Date(vacc.nextDate + 'T12:00:00').toLocaleDateString()}`}
-                    </div>
+  {!vacc.nextDate
+    ? '—'
+    : vacc.cls === 'late'
+      ? `${t('pet.vacc.expired')} · ${new Date(vacc.nextDate + 'T12:00:00').toLocaleDateString()}`
+      : `${t('pet.vacc.next')} ${new Date(vacc.nextDate + 'T12:00:00').toLocaleDateString()}`}
+</div>
+
                     <span className={`badge ${vacc.badgeCls}`} style={{ fontSize: '.6rem' }}>{vacc.badge}</span>
                   </div>
                 </div>
@@ -690,25 +694,31 @@ useEffect(() => {
     })),
   ].sort((a, b) => b.time.localeCompare(a.time))
 
-const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
   if (!file || !petData) return
-  const reader = new FileReader()
-  reader.onload = ev => {
-    const r = ev.target?.result as string
-    if (r) {
 
-      setPhotoUrl(r)
-      try { localStorage.setItem('pet-photo-' + petData.id, r) } catch {}
-      showToast(t('pet.toastPhoto'))
-
-      updatePet(petData.id, { photoUrl: r } as any).catch(() => {
-        showToast(t('pet.toastPhoto'), 'err')
-      })
-    }
+  let resized: string
+  try {
+    resized = await resizeImageToDataUrl(file)
+  } catch (err) {
+    console.warn('[PetDetailPage] Falha ao processar a foto:', err)
+    showToast(t('toast.photoError', { defaultValue: 'Não foi possível processar a foto' }), 'err')
+    return
   }
-  reader.readAsDataURL(file)
+
+  // Atualização otimista local (mantém a UI instantânea)
+  setPhotoUrl(resized)
+  try { localStorage.setItem('pet-photo-' + petData.id, resized) } catch {}
+  showToast(t('pet.toastPhoto'))
+
+  // FIX (sync): persiste através do updatePet já usado no resto da app
+  updatePet(petData.id, { photoUrl: resized } as any).catch((err) => {
+    console.warn('[PetDetailPage] Falha ao gravar a foto no servidor:', err)
+    showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar' }), 'err')
+  })
 }
+
 
 
 const handleChipSave = (updated: Partial<PetWithAlerts>) => {

@@ -26,6 +26,7 @@ import BackButton from '../components/BackButton'
 import DeleteAccountModal from '../components/DeleteAccountModal'
 import { useUser, deriveAvatar } from '../context/UserContext'
 import { usersApi } from '../api'
+import { resizeImageToDataUrl } from '../utils/imageResize'
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -624,16 +625,18 @@ export default function SettingsPage() {
     setPhotoUrl(user.photoUrl ?? null)
   }, [user])
 
-  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const r = ev.target?.result as string
-      if (r) setPhotoUrl(r)
-    }
-    reader.readAsDataURL(file)
+const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  try {
+    const resized = await resizeImageToDataUrl(file)
+    setPhotoUrl(resized)
+  } catch (err) {
+    console.warn('[SettingsPage] Falha ao processar a foto:', err)
+    showToast(t('toast.photoError', { defaultValue: 'Não foi possível processar a foto' }), 'err')
   }
+}
+
 
   const handleSave = async () => {
     if (!name.trim()) return
@@ -647,18 +650,20 @@ export default function SettingsPage() {
       ? localStorage : sessionStorage
     storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
 
-    try {
-      if (user.id) {
-       await usersApi.update(user.id, {
-  name: name.trim(),
-  photoUrl: photoUrl,
-  phone: phone || null,
-  bio: bio || null,
-  city: city || null,
-} as any)
-
-      }
-    } catch { /* silencioso — dados salvos localmente */ }
+try {
+  if (user.id) {
+    await usersApi.update(user.id, {
+      name: name.trim(),
+      photoUrl,
+      phone: phone || null,
+      bio: bio || null,
+      city: city || null,
+    } as any)
+  }
+} catch (err) {
+  console.warn('[SettingsPage] Falha ao gravar perfil no servidor:', err)
+  showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar' }), 'err')
+} { /* silencioso — dados salvos localmente */ }
 
     setSaving(false); setSaved(true)
     showToast(t('toast.changesSaved'))
