@@ -60,9 +60,6 @@ export function toApiCreateVaccineDto(dto: CreateVaccineDto) {
   return {
     name:        dto.name,
     date:        dto.date,
-    // FIX (sync): a API (server/validators/vaccineValidators.js) espera 'nextDueDate'
-    // (camelCase) — 'next_due_date' era ignorado, então a data da próxima dose
-    // nunca era gravada no servidor.
     nextDueDate: dto.nextDueDate,
     veterinary:  dto.veterinary,
     notes:       dto.notes,
@@ -73,7 +70,6 @@ export function toApiUpdateVaccineDto(dto: UpdateVaccineDto) {
   return {
     name: dto.name,
     date: dto.date,
-    // FIX (sync): idem — camelCase, não snake_case
     nextDueDate: dto.nextDueDate,
     veterinary: dto.veterinary,
     notes: dto.notes,
@@ -128,7 +124,6 @@ export function toApiCreateCareDto(dto: CreateCareDto) {
     type: dto.type,
     frequency: dto.frequency != null ? Number(dto.frequency) : undefined,
     periodType: dto.periodType ?? undefined,
-    // FIX (sync): intervalo customizado, coluna interval_days já existe no servidor
     intervalDays: dto.intervalDays ?? undefined,
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
@@ -146,7 +141,6 @@ export function toApiUpdateCareDto(dto: UpdateCareDto) {
     time: dto.time ?? undefined,
     status: dto.status ?? undefined,
     notes: dto.notes,
-    // FIX (sync): estado diário de conclusão, coluna done_dates já existe no servidor
     doneDates: dto.doneDates ?? undefined,
   }
 }
@@ -157,7 +151,7 @@ export function toApiCreateNoteDto(dto: CreateNoteDto) {
     type:       dto.type,
     content:    dto.content,
     date:       dto.date,
-    veterinary: dto.vet ?? dto.veterinary,
+    veterinary: dto.vet,  // ← FIX: 'vet' do frontend → 'veterinary' na DB
   }
 }
 
@@ -165,10 +159,7 @@ export function toApiCreateNoteDto(dto: CreateNoteDto) {
 export function toApiUpdateNoteDto(dto: UpdateNoteDto) {
   return {
     content: dto.content,
-    // FIX: a API espera 'type', não 'title' — o campo era sempre ignorado
-    type: dto.type,
-    veterinary: dto.vet ?? dto.veterinary,
-    date: dto.date,
+    title: dto.type,
   }
 }
 
@@ -209,17 +200,16 @@ export function toApiUpdateAppointmentDto(dto: UpdateAppointmentDto) {
 }
 
 export function toApiMedicalProfileDto(dto: UpsertMedicalProfileDto) {
-  // FIX (peso funcional, e perfil médico em geral): esta função só enviava
-  // 'bloodtype' e 'notes' — todos os outros campos do perfil médico (sexo,
-  // castração, alergias, condições, cirurgias, ambiente, etc.) eram
-  // descartados sempre que o utilizador guardava. Agora envia o perfil
-  // completo, tal como o servidor (server/validators/medicalProfileValidators.js)
-  // espera.
+  // FIX (perfil médico não gravava quase nada): esta função só enviava
+  // 'bloodtype' (chave errada, devia ser 'bloodType') e 'notes' — todos os
+  // outros campos (sex, neutered, neuteredAge, allergies, conditions,
+  // surgeries, environment, livingWithAnimals, behavioralNotes) eram
+  // descartados antes de sequer saírem do browser. Também adiciona
+  // weightKg (peso), que nunca teve suporte nenhum.
   return {
     sex: dto.sex,
     neutered: dto.neutered,
     neuteredAge: dto.neuteredAge,
-    weightKg: dto.weightKg,
     bloodType: dto.bloodType,
     allergies: dto.allergies,
     conditions: dto.conditions,
@@ -228,6 +218,7 @@ export function toApiMedicalProfileDto(dto: UpsertMedicalProfileDto) {
     livingWithAnimals: dto.livingWithAnimals,
     behavioralNotes: dto.behavioralNotes,
     vetQuestions: dto.vetQuestions,
+    weightKg: dto.weightKg,
   }
 }
 
@@ -296,10 +287,6 @@ export function mapApiSymptom(apiSymptom: any): ApiSymptom {
 export function mapApiCare(apiCare: any): ApiCare {
   const rawPeriod = apiCare.periodType ?? apiCare.periodtype
 
-  // FIX (sync): o servidor (server/validators/careValidators.js) guarda e
-  // devolve exactamente 'day' | 'week' | 'month' — não 'daily'/'weekly'/'monthly'.
-  // A conversão antiga nunca reconhecia o valor real vindo da API e o período
-  // voltava sempre como null ao recarregar a página / mudar de aparelho.
   const periodType =
     rawPeriod === 'day' || rawPeriod === 'week' || rawPeriod === 'month'
       ? rawPeriod
@@ -368,7 +355,6 @@ export function mapApiMedicalProfile(apiProfile: any): ApiMedicalProfile {
     sex: apiProfile.sex,
     neutered: apiProfile.neutered ?? null,
     neuteredAge: apiProfile.neuteredAge ?? null,
-    weightKg: apiProfile.weightKg ?? apiProfile.weightkg ?? null,
     bloodType: apiProfile.bloodType ?? apiProfile.bloodtype ?? null,
     allergies: apiProfile.allergies ?? [],
     conditions: apiProfile.conditions ?? [],
@@ -377,6 +363,7 @@ export function mapApiMedicalProfile(apiProfile: any): ApiMedicalProfile {
     livingWithAnimals: apiProfile.livingWithAnimals ?? null,
     behavioralNotes: apiProfile.behavioralNotes ?? null,
     vetQuestions: apiProfile.vetQuestions ?? apiProfile.notes ?? null,
+    weightKg: apiProfile.weightKg ?? apiProfile.weightkg ?? null,
     updatedAt: apiProfile.updatedAt ?? apiProfile.updatedat ?? null,
   }
 }

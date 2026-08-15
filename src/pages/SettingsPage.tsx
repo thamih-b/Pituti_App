@@ -625,50 +625,80 @@ export default function SettingsPage() {
     setPhotoUrl(user.photoUrl ?? null)
   }, [user])
 
-const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0]
-  if (!file) return
-  try {
-    const resized = await resizeImageToDataUrl(file)
-    setPhotoUrl(resized)
-  } catch (err) {
-    console.warn('[SettingsPage] Falha ao processar a foto:', err)
-    showToast(t('toast.photoError', { defaultValue: 'Não foi possível processar a foto' }), 'err')
+function normalizeApiUser(apiData: Partial<{
+  id: string; name: string; email: string
+  photoUrl: string | null; phone: string | null; city: string | null; bio: string | null
+  createdAt: string
+}>, fallback: { phone: string; city: string; bio: string }) {
+  return {
+    ...apiData,
+    phone: apiData.phone ?? fallback.phone,
+    city:  apiData.city  ?? fallback.city,
+    bio:   apiData.bio   ?? fallback.bio,
   }
 }
 
+const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async ev => {
+    const r = ev.target?.result as string
+    if (!r) return
+    setPhotoUrl(r)
 
-  const handleSave = async () => {
-    if (!name.trim()) return
-    setSaving(true)
-
-    const updated = { ...user, name: name.trim(), email, phone, city, bio, photoUrl, avatar: deriveAvatar(name.trim()) }
-    setUser(updated)
-
-    const key      = 'pitutiuser'
-    const storage  = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
-      ? localStorage : sessionStorage
-    storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
-
-try {
-  if (user.id) {
-    await usersApi.update(user.id, {
-      name: name.trim(),
-      photoUrl,
-      phone: phone || null,
-      bio: bio || null,
-      city: city || null,
-    } as any)
+    // Auto-save só da foto, assim que é escolhida
+    if (user.id) {
+      try {
+        const res = await usersApi.update(user.id, { photoUrl: r })
+        setUser({ ...user, photoUrl: r, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) })
+        showToast(t('toast.changesSaved'))
+      } catch (err) {
+        console.warn('[SettingsPage] erro ao guardar foto:', err)
+        showToast(t('toast.saveError', { defaultValue: 'Não foi possível guardar a foto. Tenta novamente.' }), 'err')
+      }
+    }
   }
-} catch (err) {
-  console.warn('[SettingsPage] Falha ao gravar perfil no servidor:', err)
-  showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar' }), 'err')
-} { /* silencioso — dados salvos localmente */ }
+  reader.readAsDataURL(file)
+}
 
-    setSaving(false); setSaved(true)
-    showToast(t('toast.changesSaved'))
-    setTimeout(() => setSaved(false), 3000)
+const handleSave = async () => {
+  if (!name.trim()) return
+  setSaving(true)
+
+  const updated = { ...user, name: name.trim(), email, phone, city, bio, photoUrl, avatar: deriveAvatar(name.trim()) }
+
+  try {
+    if (user.id) {
+      // FIX: 'photoUrl' (camelCase), não 'photo_url'
+      const res = await usersApi.update(user.id, {
+        name: name.trim(),
+        photoUrl,
+        phone: phone || null,
+        bio: bio || null,
+        city: city || null,
+      })
+      // usa a resposta real do servidor como fonte de verdade
+      setUser({ ...updated, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) })
+
+      const key = 'pitutiuser'
+      const storage = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
+        ? localStorage : sessionStorage
+      storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
+
+      setSaved(true)
+      showToast(t('toast.changesSaved'))
+      setTimeout(() => setSaved(false), 3000)
+    }
+  } catch (err) {
+    // FIX: antes isto era engolido em silêncio e a app dizia "guardado" na mesma
+    console.warn('[SettingsPage] erro ao guardar alterações:', err)
+    showToast(t('toast.saveError', { defaultValue: 'Não foi possível guardar as alterações. Tenta novamente.' }), 'err')
+  } finally {
+    setSaving(false)
   }
+}
+
 
   const handleDiscard = () => {
     setName(user.name ?? ''); setEmail(user.email ?? '')

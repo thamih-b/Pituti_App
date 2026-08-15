@@ -98,8 +98,6 @@ export interface UpsertMedicalProfileDto {
   sex?: PetSex
   neutered?: boolean | null
   neuteredAge?: string | null
-  // FIX (peso funcional): coluna weight_kg já existe no servidor
-  weightKg?: number | null
   bloodType?: string | null
   allergies?: string[]
   conditions?: Array<{
@@ -114,6 +112,8 @@ export interface UpsertMedicalProfileDto {
   livingWithAnimals?: boolean | null
   behavioralNotes?: string | null
   vetQuestions?: string | null
+  // FIX: peso nunca teve suporte no DTO nem no backend
+  weightKg?: number | null
 }
 
 // ── Vaccines DTOs ─────────────────────────────────────────────────────────────
@@ -179,8 +179,6 @@ export interface CreateCareDto {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
-  // FIX (sync): intervalo customizado ("a cada X dias")
-  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
@@ -191,12 +189,9 @@ export interface UpdateCareDto {
   type?: string
   frequency?: number | null
   periodType?: CarePeriodType | null
-  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
-  // FIX (sync): estado diário de conclusão, persistido no servidor
-  doneDates?: Record<string, { done: number; doneState: boolean }>
 }
 
 // ── Notes DTOs ────────────────────────────────────────────────────────────────
@@ -204,19 +199,12 @@ export interface UpdateCareDto {
 export interface CreateNoteDto {
   content: string
   veterinary?: string | null
-  // FIX: 'vet' é o nome usado pelo formulário (NewNoteModal) e por
-  // toApiCreateNoteDto — o tipo estava dessincronizado da implementação real.
-  vet?: string | null
-  // FIX: data da nota, agora persistida (coluna note_date)
-  date?: string | null
   type?: NoteType
 }
 
 export interface UpdateNoteDto {
   content?: string
   veterinary?: string | null
-  vet?: string | null
-  date?: string | null
   type?: NoteType
 }
 
@@ -317,7 +305,6 @@ export interface ApiMedicalProfile {
   sex?: PetSex
   neutered?: boolean | null
   neuteredAge?: string | null
-  weightKg?: number | null
   bloodType?: string | null
   allergies?: string[]
   conditions?: Array<{
@@ -332,6 +319,7 @@ export interface ApiMedicalProfile {
   livingWithAnimals?: boolean | null
   behavioralNotes?: string | null
   vetQuestions?: string | null
+  weightKg?: number | null
   updatedAt?: string | null
 }
 
@@ -376,11 +364,9 @@ export interface ApiCare {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
-  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
-  doneDates?: Record<string, { done: number; doneState: boolean }>
   createdAt: string
 }
 
@@ -389,11 +375,6 @@ export interface ApiNote {
   petId: string
   content: string
   veterinary?: string | null
-  // FIX: mapApiNote já construía objetos com 'vet' e 'date' — o tipo não
-  // os tinha, causando erro de compilação ("Object literal may only
-  // specify known properties").
-  vet?: string | null
-  date?: string | null
   type?: NoteType
   createdAt: string
 }
@@ -435,12 +416,20 @@ export interface CreateUserDto {
   name: string
   email: string
   photoUrl?: string | null
+  // FIX (sync): campos que a página de definições já recolhia mas a API
+  // nunca aceitava — eram sempre descartados antes de chegar à base de dados
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
 }
 
 export interface UpdateUserDto {
   name?: string
   email?: string
   photoUrl?: string | null
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
 }
 
 export interface ApiUser {
@@ -448,5 +437,8 @@ export interface ApiUser {
   name: string
   email: string
   photoUrl?: string | null
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
   createdAt: string
 }

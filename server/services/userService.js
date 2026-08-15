@@ -4,14 +4,17 @@ import { sql } from '../db.js'
 function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 function conflict(msg) { const e = new Error(msg); e.statusCode = 409; throw e }
 
+// FIX (perfil não persiste): phone/bio/city nunca eram lidos nem gravados
+// aqui — só name/email/photoUrl. As colunas já existem (migration
+// 003_users_profile_fields.sql).
+const SELECT_FIELDS = `id, name, email, photo_url AS "photoUrl", phone, bio, city, created_at AS "createdAt"`
+
 export const userService = {
   async getAll() {
-    return sql`SELECT id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"
-               FROM users ORDER BY created_at DESC`
+    return sql`SELECT ${sql.unsafe(SELECT_FIELDS)} FROM users ORDER BY created_at DESC`
   },
   async getById(id) {
-    const rows = await sql`SELECT id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"
-                           FROM users WHERE id = ${id}`
+    const rows = await sql`SELECT ${sql.unsafe(SELECT_FIELDS)} FROM users WHERE id = ${id}`
     if (!rows[0]) notFound('Usuario no encontrado')
     return rows[0]
   },
@@ -19,9 +22,10 @@ export const userService = {
     const exists = await sql`SELECT id FROM users WHERE email = ${data.email}`
     if (exists.length) conflict('Ya existe un usuario con ese email')
     const [row] = await sql`
-      INSERT INTO users (name, email, photo_url)
-      VALUES (${data.name}, ${data.email}, ${data.photoUrl ?? null})
-      RETURNING id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"`
+      INSERT INTO users (name, email, photo_url, phone, bio, city)
+      VALUES (${data.name}, ${data.email}, ${data.photoUrl ?? null},
+              ${data.phone ?? null}, ${data.bio ?? null}, ${data.city ?? null})
+      RETURNING ${sql.unsafe(SELECT_FIELDS)}`
     return row
   },
   async update(id, data) {
@@ -30,9 +34,12 @@ export const userService = {
       UPDATE users SET
         name      = COALESCE(${data.name ?? null}, name),
         email     = COALESCE(${data.email ?? null}, email),
-        photo_url = COALESCE(${data.photoUrl ?? null}, photo_url)
+        photo_url = COALESCE(${data.photoUrl ?? null}, photo_url),
+        phone     = COALESCE(${data.phone ?? null}, phone),
+        bio       = COALESCE(${data.bio ?? null}, bio),
+        city      = COALESCE(${data.city ?? null}, city)
       WHERE id = ${id}
-      RETURNING id, name, email, photo_url AS "photoUrl", created_at AS "createdAt"`
+      RETURNING ${sql.unsafe(SELECT_FIELDS)}`
     return row
   },
   async delete(id) {
