@@ -112,7 +112,6 @@ export interface UpsertMedicalProfileDto {
   livingWithAnimals?: boolean | null
   behavioralNotes?: string | null
   vetQuestions?: string | null
-  // FIX: peso nunca teve suporte no DTO nem no backend
   weightKg?: number | null
 }
 
@@ -179,6 +178,8 @@ export interface CreateCareDto {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  // FIX (sync): intervalo customizado ("a cada X dias")
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
@@ -189,9 +190,12 @@ export interface UpdateCareDto {
   type?: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
+  // FIX (sync): estado diário de conclusão, persistido no servidor
+  doneDates?: Record<string, { done: number; doneState: boolean }>
 }
 
 // ── Notes DTOs ────────────────────────────────────────────────────────────────
@@ -200,12 +204,19 @@ export interface CreateNoteDto {
   content: string
   veterinary?: string | null
   type?: NoteType
+  // FIX: toApiCreateNoteDto/mapApiNote sempre usaram 'date' e 'vet' —
+  // os tipos nunca tinham sido atualizados para os incluir (isto nunca foi
+  // apanhado porque o build de produção usa só `vite build`, sem tsc).
+  date?: string | null
+  vet?: string | null
 }
 
 export interface UpdateNoteDto {
   content?: string
   veterinary?: string | null
   type?: NoteType
+  date?: string | null
+  vet?: string | null
 }
 
 // ── Vets DTOs ─────────────────────────────────────────────────────────────────
@@ -364,9 +375,11 @@ export interface ApiCare {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
+  intervalDays?: number | null
   time?: string | null
   notes?: string | null
   status?: CareStatus
+  doneDates?: Record<string, { done: number; doneState: boolean }>
   createdAt: string
 }
 
@@ -376,6 +389,8 @@ export interface ApiNote {
   content: string
   veterinary?: string | null
   type?: NoteType
+  date?: string | null
+  vet?: string | null
   createdAt: string
 }
 
@@ -416,8 +431,6 @@ export interface CreateUserDto {
   name: string
   email: string
   photoUrl?: string | null
-  // FIX (sync): campos que a página de definições já recolhia mas a API
-  // nunca aceitava — eram sempre descartados antes de chegar à base de dados
   phone?: string | null
   city?: string | null
   bio?: string | null

@@ -200,12 +200,6 @@ export function toApiUpdateAppointmentDto(dto: UpdateAppointmentDto) {
 }
 
 export function toApiMedicalProfileDto(dto: UpsertMedicalProfileDto) {
-  // FIX (perfil médico não gravava quase nada): esta função só enviava
-  // 'bloodtype' (chave errada, devia ser 'bloodType') e 'notes' — todos os
-  // outros campos (sex, neutered, neuteredAge, allergies, conditions,
-  // surgeries, environment, livingWithAnimals, behavioralNotes) eram
-  // descartados antes de sequer saírem do browser. Também adiciona
-  // weightKg (peso), que nunca teve suporte nenhum.
   return {
     sex: dto.sex,
     neutered: dto.neutered,

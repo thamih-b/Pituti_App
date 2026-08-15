@@ -645,17 +645,20 @@ const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
   reader.onload = async ev => {
     const r = ev.target?.result as string
     if (!r) return
-    setPhotoUrl(r)
 
-    // Auto-save só da foto, assim que é escolhida
+    // 1. Local sempre, otimista — independente do que acontecer com a API
+    setPhotoUrl(r)
+    setUser(prev => ({ ...prev, photoUrl: r }))
+    showToast(t('toast.changesSaved'))
+
+    // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
     if (user.id) {
       try {
         const res = await usersApi.update(user.id, { photoUrl: r })
-        setUser({ ...user, photoUrl: r, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) })
-        showToast(t('toast.changesSaved'))
+        setUser(prev => ({ ...prev, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) }))
       } catch (err) {
-        console.warn('[SettingsPage] erro ao guardar foto:', err)
-        showToast(t('toast.saveError', { defaultValue: 'Não foi possível guardar a foto. Tenta novamente.' }), 'err')
+        console.warn('[SettingsPage] foto guardada só localmente, falhou a sincronizar:', err)
+        showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar com o servidor' }), 'err')
       }
     }
   }
@@ -668,9 +671,19 @@ const handleSave = async () => {
 
   const updated = { ...user, name: name.trim(), email, phone, city, bio, photoUrl, avatar: deriveAvatar(name.trim()) }
 
+  // 1. Local sempre, otimista
+  setUser(updated)
+  const key = 'pitutiuser'
+  const storage = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
+    ? localStorage : sessionStorage
+  storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
+  setSaved(true)
+  showToast(t('toast.changesSaved'))
+  setTimeout(() => setSaved(false), 3000)
+
+  // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
   try {
     if (user.id) {
-      // FIX: 'photoUrl' (camelCase), não 'photo_url'
       const res = await usersApi.update(user.id, {
         name: name.trim(),
         photoUrl,
@@ -678,22 +691,11 @@ const handleSave = async () => {
         bio: bio || null,
         city: city || null,
       })
-      // usa a resposta real do servidor como fonte de verdade
       setUser({ ...updated, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) })
-
-      const key = 'pitutiuser'
-      const storage = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
-        ? localStorage : sessionStorage
-      storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
-
-      setSaved(true)
-      showToast(t('toast.changesSaved'))
-      setTimeout(() => setSaved(false), 3000)
     }
   } catch (err) {
-    // FIX: antes isto era engolido em silêncio e a app dizia "guardado" na mesma
-    console.warn('[SettingsPage] erro ao guardar alterações:', err)
-    showToast(t('toast.saveError', { defaultValue: 'Não foi possível guardar as alterações. Tenta novamente.' }), 'err')
+    console.warn('[SettingsPage] alterações guardadas só localmente, falhou a sincronizar:', err)
+    showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar com o servidor' }), 'err')
   } finally {
     setSaving(false)
   }
