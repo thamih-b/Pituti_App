@@ -1,15 +1,3 @@
-/**
- * SettingsPage.tsx
- *
- * Requires: npm install libphonenumber-js
- *
- * Features:
- *  - Phone: country flag selector + flexible input + libphonenumber-js validation
- *    Stored as E.164 international format (+5511988880000)
- *  - City: Nominatim (OpenStreetMap) autocomplete — no API key needed
- *  - Full i18n: en / es / pt
- *  - Professional card layout
- */
 
 import {
   useState, useRef, useEffect, useCallback, type ReactNode,
@@ -27,6 +15,7 @@ import DeleteAccountModal from '../components/DeleteAccountModal'
 import { useUser, deriveAvatar } from '../context/UserContext'
 import { usersApi } from '../api'
 import { resizeImageToDataUrl } from '../utils/imageResize'
+
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -638,31 +627,55 @@ function normalizeApiUser(apiData: Partial<{
   }
 }
 
-const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+function persistUserLocally(u: typeof user) {
+  const key = 'pitutiuser'
+  const storage = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
+    ? localStorage : sessionStorage
+  storage.setItem(key, JSON.stringify({
+    id: u.id, name: u.name, email: u.email, phone: u.phone, city: u.city, bio: u.bio, photoUrl: u.photoUrl,
+  }))
+}
+
+const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = async ev => {
-    const r = ev.target?.result as string
-    if (!r) return
 
-    // 1. Local sempre, otimista — independente do que acontecer com a API
-    setPhotoUrl(r)
-    setUser(prev => ({ ...prev, photoUrl: r }))
-    showToast(t('toast.changesSaved'))
+  let resized: string
+  try {
+    // FIX: mesma redução de tamanho já usada (e já comprovada) na foto do pet
+    resized = await resizeImageToDataUrl(file)
+  } catch (err) {
+    console.warn('[SettingsPage] falha ao processar a foto:', err)
+    showToast(t('toast.photoError', { defaultValue: 'Não foi possível processar a foto' }), 'err')
+    return
+  }
 
-    // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
-    if (user.id) {
-      try {
-        const res = await usersApi.update(user.id, { photoUrl: r })
-        setUser(prev => ({ ...prev, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) }))
-      } catch (err) {
-        console.warn('[SettingsPage] foto guardada só localmente, falhou a sincronizar:', err)
-        showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar com o servidor' }), 'err')
-      }
+  // 1. Local sempre, otimista — e agora grava mesmo em localStorage, não só em memória
+  const nextUser = { ...user, photoUrl: resized }
+  setPhotoUrl(resized)
+  setUser(nextUser)
+  try {
+    persistUserLocally(nextUser)
+  } catch (err) {
+    // FIX: quota do localStorage excedida (comum em telemóvel com fotos grandes)
+    console.warn('[SettingsPage] falha ao gravar a foto localmente (quota?):', err)
+    showToast(t('toast.storageError', { defaultValue: 'A foto é demasiado grande para guardar neste aparelho' }), 'err')
+    return
+  }
+  showToast(t('toast.changesSaved'))
+
+  // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
+  if (user.id) {
+    try {
+      const res = await usersApi.update(user.id, { photoUrl: resized })
+      const merged = { ...nextUser, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) }
+      setUser(merged)
+      persistUserLocally(merged)
+    } catch (err) {
+      console.warn('[SettingsPage] foto guardada só localmente, falhou a sincronizar:', err)
+      showToast(t('toast.syncError', { defaultValue: 'Guardado neste aparelho, mas falhou ao sincronizar com o servidor' }), 'err')
     }
   }
-  reader.readAsDataURL(file)
 }
 
 const handleSave = async () => {
@@ -673,10 +686,14 @@ const handleSave = async () => {
 
   // 1. Local sempre, otimista
   setUser(updated)
-  const key = 'pitutiuser'
-  const storage = localStorage.getItem(key) || localStorage.getItem('pitutitoken')
-    ? localStorage : sessionStorage
-  storage.setItem(key, JSON.stringify({ id: user.id, name: name.trim(), email, phone, city, bio, photoUrl }))
+  try {
+    persistUserLocally(updated)
+  } catch (err) {
+    console.warn('[SettingsPage] falha ao gravar localmente (quota?):', err)
+    showToast(t('toast.storageError', { defaultValue: 'Não foi possível guardar neste aparelho (espaço insuficiente)' }), 'err')
+    setSaving(false)
+    return
+  }
   setSaved(true)
   showToast(t('toast.changesSaved'))
   setTimeout(() => setSaved(false), 3000)
@@ -691,7 +708,9 @@ const handleSave = async () => {
         bio: bio || null,
         city: city || null,
       })
-      setUser({ ...updated, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) })
+      const merged = { ...updated, ...normalizeApiUser(res?.data ?? {}, { phone, city, bio }) }
+      setUser(merged)
+      persistUserLocally(merged)
     }
   } catch (err) {
     console.warn('[SettingsPage] alterações guardadas só localmente, falhou a sincronizar:', err)
@@ -700,7 +719,6 @@ const handleSave = async () => {
     setSaving(false)
   }
 }
-
 
   const handleDiscard = () => {
     setName(user.name ?? ''); setEmail(user.email ?? '')
