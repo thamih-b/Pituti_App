@@ -441,6 +441,9 @@
   .settings-layout {
     grid-template-columns: 1fr;
   }
+  .settings-2col {
+    grid-template-columns: 1fr;
+  }
 }
 
   /* ── Pet list toolbar ── */

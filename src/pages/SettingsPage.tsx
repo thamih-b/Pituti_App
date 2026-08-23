@@ -642,7 +642,6 @@ const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
 
   let resized: string
   try {
-    // FIX: mesma redução de tamanho já usada (e já comprovada) na foto do pet
     resized = await resizeImageToDataUrl(file)
   } catch (err) {
     console.warn('[SettingsPage] falha ao processar a foto:', err)
@@ -650,21 +649,19 @@ const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
     return
   }
 
-  // 1. Local sempre, otimista — e agora grava mesmo em localStorage, não só em memória
   const nextUser = { ...user, photoUrl: resized }
   setPhotoUrl(resized)
   setUser(nextUser)
   try {
     persistUserLocally(nextUser)
   } catch (err) {
-    // FIX: quota do localStorage excedida (comum em telemóvel com fotos grandes)
     console.warn('[SettingsPage] falha ao gravar a foto localmente (quota?):', err)
     showToast(t('toast.storageError', { defaultValue: 'A foto é demasiado grande para guardar neste aparelho' }), 'err')
     return
   }
   showToast(t('toast.changesSaved'))
 
-  // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
+  // A foto é a ÚNICA chamada que envia photoUrl — handleSave nunca a reenvia
   if (user.id) {
     try {
       const res = await usersApi.update(user.id, { photoUrl: resized })
@@ -684,7 +681,6 @@ const handleSave = async () => {
 
   const updated = { ...user, name: name.trim(), email, phone, city, bio, photoUrl, avatar: deriveAvatar(name.trim()) }
 
-  // 1. Local sempre, otimista
   setUser(updated)
   try {
     persistUserLocally(updated)
@@ -698,12 +694,14 @@ const handleSave = async () => {
   showToast(t('toast.changesSaved'))
   setTimeout(() => setSaved(false), 3000)
 
-  // 2. Tenta sincronizar com o servidor; se falhar, avisa mas não desfaz o local
   try {
     if (user.id) {
+      // FIX: NÃO envia photoUrl aqui — já foi sincronizada em handlePhotoChange.
+      // Reenviá-la (potencialmente vários KB/MB em base64) tornava este pedido
+      // extremamente lento em rede móvel (~60s), parecendo que o botão não
+      // respondia.
       const res = await usersApi.update(user.id, {
         name: name.trim(),
-        photoUrl,
         phone: phone || null,
         bio: bio || null,
         city: city || null,
@@ -719,6 +717,7 @@ const handleSave = async () => {
     setSaving(false)
   }
 }
+
 
   const handleDiscard = () => {
     setName(user.name ?? ''); setEmail(user.email ?? '')
@@ -906,7 +905,7 @@ const handleSave = async () => {
       {/* ══════════════════════════════════════════════════
           IDIOMA + APARÊNCIA (2 colunas)
       ══════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+      <div className="settings-2col" style={{ marginBottom: '1.25rem' }}>
         <Card>
           <CardHeader icon="🌍" title={t('settings.language')} />
           <CardBody>
@@ -958,7 +957,7 @@ const handleSave = async () => {
       <Card style={{ marginBottom: '2rem' }}>
         <CardHeader icon="🔒" title={t('settings.dangerZone', { defaultValue: 'Data & Privacy' })} />
         <CardBody>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.875rem' }}>
+          <div className="settings-2col settings-2col--tight">
             <div style={{
               padding: '1rem', borderRadius: 'var(--r-lg)',
               background: 'var(--surface-offset)', border: '1.5px solid var(--border)',
@@ -1019,4 +1018,5 @@ const handleSave = async () => {
       <DeleteAccountModal isOpen={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDeleteAccount} />
     </div>
   )
+
 }

@@ -309,6 +309,14 @@ export default function AppLayout() {
       {/* ── MAIN ── */}
       <main className="main" id="main-content">
         <Outlet />
+          <nav className="mobile-bottom-nav" aria-label={t('nav.mobile')}>
+    <MobileNavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} />
+    <MobileNavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      />
+    <MobileNavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     />
+    <MobileNavItem to="vet"       icon={icons.vet}       label={t('nav.vet')}       />
+    <MobileNavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  />
+    <MobileNavItem to="settings"  icon={icons.settings}  label={t('nav.settings')}  />
+  </nav>
       </main>
 
       {/* ── TOAST ── */}

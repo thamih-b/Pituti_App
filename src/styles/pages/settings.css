@@ -251,3 +251,9 @@
 }
 
 
+.settings-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.settings-2col--tight { gap: .875rem; }
