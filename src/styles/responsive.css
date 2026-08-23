@@ -16,7 +16,7 @@
 
 
 /* ════════════════════════════════════════════════════════════
-   GLOBAL CLASSES (always visible, toggled by JS)
+   GLOBAL CLASSES
    ════════════════════════════════════════════════════════════ */
 
 /* Mobile hamburger button — hidden on desktop, shown via media query below */
@@ -222,6 +222,7 @@
 @media (max-width: 860px) {
   .settings-layout { grid-template-columns: 1fr; }
 }
+
 
 
 /* ════════════════════════════════════════════════════════════
@@ -435,6 +436,12 @@
     gap: 1rem;
     padding: 1rem;
   }
+
+  @media (max-width: 600px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+}
 
   /* ── Pet list toolbar ── */
   .petlist-toolbar     { flex-direction: column; gap: .625rem; }
@@ -768,4 +775,23 @@
   }
   .calico-cat { animation: none !important; opacity: 1; transform: translateX(2px) translateY(0); }
   .pituti-anim-wrap span { opacity: 1 !important; animation: none !important; }
+}
+
+
+@supports (height: 100dvh) {
+  .app { min-height: 100dvh; }
+}
+
+.mobile-bottom-nav {
+  transform: translateZ(0);
+}
+
+.topbar {
+  transform: translateZ(0);
+}
+
+.btn,
+.mobile-nav-item,
+.pf-btn {
+  touch-action: manipulation;
 }
