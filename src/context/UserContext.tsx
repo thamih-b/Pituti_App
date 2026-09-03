@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { clearToken } from '../api/client';
+import { usersApi } from '../api';
 
 export interface UserProfile {
   id: string; name: string; email: string;
@@ -20,6 +21,35 @@ const EMPTY_USER: UserProfile = {
   photoUrl: null, avatar: '?',
   color: 'var(--primary-hl)', colorFg: 'var(--primary)',
 };
+
+function fromApiUser(api: {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  city?: string | null;
+  bio?: string | null;
+  photoUrl?: string | null;
+}): UserProfile {
+  return {
+    id: api.id,
+    name: api.name,
+    email: api.email,
+    phone: api.phone ?? '',
+    city: api.city ?? '',
+    bio: api.bio ?? '',
+    photoUrl: api.photoUrl ?? null,
+    avatar: deriveAvatar(api.name ?? ''),
+    color: 'var(--primary-hl)',
+    colorFg: 'var(--primary)',
+  };
+}
+
+function persistUser(u: UserProfile) {
+  const key = 'pitutiuser';
+  const storage = localStorage.getItem(key) ? localStorage : sessionStorage;
+  storage.setItem(key, JSON.stringify(u));
+}
 
 interface UserContextValue {
   user: UserProfile;
@@ -43,7 +73,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (storedUser && token) {
       try {
         const parsed = JSON.parse(storedUser);
-        setUser({
+        const cached: UserProfile = {
           id:       parsed.id       ?? '',
           name:     parsed.name     ?? '',
           email:    parsed.email    ?? '',
@@ -54,7 +84,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
           avatar:   parsed.avatar   ?? deriveAvatar(parsed.name ?? ''),
           color:    'var(--primary-hl)',
           colorFg:  'var(--primary)',
-        });
+        };
+        // 1. Mostra já o que está em cache local (UI instantânea)
+        setUser(cached);
+        setReady(true);
+
+        // FIX (sync entre aparelhos): antes disto, o perfil nunca era
+        // buscado no servidor ao abrir a app — só lia o localStorage deste
+        // aparelho. Alterações feitas noutro aparelho só apareciam por
+        // acidente, como efeito colateral de um PATCH feito aqui. Agora
+        // busca sempre a versão mais recente do servidor ao arrancar.
+        if (cached.id) {
+          usersApi.getById(cached.id)
+            .then(res => {
+              const fresh = fromApiUser(res.data)
+              setUser(fresh)
+              persistUser(fresh)
+            })
+            .catch(err => {
+              // Falhou a rede — fica com o que já estava em cache local
+              console.warn('[UserContext] falha ao atualizar perfil a partir do servidor:', err)
+            })
+        }
+        return
       } catch {
         clearToken();
       }
