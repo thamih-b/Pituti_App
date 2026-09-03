@@ -15,6 +15,7 @@ import DeleteAccountModal from '../components/DeleteAccountModal'
 import { useUser, deriveAvatar } from '../context/UserContext'
 import { usersApi } from '../api'
 import { resizeImageToDataUrl } from '../utils/imageResize'
+import { useTheme } from '../context/PitutiContext'
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -115,6 +116,12 @@ function PhoneInput({ value, onChange }: PhoneInputProps) {
   const [phoneValid,   setPhoneValid]   = useState(true)
   const dropRef   = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+  const c = detectCountryFromE164(value)
+  setCountry(c)
+  setLocalDigits(value ? digitsOnly(value.slice(c.dial.length)) : '')
+}, [value])
 
   // Fecha o dropdown ao clicar fora
   useEffect(() => {
@@ -463,19 +470,31 @@ function Toggle({ initial = true }: { initial?: boolean }) {
   )
 }
 
-function LanguageSelector() {
+function LanguageSelector({ userId }: { userId: string }) {
   const { i18n } = useTranslation()
   const langs = [
     { code: 'es', flag: '🇪🇸', label: 'Español'   },
     { code: 'en', flag: '🇬🇧', label: 'English'   },
     { code: 'pt', flag: '🇧🇷', label: 'Português' },
   ]
+  const handleSelect = (code: string) => {
+    i18n.changeLanguage(code)
+    localStorage.setItem('lang', code)
+    // FIX (sync): antes só ficava em localStorage — nunca chegava ao
+    // servidor, por isso mudar de idioma num aparelho nunca refletia no
+    // outro. Falha de rede aqui não é grave: o idioma já mudou localmente.
+    if (userId) {
+      usersApi.update(userId, { language: code }).catch(err => {
+        console.warn('[LanguageSelector] falha ao sincronizar idioma:', err)
+      })
+    }
+  }
   return (
     <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', paddingTop: '.25rem' }}>
       {langs.map(l => (
         <button
           key={l.code} type="button"
-          onClick={() => { i18n.changeLanguage(l.code); localStorage.setItem('lang', l.code) }}
+          onClick={() => handleSelect(l.code)}
           style={{
             display: 'flex', alignItems: 'center', gap: '.375rem',
             padding: '.45rem .9rem', borderRadius: 'var(--r-full)',
@@ -591,6 +610,7 @@ function exportCSV(name: string, email: string) {
 export default function SettingsPage() {
   const { t, i18n } = useTranslation()
   const { user, setUser, logout } = useUser()
+  const { theme, toggleTheme } = useTheme()
 
   const [name,        setName]        = useState(user.name     ?? '')
   const [email,       setEmail]       = useState(user.email    ?? '')
@@ -909,7 +929,7 @@ const handleSave = async () => {
         <Card>
           <CardHeader icon="🌍" title={t('settings.language')} />
           <CardBody>
-            <LanguageSelector />
+            <LanguageSelector userId={user.id} />
           </CardBody>
         </Card>
         <Card>
@@ -918,21 +938,26 @@ const handleSave = async () => {
             <p style={{ fontSize: '.8125rem', color: 'var(--text-muted)', marginBottom: '.75rem' }}>
               {t('settings.theme')}
             </p>
-            <div style={{ display: 'flex', gap: '.5rem' }}>
-              {['☀️', '🌙'].map((icon, i) => (
-                <button
-                  key={i} type="button"
-                  style={{
-                    flex: 1, padding: '.6rem', borderRadius: 'var(--r-lg)',
-                    border: `1.5px solid ${i === 0 ? 'var(--primary)' : 'var(--border)'}`,
-                    background: i === 0 ? 'var(--primary-hl)' : 'var(--surface)',
-                    cursor: 'pointer', fontSize: '1.25rem', transition: 'all var(--trans)',
-                  }}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
+<div style={{ display: 'flex', gap: '.5rem' }}>
+  {(['light', 'dark'] as const).map((mode, i) => {
+    const icon = i === 0 ? '☀️' : '🌙'
+    const active = theme === mode
+    return (
+      <button
+        key={mode} type="button"
+        onClick={() => { if (theme !== mode) toggleTheme() }}
+        style={{
+          flex: 1, padding: '.6rem', borderRadius: 'var(--r-lg)',
+          border: `1.5px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+          background: active ? 'var(--primary-hl)' : 'var(--surface)',
+          cursor: 'pointer', fontSize: '1.25rem', transition: 'all var(--trans)',
+        }}
+      >
+        {icon}
+      </button>
+    )
+  })}
+</div>
           </CardBody>
         </Card>
       </div>

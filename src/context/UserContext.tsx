@@ -1,12 +1,15 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { clearToken } from '../api/client';
 import { usersApi } from '../api';
+import i18n from '../i18n/i18n';
 
 export interface UserProfile {
   id: string; name: string; email: string;
   phone: string; city: string; bio: string;
   photoUrl: string | null; avatar: string;
   color: string; colorFg: string;
+  // FIX (sync): idioma sincronizado entre aparelhos (antes só localStorage)
+  language: string;
 }
 
 export function deriveAvatar(name: string): string {
@@ -20,16 +23,13 @@ const EMPTY_USER: UserProfile = {
   id: '', name: '', email: '', phone: '', city: '', bio: '',
   photoUrl: null, avatar: '?',
   color: 'var(--primary-hl)', colorFg: 'var(--primary)',
+  language: '',
 };
 
 function fromApiUser(api: {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string | null;
-  city?: string | null;
-  bio?: string | null;
-  photoUrl?: string | null;
+  id: string; name: string; email: string
+  phone?: string | null; city?: string | null; bio?: string | null
+  photoUrl?: string | null; language?: string | null
 }): UserProfile {
   return {
     id: api.id,
@@ -42,6 +42,7 @@ function fromApiUser(api: {
     avatar: deriveAvatar(api.name ?? ''),
     color: 'var(--primary-hl)',
     colorFg: 'var(--primary)',
+    language: api.language ?? '',
   };
 }
 
@@ -84,25 +85,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
           avatar:   parsed.avatar   ?? deriveAvatar(parsed.name ?? ''),
           color:    'var(--primary-hl)',
           colorFg:  'var(--primary)',
+          language: parsed.language ?? '',
         };
         // 1. Mostra já o que está em cache local (UI instantânea)
         setUser(cached);
         setReady(true);
 
-        // FIX (sync entre aparelhos): antes disto, o perfil nunca era
-        // buscado no servidor ao abrir a app — só lia o localStorage deste
-        // aparelho. Alterações feitas noutro aparelho só apareciam por
-        // acidente, como efeito colateral de um PATCH feito aqui. Agora
-        // busca sempre a versão mais recente do servidor ao arrancar.
+        // FIX (sync entre aparelhos): busca sempre a versão mais recente do
+        // servidor ao arrancar (antes só lia o localStorage deste aparelho).
         if (cached.id) {
           usersApi.getById(cached.id)
             .then(res => {
               const fresh = fromApiUser(res.data)
               setUser(fresh)
               persistUser(fresh)
+              // FIX (idioma entre aparelhos): aplica o idioma vindo do
+              // servidor, se existir e for diferente do atual.
+              if (fresh.language && fresh.language !== i18n.language) {
+                i18n.changeLanguage(fresh.language)
+                localStorage.setItem('lang', fresh.language)
+              }
             })
             .catch(err => {
-              // Falhou a rede — fica com o que já estava em cache local
               console.warn('[UserContext] falha ao atualizar perfil a partir do servidor:', err)
             })
         }

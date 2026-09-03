@@ -4,10 +4,10 @@ import { sql } from '../db.js'
 function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 function conflict(msg) { const e = new Error(msg); e.statusCode = 409; throw e }
 
-// FIX (perfil não persiste): phone/bio/city nunca eram lidos nem gravados
-// aqui — só name/email/photoUrl. As colunas já existem (migration
-// 003_users_profile_fields.sql).
-const SELECT_FIELDS = `id, name, email, photo_url AS "photoUrl", phone, bio, city, created_at AS "createdAt"`
+// FIX (perfil não persiste): phone/bio/city/language nunca eram lidos nem
+// gravados aqui — só name/email/photoUrl. As colunas já existem (migrations
+// 003_users_profile_fields.sql e 005_users_language.sql).
+const SELECT_FIELDS = `id, name, email, photo_url AS "photoUrl", phone, bio, city, language, created_at AS "createdAt"`
 
 export const userService = {
   async getAll() {
@@ -22,9 +22,10 @@ export const userService = {
     const exists = await sql`SELECT id FROM users WHERE email = ${data.email}`
     if (exists.length) conflict('Ya existe un usuario con ese email')
     const [row] = await sql`
-      INSERT INTO users (name, email, photo_url, phone, bio, city)
+      INSERT INTO users (name, email, photo_url, phone, bio, city, language)
       VALUES (${data.name}, ${data.email}, ${data.photoUrl ?? null},
-              ${data.phone ?? null}, ${data.bio ?? null}, ${data.city ?? null})
+              ${data.phone ?? null}, ${data.bio ?? null}, ${data.city ?? null},
+              ${data.language ?? null})
       RETURNING ${sql.unsafe(SELECT_FIELDS)}`
     return row
   },
@@ -37,7 +38,8 @@ export const userService = {
         photo_url = COALESCE(${data.photoUrl ?? null}, photo_url),
         phone     = COALESCE(${data.phone ?? null}, phone),
         bio       = COALESCE(${data.bio ?? null}, bio),
-        city      = COALESCE(${data.city ?? null}, city)
+        city      = COALESCE(${data.city ?? null}, city),
+        language  = COALESCE(${data.language ?? null}, language)
       WHERE id = ${id}
       RETURNING ${sql.unsafe(SELECT_FIELDS)}`
     return row

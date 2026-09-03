@@ -178,7 +178,6 @@ export interface CreateCareDto {
   type: string
   frequency?: number | null
   periodType?: CarePeriodType | null
-  // FIX (sync): intervalo customizado ("a cada X dias")
   intervalDays?: number | null
   time?: string | null
   notes?: string | null
@@ -194,7 +193,6 @@ export interface UpdateCareDto {
   time?: string | null
   notes?: string | null
   status?: CareStatus
-  // FIX (sync): estado diário de conclusão, persistido no servidor
   doneDates?: Record<string, { done: number; doneState: boolean }>
 }
 
@@ -204,9 +202,6 @@ export interface CreateNoteDto {
   content: string
   veterinary?: string | null
   type?: NoteType
-  // FIX: toApiCreateNoteDto/mapApiNote sempre usaram 'date' e 'vet' —
-  // os tipos nunca tinham sido atualizados para os incluir (isto nunca foi
-  // apanhado porque o build de produção usa só `vite build`, sem tsc).
   date?: string | null
   vet?: string | null
 }
@@ -330,7 +325,6 @@ export interface ApiMedicalProfile {
   livingWithAnimals?: boolean | null
   behavioralNotes?: string | null
   vetQuestions?: string | null
-  weightKg?: number | null
   updatedAt?: string | null
 }
 
@@ -434,6 +428,7 @@ export interface CreateUserDto {
   phone?: string | null
   city?: string | null
   bio?: string | null
+  language?: string | null
 }
 
 export interface UpdateUserDto {
@@ -443,6 +438,7 @@ export interface UpdateUserDto {
   phone?: string | null
   city?: string | null
   bio?: string | null
+  language?: string | null
 }
 
 export interface ApiUser {
@@ -453,5 +449,6 @@ export interface ApiUser {
   phone?: string | null
   city?: string | null
   bio?: string | null
+  language?: string | null
   createdAt: string
 }
