@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useNotifications } from '../hooks/useNotifications'
 
 interface Notification {
   id:    string
@@ -41,10 +42,9 @@ export default function NotificationsPanel() {
   const navigate = useNavigate()
 
   const [open,   setOpen]   = useState(false)
-  const [notifs, setNotifs] = useState<Notification[]>([])
+
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const unread = notifs.filter(n => !n.read).length
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -57,10 +57,9 @@ export default function NotificationsPanel() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+const { notifications: notifs, markRead, markAllRead, dismiss } = useNotifications()
+const unread = notifs.filter(n => !n.read).length
 
-  const markAllRead = () => setNotifs(n => n.map(x => ({ ...x, read: true })))
-  const markRead    = (id: string) => setNotifs(n => n.map(x => x.id === id ? { ...x, read: true } : x))
-  const dismiss     = (id: string) => setNotifs(n => n.filter(x => x.id !== id))
 
   const handleClick = (notif: Notification) => {
     markRead(notif.id)
