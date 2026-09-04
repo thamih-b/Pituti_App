@@ -1,5 +1,9 @@
 // src/hooks/useNotifications.ts — NOVO FICHEIRO
-
+//
+// Calcula notificações reais a partir dos dados já sincronizados (cuidados,
+// vacinas, medicamentos, sintomas). Antes disto, o painel de notificações
+// (NotificationPanel.tsx) tinha toda a interface pronta, mas `notifs`
+// começava sempre vazio e nunca era preenchido.
 
 import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,14 +23,15 @@ export interface AppNotification {
   to?: string
 }
 
-const READ_KEY = 'pituti-notif-read'
+const READ_KEY      = 'pituti-notif-read'
+const DISMISSED_KEY = 'pituti-notif-dismissed'
 
-function loadReadIds(): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')) }
+function loadIds(key: string): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')) }
   catch { return new Set() }
 }
-function persistReadIds(ids: Set<string>) {
-  try { localStorage.setItem(READ_KEY, JSON.stringify([...ids])) } catch {}
+function persistIds(key: string, ids: Set<string>) {
+  try { localStorage.setItem(key, JSON.stringify([...ids])) } catch {}
 }
 
 const DAY = 86_400_000
@@ -39,8 +44,14 @@ export function useNotifications() {
   const { medications } = useMedications()
   const { symptoms } = useSymptoms()
 
-  const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds())
-  useEffect(() => { persistReadIds(readIds) }, [readIds])
+  const [readIds, setReadIds] = useState<Set<string>>(() => loadIds(READ_KEY))
+  useEffect(() => { persistIds(READ_KEY, readIds) }, [readIds])
+
+  // FIX: "dispensar" (✕) precisa de REMOVER a notificação do painel — antes
+  // usava o mesmo conjunto de "lidas", por isso a notificação continuava
+  // visível (só menos destacada) depois de se clicar no ✕.
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => loadIds(DISMISSED_KEY))
+  useEffect(() => { persistIds(DISMISSED_KEY, dismissedIds) }, [dismissedIds])
 
   const petName = useCallback(
     (petId: string) => pets.find(p => p.id === petId)?.name ?? '',
@@ -54,20 +65,24 @@ export function useNotifications() {
     const list: AppNotification[] = []
 
     // ── Vacinas: atrasadas ou a vencer nos próximos 7 dias ──
+    // FIX: id inclui o nível de urgência (soon/late) — dispensar o aviso
+    // "a vencer" não deve esconder o aviso "atrasada" quando a data passar,
+    // porque são ids diferentes.
     Object.entries(vaccinesByPet).forEach(([petId, vaccines]) => vaccines.forEach(v => {
       if (!v.nextDate) return
       const next = new Date(v.nextDate + 'T00:00:00')
       const diffDays = Math.round((next.getTime() - today.getTime()) / DAY)
       if (diffDays > 7) return
       const late = diffDays < 0
+      const id = `vaccine:${v.id}:${late ? 'late' : 'soon'}`
       list.push({
-        id: `vaccine:${v.id}`,
+        id,
         type: 'vaccine',
         title: late ? t('notif.vaccineLate', { defaultValue: 'Vacina atrasada' })
                      : t('notif.vaccineSoon', { defaultValue: 'Vacina a vencer' }),
         body: `${petName(petId)} — ${v.name}`,
         time: v.nextDate,
-        read: readIds.has(`vaccine:${v.id}`),
+        read: readIds.has(id),
         to: `pets/${petId}`,
       })
     }))
@@ -78,13 +93,14 @@ export function useNotifications() {
       const end = new Date(m.endDate + 'T00:00:00')
       const diffDays = Math.round((end.getTime() - today.getTime()) / DAY)
       if (diffDays < 0 || diffDays > 3) return
+      const id = `medication:${m.id}`
       list.push({
-        id: `medication:${m.id}`,
+        id,
         type: 'medication',
         title: t('notif.medEnding', { defaultValue: 'Medicamento a terminar' }),
         body: `${petName(m.petId)} — ${m.title}`,
         time: m.endDate,
-        read: readIds.has(`medication:${m.id}`),
+        read: readIds.has(id),
         to: `pets/${m.petId}`,
       })
     })
@@ -95,36 +111,42 @@ export function useNotifications() {
       const d = new Date(s.date + 'T00:00:00')
       const diffDays = Math.round((today.getTime() - d.getTime()) / DAY)
       if (diffDays < 3) return
+      const id = `symptom:${s.id}`
       list.push({
-        id: `symptom:${s.id}`,
+        id,
         type: 'symptom',
         title: t('notif.symptomUnresolved', { defaultValue: 'Sintoma por resolver' }),
         body: `${petName(s.petId)} — ${s.description.slice(0, 60)}`,
         time: s.date,
-        read: readIds.has(`symptom:${s.id}`),
+        read: readIds.has(id),
         to: `pets/${s.petId}`,
       })
     })
 
     // ── Cuidados: pendentes hoje ──
+    // (id inclui a data de hoje — dispensar não afeta o dia seguinte)
     cares.forEach(c => {
       if (!isDueOnDate(c, todayStr)) return
       const done = c.doneByDate[todayStr]?.doneState
       if (done) return
+      const id = `care:${c.id}:${todayStr}`
       list.push({
-        id: `care:${c.id}:${todayStr}`,
+        id,
         type: 'care',
         title: t('notif.careDueToday', { defaultValue: 'Cuidado pendente hoje' }),
         body: `${petName(c.petId)} — ${c.title}`,
         time: todayStr,
-        read: readIds.has(`care:${c.id}:${todayStr}`),
+        read: readIds.has(id),
         to: `pets/${c.petId}`,
       })
     })
 
-    // Mais recentes/urgentes primeiro
-    return list.sort((a, b) => a.time.localeCompare(b.time))
-  }, [pets, cares, vaccinesByPet, medications, symptoms, readIds, petName, t])
+    // FIX: filtra as dispensadas — é isto que faz o ✕ removê-las de facto
+    // do painel, em vez de as deixar visíveis só marcadas como lidas.
+    return list
+      .filter(n => !dismissedIds.has(n.id))
+      .sort((a, b) => a.time.localeCompare(b.time))
+  }, [pets, cares, vaccinesByPet, medications, symptoms, readIds, dismissedIds, petName, t])
 
   const markRead = useCallback((id: string) => {
     setReadIds(prev => new Set(prev).add(id))
@@ -138,10 +160,10 @@ export function useNotifications() {
     })
   }, [notifs])
 
+  // FIX: dismiss agora remove mesmo a notificação (ver filtro acima),
+  // em vez de só a marcar como lida.
   const dismiss = useCallback((id: string) => {
-    // "Dispensar" = marcar como lida (a notificação reaparece só se a
-    // condição de origem mudar, ex. data diferente para cuidados diários)
-    setReadIds(prev => new Set(prev).add(id))
+    setDismissedIds(prev => new Set(prev).add(id))
   }, [])
 
   return { notifications: notifs, markRead, markAllRead, dismiss }
