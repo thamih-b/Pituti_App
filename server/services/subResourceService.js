@@ -3,13 +3,15 @@ import { sql } from '../db.js'
 
 function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 
+function toDateStr(d) {
+  if (d == null) return null
+  if (typeof d === 'string') return d.slice(0, 10)
+  return d.toISOString().slice(0, 10)
+}
+
 const CONFIG = {
   vaccines: {
     table: 'vaccines',
-    // FIX (500 ao criar/editar vacina, confirmado via information_schema.columns):
-    // a coluna real chama-se apenas `date` — o código escrevia em `vaccine_date`,
-    // que não existe, e o Postgres rebentava com 500. next_due_date e veterinary
-    // já estavam corretos.
     insert: (petId, d) => sql`
       INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
       VALUES (${petId}, ${d.name}, ${d.date}, ${d.nextDueDate ?? null},
@@ -22,8 +24,10 @@ const CONFIG = {
         veterinary    = COALESCE(${d.veterinary ?? null}, veterinary),
         notes         = COALESCE(${d.notes ?? null}, notes)
       WHERE id = ${id} RETURNING *`,
-    fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, date: r.date,
-      nextDueDate: r.next_due_date, veterinary: r.veterinary, notes: r.notes, createdAt: r.created_at }),
+    fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name,
+      date: toDateStr(r.date),
+      nextDueDate: toDateStr(r.next_due_date),
+      veterinary: r.veterinary, notes: r.notes, createdAt: r.created_at }),
   },
   medications: {
     table: 'medications',
@@ -41,15 +45,13 @@ const CONFIG = {
         notes      = COALESCE(${d.notes ?? null}, notes)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name, dosage: r.dosage,
-      frequency: r.frequency, startDate: r.start_date, endDate: r.end_date,
+      frequency: r.frequency,
+      startDate: toDateStr(r.start_date),
+      endDate: toDateStr(r.end_date),
       notes: r.notes, createdAt: r.created_at }),
   },
   symptoms: {
     table: 'symptoms',
-    // FIX (sintomas não persistiam, confirmado via information_schema.columns):
-    // a coluna real chama-se apenas `date` — o código escrevia em
-    // `observed_date`, que não existe, e o Postgres rebentava com 500 em
-    // todo o INSERT/UPDATE.
     insert: (petId, d) => sql`
       INSERT INTO symptoms (pet_id, description, severity, date, notes, resolved)
       VALUES (${petId}, ${d.description}, ${d.severity}, ${d.date},
@@ -63,15 +65,12 @@ const CONFIG = {
         resolved    = COALESCE(${d.resolved ?? null}, resolved)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, description: r.description,
-      severity: r.severity, date: r.date, notes: r.notes,
-      resolved: r.resolved, createdAt: r.created_at }),
+      severity: r.severity,
+      date: toDateStr(r.date),
+      notes: r.notes, resolved: r.resolved, createdAt: r.created_at }),
   },
   cares: {
     table: 'cares',
-    // FIX (sync completo dos cuidados): interval_days (intervalo "a cada X
-    // dias") e done_dates (estado diário de conclusão) já existem na tabela
-    // (confirmado via information_schema.columns) — antes não eram lidos
-    // nem escritos aqui, por isso ficavam só em localStorage do aparelho.
     insert: (petId, d) => sql`
       INSERT INTO cares (pet_id, name, type, frequency, period_type, interval_days, time, notes, status)
       VALUES (${petId}, ${d.name}, ${d.type}, ${d.frequency ?? null},
@@ -97,21 +96,25 @@ const CONFIG = {
   },
   notes: {
     table: 'notes',
-    // FIX (data da nota): coluna note_date adicionada via migração 004 —
-    // antes a data escolhida no formulário era sempre descartada.
     insert: (petId, d) => sql`
-      INSERT INTO notes (pet_id, content, veterinary, type, note_date)
+      INSERT INTO notes (pet_id, content, veterinary, type)
       VALUES (${petId}, ${d.content}, ${d.veterinary ?? null},
-              ${d.type ?? 'observacion'}, ${d.date ?? null}) RETURNING *`,
+              ${d.type ?? 'observacion'}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE notes SET
         content    = COALESCE(${d.content ?? null}, content),
         veterinary = COALESCE(${d.veterinary ?? null}, veterinary),
-        type       = COALESCE(${d.type ?? null}, type),
-        note_date  = COALESCE(${d.date ?? null}::date, note_date)
+        type       = COALESCE(${d.type ?? null}, type)
       WHERE id = ${id} RETURNING *`,
+    // FIX: a tabela `notes` não tem coluna `date` — o frontend usa este
+    // campo (CreateNoteDto.date / ApiNote.date), mas nunca foi persistido
+    // no servidor. Devolvemos sempre null aqui para não fingir um valor;
+    // se precisares de guardar a data da nota, é preciso uma migração para
+    // adicionar essa coluna (dizes-me e faço).
     fromRow: r => ({ id: r.id, petId: r.pet_id, content: r.content,
-      veterinary: r.veterinary, type: r.type, date: r.note_date, createdAt: r.created_at }),
+      veterinary: r.veterinary, vet: r.veterinary, type: r.type,
+      date: null,
+      createdAt: r.created_at }),
   },
 }
 
@@ -122,10 +125,6 @@ export function createSubResourceService(storeKey) {
 
   return {
     async getAllForPet(petId) {
-      // FIX: `${sql(table)}` deixou de ser suportado pelo driver do Neon —
-      // usa-se sql.unsafe() para interpolar um identificador "cru" (nome de
-      // tabela). Seguro aqui porque `table` vem sempre de CONFIG (lista fixa
-      // no código), nunca de input do utilizador.
       const rows = await sql`SELECT * FROM ${sql.unsafe(table)} WHERE pet_id = ${petId} ORDER BY created_at DESC`
       return rows.map(fromRow)
     },

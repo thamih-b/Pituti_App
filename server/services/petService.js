@@ -4,14 +4,24 @@ import { sql } from '../db.js'
 function notFound(msg) { const e = new Error(msg); e.statusCode = 404; throw e }
 function badRequest(msg) { const e = new Error(msg); e.statusCode = 400; throw e }
 
+function toDateStr(d) {
+  if (d == null) return null
+  if (typeof d === 'string') return d.slice(0, 10)
+  return d.toISOString().slice(0, 10)
+}
+function normalizePet(row) {
+  return row ? { ...row, birthDate: toDateStr(row.birthDate) } : row
+}
+
 export const petService = {
   async getAll(ownerId) {
     if (!ownerId) badRequest('ownerId query param is required')
-    return sql`
+    const rows = await sql`
       SELECT id, owner_id AS "ownerId", name, species, breed,
              birth_date AS "birthDate", photo_url AS "photoUrl",
              created_at AS "createdAt"
       FROM pets WHERE owner_id = ${ownerId} ORDER BY created_at ASC`
+    return rows.map(normalizePet)
   },
 
   async getById(id) {
@@ -21,7 +31,7 @@ export const petService = {
              created_at AS "createdAt"
       FROM pets WHERE id = ${id}`
     if (!rows[0]) notFound('Mascota no encontrada')
-    return rows[0]
+    return normalizePet(rows[0])
   },
 
   async create(data) {
@@ -33,7 +43,7 @@ export const petService = {
       RETURNING id, owner_id AS "ownerId", name, species, breed,
                 birth_date AS "birthDate", photo_url AS "photoUrl",
                 created_at AS "createdAt"`
-    return row
+    return normalizePet(row)
   },
 
   async update(id, data) {
@@ -49,7 +59,7 @@ export const petService = {
       RETURNING id, owner_id AS "ownerId", name, species, breed,
                 birth_date AS "birthDate", photo_url AS "photoUrl",
                 created_at AS "createdAt"`
-    return row
+    return normalizePet(row)
   },
 
   async delete(id) {
