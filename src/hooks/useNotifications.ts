@@ -83,7 +83,8 @@ export function useNotifications() {
         body: `${petName(petId)} — ${v.name}`,
         time: v.nextDate,
         read: readIds.has(id),
-        to: `pets/${petId}`,
+        // FIX: link direto para o separador de Vacinas dentro do pet
+        to: `pets/${petId}?tab=vaccines`,
       })
     }))
 
@@ -101,7 +102,8 @@ export function useNotifications() {
         body: `${petName(m.petId)} — ${m.title}`,
         time: m.endDate,
         read: readIds.has(id),
-        to: `pets/${m.petId}`,
+        // FIX: link direto para o separador de Medicamentos dentro do pet
+        to: `pets/${m.petId}?tab=medications`,
       })
     })
 
@@ -119,7 +121,8 @@ export function useNotifications() {
         body: `${petName(s.petId)} — ${s.description.slice(0, 60)}`,
         time: s.date,
         read: readIds.has(id),
-        to: `pets/${s.petId}`,
+        // FIX: link direto para o separador de Sintomas dentro do pet
+        to: `pets/${s.petId}?tab=symptoms`,
       })
     })
 
@@ -137,7 +140,8 @@ export function useNotifications() {
         body: `${petName(c.petId)} — ${c.title}`,
         time: todayStr,
         read: readIds.has(id),
-        to: `pets/${c.petId}`,
+        // FIX: link direto para o separador de Cuidados dentro do pet
+        to: `pets/${c.petId}?tab=cares`,
       })
     })
 

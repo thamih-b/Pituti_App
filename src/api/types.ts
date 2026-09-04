@@ -325,6 +325,7 @@ export interface ApiMedicalProfile {
   livingWithAnimals?: boolean | null
   behavioralNotes?: string | null
   vetQuestions?: string | null
+  weightKg?: number | null
   updatedAt?: string | null
 }
 

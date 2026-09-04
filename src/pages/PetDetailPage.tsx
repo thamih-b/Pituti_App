@@ -1,7 +1,7 @@
 // traduzido — sem mock, sem extraVacc local
 
 import { useState, useRef, useMemo, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { SPECIES_EMOJI } from '../hooks/usePets'
 import type { PetWithAlerts } from '../hooks/usePets'
 import { getVaccStatus } from '../utils/vaccUtils'
@@ -531,6 +531,11 @@ export default function PetDetailPage() {
   const { petId = '' } = useParams<{ petId: string }>()
   const navigate = useNavigate()
   const { pets, loading, updatePet } = usePetsContext()
+  
+const TAB_BY_NAME: Record<string, number> = {
+  cares: 0, vaccines: 1, medications: 2, symptoms: 3, notes: 4, history: 5,
+}
+const [searchParams] = useSearchParams()
 
   // ══════════════════════════════════════════════════════════════
   // TODOS os hooks ANTES de qualquer return condicional (Rules of
@@ -538,7 +543,9 @@ export default function PetDetailPage() {
   // dos if-returns → React error #310.
   // ══════════════════════════════════════════════════════════════
 
-  const [activeTab,      setActiveTab]      = useState(0)
+const [activeTab, setActiveTab] = useState(
+  () => TAB_BY_NAME[searchParams.get('tab') ?? ''] ?? 0
+)
   const [shareOpen,      setShareOpen]      = useState(false)
   const [editOpen,       setEditOpen]       = useState(false)
   const [addMedOpen,     setAddMedOpen]     = useState(false)
@@ -561,7 +568,7 @@ useEffect(() => {
     setPhotoUrl(petData.photoUrl)
     try { localStorage.setItem(`pet-photo-${petData.id}`, petData.photoUrl) } catch {}
   }
-}, [petData?.photoUrl, petData?.id])
+}, [petData?.photoUrl, petData?.id, searchParams])
 
 
   const { addSymptom, saveSymptom, resolve, unresolve } = useSymptoms()
