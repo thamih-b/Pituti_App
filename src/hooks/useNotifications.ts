@@ -1,9 +1,4 @@
-// src/hooks/useNotifications.ts — NOVO FICHEIRO
-//
-// Calcula notificações reais a partir dos dados já sincronizados (cuidados,
-// vacinas, medicamentos, sintomas). Antes disto, o painel de notificações
-// (NotificationPanel.tsx) tinha toda a interface pronta, mas `notifs`
-// começava sempre vazio e nunca era preenchido.
+// src/hooks/useNotifications.ts
 
 import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -47,9 +42,7 @@ export function useNotifications() {
   const [readIds, setReadIds] = useState<Set<string>>(() => loadIds(READ_KEY))
   useEffect(() => { persistIds(READ_KEY, readIds) }, [readIds])
 
-  // FIX: "dispensar" (✕) precisa de REMOVER a notificação do painel — antes
-  // usava o mesmo conjunto de "lidas", por isso a notificação continuava
-  // visível (só menos destacada) depois de se clicar no ✕.
+
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => loadIds(DISMISSED_KEY))
   useEffect(() => { persistIds(DISMISSED_KEY, dismissedIds) }, [dismissedIds])
 
@@ -65,28 +58,29 @@ export function useNotifications() {
     const list: AppNotification[] = []
 
     // ── Vacinas: atrasadas ou a vencer nos próximos 7 dias ──
-    // FIX: id inclui o nível de urgência (soon/late) — dispensar o aviso
-    // "a vencer" não deve esconder o aviso "atrasada" quando a data passar,
-    // porque são ids diferentes.
-    Object.entries(vaccinesByPet).forEach(([petId, vaccines]) => vaccines.forEach(v => {
-      if (!v.nextDate) return
-      const next = new Date(v.nextDate + 'T00:00:00')
-      const diffDays = Math.round((next.getTime() - today.getTime()) / DAY)
-      if (diffDays > 7) return
-      const late = diffDays < 0
-      const id = `vaccine:${v.id}:${late ? 'late' : 'soon'}`
-      list.push({
-        id,
-        type: 'vaccine',
-        title: late ? t('notif.vaccineLate', { defaultValue: 'Vacina atrasada' })
-                     : t('notif.vaccineSoon', { defaultValue: 'Vacina a vencer' }),
-        body: `${petName(petId)} — ${v.name}`,
-        time: v.nextDate,
-        read: readIds.has(id),
-        // FIX: link direto para o separador de Vacinas dentro do pet
-        to: `pets/${petId}?tab=vaccines`,
+    // FIX: VaccineRecord não tem campo petId — o petId é a CHAVE de
+    // vaccinesByPet, não uma propriedade de cada registo.
+    Object.entries(vaccinesByPet).forEach(([petId, vaccines]) => {
+      vaccines.forEach(v => {
+        if (!v.nextDate) return
+        const next = new Date(v.nextDate + 'T00:00:00')
+        const diffDays = Math.round((next.getTime() - today.getTime()) / DAY)
+        if (diffDays > 7) return
+        const late = diffDays < 0
+        const id = `vaccine:${v.id}:${late ? 'late' : 'soon'}`
+        list.push({
+          id,
+          type: 'vaccine',
+          title: late ? t('notif.vaccineLate', { defaultValue: 'Vacina atrasada' })
+                       : t('notif.vaccineSoon', { defaultValue: 'Vacina a vencer' }),
+          body: `${petName(petId)} — ${v.name}`,
+          time: v.nextDate,
+          read: readIds.has(id),
+          // FIX: link direto para o separador de Vacinas dentro do pet
+          to: `/pets/${petId}?tab=vaccines`,
+        })
       })
-    }))
+    })
 
     // ── Medicamentos: a terminar nos próximos 3 dias ──
     medications.forEach(m => {
@@ -103,7 +97,7 @@ export function useNotifications() {
         time: m.endDate,
         read: readIds.has(id),
         // FIX: link direto para o separador de Medicamentos dentro do pet
-        to: `pets/${m.petId}?tab=medications`,
+        to: `/pets/${m.petId}?tab=medications`,
       })
     })
 
@@ -122,7 +116,7 @@ export function useNotifications() {
         time: s.date,
         read: readIds.has(id),
         // FIX: link direto para o separador de Sintomas dentro do pet
-        to: `pets/${s.petId}?tab=symptoms`,
+        to: `/pets/${s.petId}?tab=symptoms`,
       })
     })
 
@@ -141,7 +135,7 @@ export function useNotifications() {
         time: todayStr,
         read: readIds.has(id),
         // FIX: link direto para o separador de Cuidados dentro do pet
-        to: `pets/${c.petId}?tab=cares`,
+        to: `/pets/${c.petId}?tab=cares`,
       })
     })
 

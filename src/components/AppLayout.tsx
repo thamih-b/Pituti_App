@@ -76,7 +76,8 @@ export function showToast(message: string, type: 'success' | 'err' = 'success') 
 // ─── PROFILE DROPDOWN ─────────────────────────────────────────────────────────
 function ProfileDropdown() {
   const { user, logout } = useUser()
-  const { state } = usePituti()
+  const { state, toggleTheme } = usePituti()
+  const theme = state.theme
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -171,36 +172,83 @@ function ProfileDropdown() {
               {icons.settings}
               {t('nav.settings') ?? 'Definições'}
             </button>
+
+
+<div style={{ padding: '.375rem 0' }}>
+  <button
+    onClick={toggleTheme}
+    style={{
+      width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
+      display: 'flex', alignItems: 'center', gap: '.625rem',
+      fontSize: '.875rem', color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
+      fontFamily: 'inherit',
+    }}
+    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
+    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+  >
+    {theme === 'light' ? icons.moon : icons.sun}
+    {theme === 'light' ? (t('topbar.darkMode') ?? 'Modo escuro') : (t('topbar.lightMode') ?? 'Modo claro')}
+  </button>
+  <button
+    onClick={() => { setOpen(false); navigate('settings') }}
+    style={{
+      width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
+      display: 'flex', alignItems: 'center', gap: '.625rem',
+      fontSize: '.875rem', color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
+      fontFamily: 'inherit',
+    }}
+    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
+    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+  >
+    {icons.settings}
+    {t('nav.settings') ?? 'Definições'}
+  </button>
+
             <button
-              onClick={() => { setOpen(false); logout() }}
+              onClick={() => {
+                setOpen(false)
+                logout()
+              }}
               style={{
-                width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
-                display: 'flex', alignItems: 'center', gap: '.625rem',
-                fontSize: '.875rem', color: 'var(--err)', cursor: 'pointer', textAlign: 'left',
+                width: '100%',
+                padding: '.625rem 1rem',
+                background: 'none',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '.625rem',
+                fontSize: '.875rem',
+                color: 'var(--err)',
+                cursor: 'pointer',
+                textAlign: 'left',
                 fontFamily: 'inherit',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--err-hl, #fff0f0)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = 'var(--err-hl, #fff0f0)')
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = 'none')
+              }
             >
               {icons.logout}
               {t('settings.logout') ?? 'Sair'}
             </button>
           </div>
         </div>
-      )}
-    </div>
-  )
+      </div>
+    )}
+  </div>
+)
 }
 
 // ─── APP LAYOUT ───────────────────────────────────────────────────────────────
 export default function AppLayout() {
-  const [collapsed,  setCollapsed]  = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
 
-  const { state, toggleTheme } = usePituti()
+  const { state } = usePituti()
   const petCount = state.pets?.length ?? 0
-  const theme = state.theme
 
   const { t } = useTranslation()
 
@@ -210,7 +258,6 @@ export default function AppLayout() {
     _setToast = setToast
     return () => { _setToast = null }
   }, [setToast])
-
   const closeMobile = () => setMobileOpen(false)
 
   return (
@@ -240,11 +287,8 @@ export default function AppLayout() {
         </div>
 
         <div className="topbar-actions">
-          <NotificationsPanel />
-          <button className="topbar-icon-btn" onClick={toggleTheme} title={t('topbar.changeTheme')}>
-            {theme === 'light' ? icons.moon : icons.sun}
-          </button>
-        </div>
+  <NotificationsPanel />
+</div>
 
         {/* ← dropdown de perfil em vez do botão simples */}
         <ProfileDropdown />
@@ -266,24 +310,24 @@ export default function AppLayout() {
         </div>
 
         <div className="sidebar-section-label">{t('nav.main')}</div>
-        <NavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} collapsed={collapsed} />
-        <NavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      collapsed={collapsed} badge={petCount > 0 ? String(petCount) : undefined} />
-        <NavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     collapsed={collapsed} />
-        <NavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  collapsed={collapsed} />
+<NavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      collapsed={collapsed} badge={petCount > 0 ? String(petCount) : undefined} onClick={closeMobile} />
+<NavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  collapsed={collapsed} onClick={closeMobile} />
 
         <div className="sidebar-divider" />
 
         <div className="sidebar-section-label">{t('nav.health')}</div>
-        <NavItem to="vaccines"    icon={icons.vaccines}    label={t('nav.vaccines')}    collapsed={collapsed} />
-        <NavItem to="medications" icon={icons.medications} label={t('nav.medications')} collapsed={collapsed} />
-        <NavItem to="symptoms"    icon={icons.symptoms}    label={t('nav.symptoms')}    collapsed={collapsed} />
-        <NavItem to="notes"       icon={icons.notes}       label={t('nav.notes')}       collapsed={collapsed} />
-        <NavItem to="vet"         icon={icons.vet}         label={t('nav.vet')}         collapsed={collapsed} />
+<NavItem to="vaccines"    icon={icons.vaccines}    label={t('nav.vaccines')}    collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="medications" icon={icons.medications} label={t('nav.medications')} collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="symptoms"    icon={icons.symptoms}    label={t('nav.symptoms')}    collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="notes"       icon={icons.notes}       label={t('nav.notes')}       collapsed={collapsed} onClick={closeMobile} />
+<NavItem to="vet"         icon={icons.vet}         label={t('nav.vet')}         collapsed={collapsed} onClick={closeMobile} />
 
         <div className="sidebar-divider" />
 
         <div className="sidebar-section-label">{t('nav.account')}</div>
-        <NavItem to="settings" icon={icons.settings} label={t('nav.settings')} collapsed={collapsed} />
+        <NavItem to="settings" icon={icons.settings} label={t('nav.settings')} collapsed={collapsed} onClick={closeMobile} />
 
         <div className="sidebar-toggle">
           <button className="nav-item" style={{ width: '100%' }}
@@ -299,14 +343,7 @@ export default function AppLayout() {
       {/* ── MAIN ── */}
       <main className="main" id="main-content">
         <Outlet />
-          <nav className="mobile-bottom-nav" aria-label={t('nav.mobile')}>
-    <MobileNavItem to="dashboard" icon={icons.dashboard} label={t('nav.dashboard')} />
-    <MobileNavItem to="pets"      icon={icons.pets}      label={t('nav.pets')}      />
-    <MobileNavItem to="cares"     icon={icons.cares}     label={t('nav.cares')}     />
-    <MobileNavItem to="vet"       icon={icons.vet}       label={t('nav.vet')}       />
-    <MobileNavItem to="calendar"  icon={icons.calendar}  label={t('nav.calendar')}  />
-    <MobileNavItem to="settings"  icon={icons.settings}  label={t('nav.settings')}  />
-  </nav>
+        
       </main>
 
       {/* ── TOAST ── */}

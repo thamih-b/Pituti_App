@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { vetsApi, appointmentsApi, medicalProfilesApi, petsApi } from '../api'
 import type { CreateVetDto, UpdateVetDto, ApiAppointment } from '../api'
 import { useUser } from './UserContext'
+import type { AppointmentType } from '../api/types'
+
 
 // ── Tipos exportados ───────────────────────────────────────────────────────────
 
@@ -104,7 +106,7 @@ function apiToAppt(api: ApiAppointment): VetAppointment {
     type:                api.type,
     date:                api.date,
     createdAt:           api.createdAt,
-    vetContactId:        api.vetContactId  ?? undefined,
+    vetContactId:        api.vetId  ?? undefined,
     vetName:             api.vetName,
     clinic:              api.clinic        ?? undefined,
     reason:              api.reason,
@@ -261,7 +263,7 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
             vetContactId:        a.vetContactId,
             vetName:             a.vetName,
             clinic:              a.clinic,
-            type:                a.type,
+            type:                a.type as AppointmentType,
             date:                a.date,
             reason:              a.reason,
             diagnosis:           a.diagnosis,
@@ -294,7 +296,7 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
             vetContactId:        a.vetContactId,
             vetName:             a.vetName,
             clinic:              a.clinic,
-            type:                a.type,
+            type:                a.type  as AppointmentType,
             date:                a.date,
             reason:              a.reason,
             diagnosis:           a.diagnosis,
@@ -323,66 +325,130 @@ export function VetProvider({ children }: { children: React.ReactNode }) {
   )
 
   // ── MEDICAL PROFILES: cloud sync ─────────────────────────────────────────────
-  //
-  // Ao carregar: para cada pet, busca o perfil médico da API.
+  const KNOWN_CONDITION_IDS = new Set<string>([
+  'diabetes', 'hypothyroidism', 'hyperthyroidism', 'ckd', 'arthritis',
+  'hipdysplasia', 'cardiopathy', 'felv', 'fiv', 'epilepsy', 'lupus',
+  'atopy', 'blinddeaf',
+])
 
-  useEffect(() => {
-    if (!ready || !isAuthenticated || !user.id) return
+// API (ApiMedicalProfile) → modelo local (PetMedicalProfile)
+function fromApiProfile(api: any, petId: string): PetMedicalProfile {
+  const apiConditions: Array<{ name: string; notes?: string }> = api?.conditions ?? []
+  const chronicConditionIds = apiConditions
+    .map(c => c.name)
+    .filter((name): name is PetMedicalProfile['chronicConditionIds'][number] =>
+      KNOWN_CONDITION_IDS.has(name))
+  const customConditions = apiConditions
+    .map(c => c.name)
+    .filter(name => !KNOWN_CONDITION_IDS.has(name))
 
-    let cancelled = false
+  return {
+    petId,
+    sex: api?.sex,
+    neutered: api?.neutered ?? undefined,
+    neuteredAge: api?.neuteredAge ?? undefined,
+    bloodType: api?.bloodType ?? undefined,
+    // FIX: a API guarda allergies como string[]; o modelo local usa uma
+    // única string (lista separada por vírgulas)
+    allergies: Array.isArray(api?.allergies) ? api.allergies.join(', ') : (api?.allergies ?? undefined),
+    chronicConditionIds,
+    customConditions,
+    surgeries: (api?.surgeries ?? []).map((s: any, i: number) => ({
+      id: `s-${i}`, name: s.name, notes: s.notes,
+    })),
+    environment: api?.environment ?? undefined,
+    livingWithAnimals: api?.livingWithAnimals ?? undefined,
+    behavioralNotes: api?.behavioralNotes ?? undefined,
+    vetQuestions: api?.vetQuestions ?? undefined,
+    updatedAt: api?.updatedAt ?? undefined,
+  }
+}
 
-    petsApi.getAll(user.id).then(async petsRes => {
-      const pets = petsRes.data as any[]
-      const results = await Promise.all(
-        pets.map(async p => {
-          try {
-            const res = await medicalProfilesApi.get(p.id)
-            return { petId: p.id, profile: res.data as unknown as PetMedicalProfile }
-          } catch {
-            return null
-          }
-        }),
-      )
+// modelo local (PetMedicalProfile) → API (UpsertMedicalProfileDto)
+function toApiProfileDto(profile: PetMedicalProfile) {
+  const conditions = [
+    ...(profile.chronicConditionIds ?? []).map(id => ({ name: id })),
+    ...(profile.customConditions ?? []).map(name => ({ name })),
+  ]
+  return {
+    sex: profile.sex,
+    neutered: profile.neutered,
+    neuteredAge: profile.neuteredAge,
+    bloodType: profile.bloodType,
+    allergies: profile.allergies
+      ? profile.allergies.split(',').map(s => s.trim()).filter(Boolean)
+      : [],
+    conditions,
+    surgeries: (profile.surgeries ?? []).map(s => ({ name: s.name, notes: s.notes })),
+    environment: profile.environment,
+    livingWithAnimals: profile.livingWithAnimals,
+    behavioralNotes: profile.behavioralNotes,
+    vetQuestions: profile.vetQuestions,
+  }
+}
 
-      if (cancelled) return
+// ── MEDICAL PROFILES: cloud sync ─────────────────────────────────────────────
 
-      const profileMap: Record<string, PetMedicalProfile> = {}
-      for (const r of results) {
-        if (r && r.profile) profileMap[r.petId] = { ...r.profile, petId: r.petId }
-      }
+useEffect(() => {
+  if (!ready || !isAuthenticated || !user.id) return
 
-      if (Object.keys(profileMap).length > 0) {
-        setProfiles(prev => {
-          // Mescla: API tem prioridade; perfis apenas locais são mantidos
-          const merged = { ...prev, ...profileMap }
-          if (user.id) saveLS(`pituti_profiles_${user.id}`, merged)
-          return merged
-        })
-      }
-    }).catch(() => { /* fica com localStorage */ })
+  let cancelled = false
 
-    return () => { cancelled = true }
-  }, [ready, isAuthenticated, user.id])
+  petsApi.getAll(user.id).then(async petsRes => {
+    const pets = petsRes.data as any[]
+    const results = await Promise.all(
+      pets.map(async p => {
+        try {
+          const res = await medicalProfilesApi.get(p.id)
+          // FIX: converte o formato da API para o formato local, em vez do
+          // cast "as unknown as" que escondia a incompatibilidade
+          return { petId: p.id, profile: fromApiProfile(res.data, p.id) }
+        } catch {
+          return null
+        }
+      }),
+    )
 
-  const getMedicalProfile = useCallback(
-    (petId: string): PetMedicalProfile =>
-      profiles[petId] ?? { ...EMPTY_PROFILE, petId },
-    [profiles],
-  )
+    if (cancelled) return
 
-  const saveMedicalProfile = useCallback(
-    (profile: PetMedicalProfile) => {
-      const id = profile.petId
-      if (!id) return
-      // 1. Actualiza estado local
-      setProfiles(prev => ({ ...prev, [id]: profile }))
-      // 2. Persiste na API
-      medicalProfilesApi
-        .upsert(id, profile as any)
-        .catch(() => { /* silencia — perfil está no localStorage */ })
-    },
-    [],
-  )
+    const profileMap: Record<string, PetMedicalProfile> = {}
+    for (const r of results) {
+      if (r && r.profile) profileMap[r.petId] = r.profile
+    }
+
+    if (Object.keys(profileMap).length > 0) {
+      setProfiles(prev => {
+        const merged = { ...prev, ...profileMap }
+        if (user.id) saveLS(`pituti_profiles_${user.id}`, merged)
+        return merged
+      })
+    }
+  }).catch(() => { /* fica com localStorage */ })
+
+  return () => { cancelled = true }
+}, [ready, isAuthenticated, user.id])
+
+const getMedicalProfile = useCallback(
+  (petId: string): PetMedicalProfile =>
+    profiles[petId] ?? { ...EMPTY_PROFILE, petId },
+  [profiles],
+)
+
+const saveMedicalProfile = useCallback(
+  (profile: PetMedicalProfile) => {
+    const id = profile.petId
+    if (!id) return
+    // 1. Actualiza estado local
+    setProfiles(prev => ({ ...prev, [id]: profile }))
+    // 2. FIX: converte para o formato que a API realmente espera, em vez
+    //    de enviar o objeto local diretamente
+    medicalProfilesApi
+      .upsert(id, toApiProfileDto(profile))
+      .catch(() => { /* silencia — perfil está no localStorage */ })
+  },
+  [],
+)
+
 
   // ── vetCalendarDates ──────────────────────────────────────────────────────────
 

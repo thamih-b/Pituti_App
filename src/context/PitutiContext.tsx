@@ -10,6 +10,7 @@ import type { Species } from '../types'
 import type { PetWithAlerts } from '../hooks/usePets'
 import { petsApi } from '../api'
 import { useUser } from './UserContext'
+import { medicalProfilesApi } from '../api'
 
 export type Theme = 'light' | 'dark'
 
@@ -123,18 +124,25 @@ export function PitutiProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t)
   }, [state.toastVisible, state.toastMessage])
 
-  const addPet = useCallback(async (data: CreatePetInput) => {
-    const res = await petsApi.create({
-      name: data.name,
-      species: data.species,
-      breed: data.breed,
-      birthDate: data.birthDate,
-      ownerId: user.id,
+const addPet = useCallback(async (data: CreatePetInput) => {
+  const res = await petsApi.create({
+    name: data.name,
+    species: data.species,
+    breed: data.breed,
+    birthDate: data.birthDate,
+    ownerId: user.id,
+  })
+  const createdPet = mapApiPetToPetWithAlerts(res.data)
+  dispatch({ type: 'ADD_PET', payload: createdPet })
+
+  if (data.weightKg != null) {
+    medicalProfilesApi.upsert(createdPet.id, { weightKg: data.weightKg }).catch(err => {
+      console.warn('[PitutiContext] falha ao gravar peso inicial:', err)
     })
-    const createdPet = mapApiPetToPetWithAlerts(res.data)
-    dispatch({ type: 'ADD_PET', payload: createdPet })
-    return createdPet
-  }, [user.id])
+  }
+
+  return createdPet
+}, [user.id])
 
   const removePet = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_PET', payload: id })

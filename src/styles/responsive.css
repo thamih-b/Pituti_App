@@ -292,11 +292,12 @@
   .card-title { font-size: .875rem; margin-bottom: .75rem; }
 
   /* ── Dashboard grid ── */
-  .dash-mockup-grid {
-    grid-template-columns: 1fr !important;
-    grid-template-areas: "left" "center" "right" "eventos" !important;
-    gap: 1rem;
-  }
+.dash-mockup-grid {
+  grid-template-columns: 1fr !important;
+  grid-template-areas: "left" "center" "events" "right" !important;
+  gap: 1rem;
+}
+
   .dash-col-left,
   .dash-col-center,
   .dash-col-right,

@@ -23,20 +23,39 @@ const PALETTE_COLORS = [
   'var(--pal-candy)',
   'var(--pal-mauve)',
   'var(--pal-denim)',
-]
+] as const
 
-function useGreeting() {
+interface GreetingText {
+  saludo: string
+  date: string
+}
+
+interface PawLayoutProps {
+  pets: PetWithAlerts[]
+  onPetClick: (id: string) => void
+  onAddPet?: () => void
+}
+
+interface DashboardAlert {
+  type: 'warn' | 'err'
+  text: string
+  petName: string
+}
+
+function useGreeting(): GreetingText {
   const { t, i18n } = useTranslation()
-  const [text, setText] = useState({ saludo: '', date: '' })
+  const [text, setText] = useState<GreetingText>({ saludo: '', date: '' })
 
   useEffect(() => {
     const now = new Date()
     const h = now.getHours()
 
     const saludo =
-      h < 12 ? t('dashboard.greeting_morning')
-      : h < 19 ? t('dashboard.greeting_afternoon')
-      : t('dashboard.greeting_evening')
+      h < 12
+        ? t('dashboard.greeting_morning')
+        : h < 19
+          ? t('dashboard.greeting_afternoon')
+          : t('dashboard.greeting_evening')
 
     const days = t('dates.weekdays', { returnObjects: true }) as string[]
     const months = t('dates.months', { returnObjects: true }) as string[]
@@ -69,30 +88,39 @@ function PawLayout({
   pets,
   onPetClick,
   onAddPet,
-}: {
-  pets: PetWithAlerts[]
-  onPetClick: (id: string) => void
-  onAddPet?: () => void
-}) {
+}: PawLayoutProps) {
   const { t } = useTranslation()
 
-const photos: Record<string, string> = {}
-try {
-  Object.keys(localStorage)
-    .filter(k => k.startsWith('pet-photo-'))
-    .forEach(k => {
-      const value = localStorage.getItem(k)
-      if (value) photos[k.replace('pet-photo-', '')] = value
-    })
-} catch {}
+  const photos: Record<string, string> = {}
 
-pets.forEach(p => {
-  if ((p as any).photoUrl) photos[p.id] = (p as any).photoUrl
-})
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('pet-photo-'))
+      .forEach((key) => {
+        const value = localStorage.getItem(key)
+
+        if (value) {
+          photos[key.replace('pet-photo-', '')] = value
+        }
+      })
+  } catch {}
+
+  pets.forEach((pet) => {
+    if ((pet as any).photoUrl) {
+      photos[pet.id] = (pet as any).photoUrl
+    }
+  })
 
   if (!pets.length) {
     return (
-      <div className="paw-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        className="paw-layout"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <div className="paw-empty">
           <div className="paw-empty-icon">🐾</div>
           <p>{t('dashboard.addFirstPet')}</p>
@@ -108,17 +136,25 @@ pets.forEach(p => {
     <>
       <div className="paw-layout">
         {buildSlots(pawPets).map((slot, i) => {
-          const photo = slot.pet ? (photos[slot.pet.id] || null) : null
+          const photo = slot.pet ? photos[slot.pet.id] || null : null
           const highestAlert = slot.pet?.alerts?.[0] ?? null
           const isEmpty = !slot.pet
 
           return (
             <div
               key={i}
-              className={[SLOT_CLASSES[i], isEmpty ? 'paw-bubble-empty' : ''].join(' ')}
-              style={isEmpty ? { cursor: onAddPet ? 'pointer' : 'default' } : undefined}
-              onClick={(e) => {
-                e.stopPropagation()
+              className={[
+                SLOT_CLASSES[i],
+                isEmpty ? 'paw-bubble-empty' : '',
+              ].join(' ')}
+              style={
+                isEmpty
+                  ? { cursor: onAddPet ? 'pointer' : 'default' }
+                  : undefined
+              }
+              onClick={(event) => {
+                event.stopPropagation()
+
                 if (isEmpty) {
                   onAddPet?.()
                 } else if (slot.pet?.id) {
@@ -137,15 +173,23 @@ pets.forEach(p => {
                   }}
                 >
                   {photo ? (
-                    <img src={photo} alt={slot.pet?.name ?? 'Pet'} loading="lazy" />
+                    <img
+                      src={photo}
+                      alt={slot.pet?.name ?? 'Pet'}
+                      loading="lazy"
+                    />
                   ) : (
-                    <span>{SPECIES_EMOJI[slot.pet?.species ?? 'other'] ?? '🐾'}</span>
+                    <span>
+                      {SPECIES_EMOJI[slot.pet?.species ?? 'other'] ?? '🐾'}
+                    </span>
                   )}
                 </div>
               )}
 
               {highestAlert && <div className="paw-dot warn" />}
-              {slot.pet && <div className="paw-pet-name">{slot.pet.name}</div>}
+              {slot.pet && (
+                <div className="paw-pet-name">{slot.pet.name}</div>
+              )}
             </div>
           )
         })}
@@ -155,6 +199,7 @@ pets.forEach(p => {
         <div className="paw-extra-row">
           {extraPets.map((pet, idx) => {
             const photo = photos[pet.id] || null
+
             return (
               <div
                 key={pet.id}
@@ -164,7 +209,11 @@ pets.forEach(p => {
                 <div
                   className="paw-bubble-clip"
                   style={{
-                    background: photo ? undefined : PALETTE_COLORS[(idx + 5) % PALETTE_COLORS.length],
+                    background: photo
+                      ? undefined
+                      : PALETTE_COLORS[
+                          (idx + 5) % PALETTE_COLORS.length
+                        ],
                     fontSize: '1.3rem',
                     width: '100%',
                     height: '100%',
@@ -177,9 +226,14 @@ pets.forEach(p => {
                     <span>{SPECIES_EMOJI[pet.species] ?? '🐾'}</span>
                   )}
                 </div>
+
                 {(pet.alerts ?? []).length > 0 && (
-                  <div className="paw-dot warn" style={{ top: 2, right: 2 }} />
+                  <div
+                    className="paw-dot warn"
+                    style={{ top: 2, right: 2 }}
+                  />
                 )}
+
                 <div className="paw-pet-name">{pet.name}</div>
               </div>
             )
@@ -196,7 +250,7 @@ interface CareStripProps {
   total?: number
   doneInit?: number
   urgent?: boolean
-  onDoneChange?: (d: number) => void
+  onDoneChange?: (done: number) => void
   onClick?: () => void
 }
 
@@ -210,26 +264,46 @@ function CareStripItem({
   onClick,
 }: CareStripProps) {
   const [doneCount, setDoneCount] = useState(doneInit)
+
+  useEffect(() => {
+    setDoneCount(doneInit)
+  }, [doneInit])
+
   const allDone = doneCount >= total
-  const cls = ['care-strip-item', allDone ? 'done' : urgent && doneCount === 0 ? 'urgent' : ''].join(' ')
+  const cls = [
+    'care-strip-item',
+    allDone ? 'done' : urgent && doneCount === 0 ? 'urgent' : '',
+  ].join(' ')
 
   const toggle = (i: number) => {
-    setDoneCount(prev => {
-      const next = i === prev ? prev + 1 : i === prev - 1 ? prev - 1 : prev
+    setDoneCount((prev) => {
+      const next =
+        i === prev ? prev + 1 : i === prev - 1 ? prev - 1 : prev
+
       onDoneChange?.(next)
+
       return next
     })
   }
 
   return (
-    <div className={cls} onClick={onClick} style={{ cursor: onClick ? 'pointer' : undefined }}>
+    <div
+      className={cls}
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : undefined }}
+    >
       <span className="care-emoji">{emoji}</span>
       <span className="care-label">{label}</span>
-      <span className="care-dots" onClick={e => e.stopPropagation()}>
+
+      <span className="care-dots" onClick={(event) => event.stopPropagation()}>
         {Array.from({ length: total }).map((_, i) => (
           <button
+            type="button"
             key={i}
-            className={['care-dot-btn', i < doneCount ? 'filled' : ''].join(' ')}
+            className={[
+              'care-dot-btn',
+              i < doneCount ? 'filled' : '',
+            ].join(' ')}
             onClick={() => toggle(i)}
           >
             {i < doneCount ? '✓' : '○'}
@@ -249,33 +323,59 @@ export default function DashboardPage() {
   const { saludo, date } = useGreeting()
 
   const today = new Date().toISOString().split('T')[0]
-  const in60 = new Date(Date.now() + 60 * 86_400_000).toISOString().split('T')[0]
+  const in60 = new Date(Date.now() + 60 * 86_400_000)
+    .toISOString()
+    .split('T')[0]
 
-  const { allVaccines } = useVaccinesContext()
-  const upcomingVaccines: VaccineWithMeta[] = (allVaccines ?? [])
-    .filter(v => !!v?.nextDate && v.nextDate >= today && v.nextDate <= in60)
-    .sort((a, b) => a.nextDate.localeCompare(b.nextDate))
+  const {
+    allVaccines: allVaccinesRaw,
+    loading: vaccinesLoading = loading,
+  } = useVaccinesContext() as any
+
+  const allVaccines = allVaccinesRaw ?? []
+
+  const upcomingVaccines: VaccineWithMeta[] = allVaccines
+    .filter((v: VaccineWithMeta) =>
+      !!v?.nextDate && v.nextDate >= today && v.nextDate <= in60,
+    )
+    .sort((a: VaccineWithMeta, b: VaccineWithMeta) =>
+      a.nextDate.localeCompare(b.nextDate),
+    )
     .slice(0, 3)
 
-  const { medications } = useMedications()
-  const activeMeds = (medications ?? []).filter(m => !m.archived)
+  const {
+    medications: medicationsRaw,
+    loading: medsLoading = loading,
+  } = useMedications() as any
+
+  const medications = medicationsRaw ?? []
+  const activeMeds = medications.filter((med: any) => !med.archived)
 
   const symptomsCtx = useSymptoms()
-const symptomsList = (symptomsCtx as { symptoms?: SymptomEntry[] }).symptoms ?? []
-const activeSymptoms = symptomsList.filter(s => !s.resolved)
+  const symptomsLoading = (symptomsCtx as any).loading ?? loading
+  const symptomsList =
+    (symptomsCtx as { symptoms?: SymptomEntry[] }).symptoms ?? []
 
-const allAlerts = pets.flatMap(p =>
-  (p.alerts ?? []).map((text: string) => ({
-    type: 'warn' as 'warn' | 'err',
-    text,
-    petName: p.name,
-  }))
-)
+  const activeSymptoms = symptomsList.filter((symptom) => !symptom.resolved)
 
-  const { items: careItems = [], setCareProgress } = useCares()
+  const allAlerts: DashboardAlert[] = pets.flatMap((pet) =>
+    (pet.alerts ?? []).map((text: string) => ({
+      type: 'warn',
+      text,
+      petName: pet.name,
+    })),
+  )
+
+  const {
+    items: careItems = [],
+    setCareProgress,
+    loading: caresLoading,
+  } = useCares()
+
   const todayStr = today
+
   const dashCares = careItems
-    .filter((c: CareItem) => isDueOnDate(c, todayStr))
+    .filter((care: CareItem) => isDueOnDate(care, todayStr))
     .slice(0, 6)
 
   const [detailItem, setDetailItem] = useState<CareDetailItem | null>(null)
@@ -284,25 +384,28 @@ const allAlerts = pets.flatMap(p =>
   const [symptomDetail, setSymptomDetail] = useState<SymptomEntry | null>(null)
   const [addPetOpen, setAddPetOpen] = useState(false)
 
-  const handleCareToggle = useCallback((id: string, newDone: number, newState: boolean) => {
-    setCareProgress(id, todayStr, newDone, newState)
-  }, [setCareProgress, todayStr])
+  const handleCareToggle = useCallback(
+    (id: string, newDone: number, newState: boolean) => {
+      setCareProgress(id, todayStr, newDone, newState)
+    },
+    [setCareProgress, todayStr],
+  )
 
-  const openDetail = (c: CareItem) => {
-    const prog = c.doneByDate?.[todayStr]
+  const openDetail = (care: CareItem) => {
+    const prog = care.doneByDate?.[todayStr]
     const done = prog?.done ?? 0
     const doneState = prog?.doneState ?? false
 
     setDetailItem({
-      id: c.id,
-      petId: c.petId,
-      emoji: c.emoji,
-      title: c.title,
-      sub: c.sub,
-      total: c.total,
+      id: care.id,
+      petId: care.petId,
+      emoji: care.emoji,
+      title: care.title,
+      sub: care.sub,
+      total: care.total,
       done,
       done_state: doneState,
-      bg: c.bg,
+      bg: care.bg,
     })
   }
 
@@ -339,77 +442,158 @@ const allAlerts = pets.flatMap(p =>
             />
           )}
 
-          {allAlerts.length === 0 && <div className="paw-caption">{t('dashboard.allGood')}</div>}
+          {!loading && allAlerts.length === 0 && (
+            <div className="paw-caption">{t('dashboard.allGood')}</div>
+          )}
         </div>
       </div>
 
       <div className="dash-col-center">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom: 0 }}>{t('dashboard.todayCares')}</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/cares')}>{t('btn.seeAll')} →</button>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '.75rem',
+          }}
+        >
+          <div className="dash-section-label" style={{ marginBottom: 0 }}>
+            {t('dashboard.todayCares')}
+          </div>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate('/cares')}
+          >
+            {t('btn.seeAll')} →
+          </button>
         </div>
 
-        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '.625rem' }}>
+        <div
+          style={{
+            fontSize: '.75rem',
+            color: 'var(--text-muted)',
+            fontWeight: 700,
+            marginBottom: '.625rem',
+          }}
+        >
           {t('dates.today')} —{' '}
           <span style={{ color: 'var(--err)' }}>
-            {dashCares.filter((c: CareItem) => (c.doneByDate?.[todayStr]?.done ?? 0) < c.total).length}
+            {
+              dashCares.filter(
+                (care: CareItem) =>
+                  (care.doneByDate?.[todayStr]?.done ?? 0) < care.total,
+              ).length
+            }
           </span>
         </div>
 
         <div className="dash-care-col">
-          {dashCares.length === 0 && (
-            <div style={{ color: 'var(--text-faint)', fontSize: '.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
-              {t('pets.noPets')}
+          {caresLoading ? (
+            <div
+              style={{
+                color: 'var(--text-faint)',
+                fontSize: '.875rem',
+                textAlign: 'center',
+                padding: '1.5rem 0',
+              }}
+            >
+              {t('btn.loading')}
             </div>
-          )}
-
-          {dashCares.map((c: CareItem) => {
-            const prog = c.doneByDate?.[todayStr]
-            const done = prog?.done ?? 0
-
-            return (
+          ) : dashCares.length === 0 ? (
+            <div
+              style={{
+                color: 'var(--text-faint)',
+                fontSize: '.875rem',
+                textAlign: 'center',
+                padding: '1.5rem 0',
+              }}
+            >
+              {t('dashboard.noCaresToday', {
+                defaultValue: 'Sem cuidados para hoje',
+              })}
+            </div>
+          ) : (
+            dashCares.map((care: CareItem) => (
               <CareStripItem
-                key={c.id}
-                emoji={c.emoji}
-                label={c.title}
-                total={c.total}
-                doneInit={done}
-                urgent={done === 0 && c.intervalDays <= 1}
-                onDoneChange={d => handleCareToggle(c.id, d, d >= c.total)}
-                onClick={() => openDetail(c)}
+                key={care.id}
+                emoji={care.emoji}
+                label={care.title}
+                total={care.total}
+                doneInit={care.doneByDate?.[todayStr]?.done ?? 0}
+                urgent={
+                  (care.doneByDate?.[todayStr]?.done ?? 0) === 0 &&
+                  care.intervalDays <= 1
+                }
+                onDoneChange={(done) =>
+                  handleCareToggle(care.id, done, done >= care.total)
+                }
+                onClick={() => openDetail(care)}
               />
-            )
-          })}
+            ))
+          )}
         </div>
       </div>
 
       <div className="dash-col-eventos">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom: 0 }}>{t('dashboard.upcomingEvents')}</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/vaccines')}>{t('btn.seeAll')} →</button>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '.75rem',
+          }}
+        >
+          <div className="dash-section-label" style={{ marginBottom: 0 }}>
+            {t('dashboard.upcomingEvents')}
+          </div>
+
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate('/vaccines')}
+          >
+            {t('btn.seeAll')} →
+          </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '.5rem',
+          }}
+        >
           {upcomingVaccines.length === 0 && (
-            <div style={{ color: 'var(--text-faint)', fontSize: '.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
+            <div
+              style={{
+                color: 'var(--text-faint)',
+                fontSize: '.875rem',
+                textAlign: 'center',
+                padding: '1.5rem 0',
+              }}
+            >
               {t('dashboard.noUpcoming')}
             </div>
           )}
 
-          {upcomingVaccines.map((v, i) => {
-            if (!v.nextDate) return null
+          {upcomingVaccines.map((vaccine, i) => {
+            if (!vaccine.nextDate) return null
 
-            const due = new Date(v.nextDate + 'T00:00:00')
-            const daysLeft = Math.round((due.getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
+            const due = new Date(`${vaccine.nextDate}T00:00:00`)
+            const daysLeft = Math.round(
+              (due.getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000,
+            )
             const urgent = daysLeft <= 7
             const day = String(due.getDate()).padStart(2, '0')
-            const mon = due.toLocaleDateString(i18n.language, { month: 'short' }).toUpperCase()
+            const mon = due
+              .toLocaleDateString(i18n.language, { month: 'short' })
+              .toUpperCase()
 
             return (
               <div
-                key={v.id ?? `${v.name}-${v.petId}-${i}`}
+                key={vaccine.id ?? `${vaccine.name}-${vaccine.petId}-${i}`}
                 className={`event-row${urgent ? ' event-urgent' : ''}`}
-                onClick={() => openCalendarAt(v.nextDate!)}
+                onClick={() => openCalendarAt(vaccine.nextDate!)}
               >
                 <div className="event-date-badge">
                   <div className="edb-day">{day}</div>
@@ -427,13 +611,22 @@ const allAlerts = pets.flatMap(p =>
                 </div>
 
                 <div className="event-info">
-                  <div className="event-title">{v.name} — {v.petEmoji} {v.petName}</div>
+                  <div className="event-title">
+                    {vaccine.name} — {vaccine.petEmoji} {vaccine.petName}
+                  </div>
+
                   <div className="event-sub">
-                    {daysLeft === 0 ? t('dates.today') : t('dashboard.inDays', { n: daysLeft })}
+                    {daysLeft === 0
+                      ? t('dates.today')
+                      : t('dashboard.inDays', { n: daysLeft })}
                   </div>
                 </div>
 
-                <span className={`badge ${urgent ? 'badge-red' : 'badge-yellow'}`}>
+                <span
+                  className={`badge ${
+                    urgent ? 'badge-red' : 'badge-yellow'
+                  }`}
+                >
                   {urgent ? t('vaccines.expiringSoon') : `${daysLeft}d`}
                 </span>
               </div>
@@ -443,72 +636,131 @@ const allAlerts = pets.flatMap(p =>
       </div>
 
       <div className="dash-col-right">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-          <div className="dash-section-label" style={{ marginBottom: 0 }}>{t('dashboard.alerts')}</div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '.75rem',
+          }}
+        >
+          <div className="dash-section-label" style={{ marginBottom: 0 }}>
+            {t('dashboard.alerts')}
+          </div>
         </div>
 
         <div className="dash-kpi-col">
           {[
-            { val: pets.length, label: t('nav.pets'), sub: null, color: '', to: '/pets' },
             {
-              val: allVaccines.length,
+              val: loading ? '…' : pets.length,
+              label: t('nav.pets'),
+              sub: null,
+              color: '',
+              to: '/pets',
+            },
+            {
+              val: vaccinesLoading ? '…' : allVaccines.length,
               label: t('nav.vaccines'),
-              sub: upcomingVaccines.length > 0 ? `⚠ ${upcomingVaccines.length} ${t('vaccines.expiringSoon')}` : null,
+              sub:
+                upcomingVaccines.length > 0
+                  ? `⚠ ${upcomingVaccines.length} ${t(
+                      'vaccines.expiringSoon',
+                    )}`
+                  : null,
               color: 'var(--warn)',
               to: '/vaccines',
             },
             {
-              val: activeMeds.length,
+              val: medsLoading ? '…' : activeMeds.length,
               label: t('nav.medications'),
-              sub: activeMeds.length > 0 ? `● ${t('status.active')}` : null,
+              sub:
+                activeMeds.length > 0 ? `● ${t('status.active')}` : null,
               color: 'var(--success)',
               to: '/medications',
             },
             {
-              val: activeSymptoms.length,
+              val: symptomsLoading ? '…' : activeSymptoms.length,
               label: t('nav.symptoms'),
-              sub: activeSymptoms[0] ? `● ${pets.find(p => p.id === activeSymptoms[0].petId)?.name ?? ''}` : null,
+              sub: activeSymptoms[0]
+                ? `● ${
+                    pets.find(
+                      (pet) => pet.id === activeSymptoms[0].petId,
+                    )?.name ?? ''
+                  }`
+                : null,
               color: 'var(--err)',
               to: '/symptoms',
             },
-          ].map(k => (
+          ].map((kpi) => (
             <div
-              key={k.label}
+              key={kpi.label}
               className="paw-kpi"
               style={{ cursor: 'pointer' }}
-              onClick={() => k.to === '/symptoms' && activeSymptoms[0]
-                ? setSymptomDetail(activeSymptoms[0])
-                : navigate(k.to)
+              onClick={() =>
+                kpi.to === '/symptoms' && activeSymptoms[0]
+                  ? setSymptomDetail(activeSymptoms[0])
+                  : navigate(kpi.to)
               }
             >
-              <div className="paw-kpi-value">{k.val}</div>
-              <div className="paw-kpi-label">{k.label}</div>
-              {k.sub && <div className="paw-kpi-sub" style={{ color: k.color }}>{k.sub}</div>}
+              <div className="paw-kpi-value">{kpi.val}</div>
+              <div className="paw-kpi-label">{kpi.label}</div>
+
+              {kpi.sub && (
+                <div className="paw-kpi-sub" style={{ color: kpi.color }}>
+                  {kpi.sub}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         {allAlerts.length > 0 && (
-          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-            {allAlerts.map((a, i) => (
+          <div
+            style={{
+              marginTop: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '.5rem',
+            }}
+          >
+            {allAlerts.map((alert, i) => (
               <div
                 key={i}
-                className={`paw-alert ${a.type}`}
-                style={{ cursor: a.type === 'err' && activeSymptoms[0] ? 'pointer' : undefined }}
-                onClick={() => a.type === 'err' && activeSymptoms[0] ? setSymptomDetail(activeSymptoms[0]) : undefined}
+                className={`paw-alert ${alert.type}`}
+                style={{
+                  cursor:
+                    alert.type === 'err' && activeSymptoms[0]
+                      ? 'pointer'
+                      : undefined,
+                }}
+                onClick={() =>
+                  alert.type === 'err' && activeSymptoms[0]
+                    ? setSymptomDetail(activeSymptoms[0])
+                    : undefined
+                }
               >
-                <span className="paw-alert-icon">{a.type === 'warn' ? '⚠️' : '🔴'}</span>
-                <span className="paw-alert-text"><strong>{a.petName} </strong>{a.text}</span>
+                <span className="paw-alert-icon">
+                  {alert.type === 'warn' ? '⚠️' : '🔴'}
+                </span>
+
+                <span className="paw-alert-text">
+                  <strong>{alert.petName} </strong>
+                  {alert.text}
+                </span>
               </div>
             ))}
           </div>
         )}
 
-        {allAlerts.length === 0 && (
+        {loading ? (
+          <div className="paw-caption" style={{ marginTop: '1rem' }}>
+            {t('btn.loading')}
+          </div>
+        ) : allAlerts.length === 0 ? (
           <div className="paw-caption" style={{ marginTop: '1rem' }}>
             {t('dashboard.noAlerts')}
           </div>
-        )}
+        ) : null}
       </div>
 
       {detailItem && (
@@ -517,7 +769,16 @@ const allAlerts = pets.flatMap(p =>
           onClose={() => setDetailItem(null)}
           onToggle={(id, newDone, newState) => {
             handleCareToggle(id, newDone, newState)
-            setDetailItem(prev => prev ? { ...prev, done: newDone, done_state: newState } : null)
+
+            setDetailItem((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    done: newDone,
+                    done_state: newState,
+                  }
+                : null,
+            )
           }}
           onEdit={(item) => {
             setEditCareItem({
@@ -530,6 +791,7 @@ const allAlerts = pets.flatMap(p =>
               notify: true,
               bg: item.bg,
             })
+
             setEditCareOpen(true)
           }}
         />
@@ -552,7 +814,10 @@ const allAlerts = pets.flatMap(p =>
         }}
         onResolve={() => {
           setSymptomDetail(null)
-          import('../components/AppLayout').then(m => m.showToast(t('toast.symptomResolved')))
+
+          import('../components/AppLayout').then((module) =>
+            module.showToast(t('toast.symptomResolved')),
+          )
         }}
         onUnresolve={() => setSymptomDetail(null)}
       />

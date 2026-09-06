@@ -4,7 +4,6 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { SPECIES_EMOJI } from '../hooks/usePets'
 import type { PetWithAlerts } from '../hooks/usePets'
-import { getVaccStatus } from '../utils/vaccUtils'
 import type { VaccineRecord } from '../utils/vaccUtils'
 import { showToast } from '../components/AppLayout'
 import Modal from '../components/Modal'
@@ -42,6 +41,7 @@ import type { RegisterVaccineData } from '../components/RegisterVaccineModal'
 import { medicalProfilesApi } from '../api'
 import type { ApiMedicalProfile } from '../api'
 import { resizeImageToDataUrl } from '../utils/imageResize'
+import { getVaccStatus, computeVaccCoverage } from '../utils/vaccUtils'
 
 type ChipField = 'species' | 'birthDate' | 'weight' | 'caregivers'
 
@@ -395,13 +395,8 @@ function TabVaccines({ petId, petName, petSpecies }: {
 
   const vaccines   = vaccinesByPet[petId] ?? []
   const withStatus = vaccines.map(vacc => ({ ...vacc, cls: getVaccStatus(vacc.nextDate) as 'ok' | 'soon' | 'late' }))
-  const okCount    = withStatus.filter(vacc => vacc.cls === 'ok').length
-  const alDia      = withStatus.filter(vacc => vacc.cls === 'ok' || vacc.cls === 'soon').length
-  const pending    = withStatus.filter(vacc => vacc.cls === 'soon' || vacc.cls === 'late').length
-  const total      = vaccines.length
-  const cov        = total > 0 ? Math.round(okCount / total * 100) : 100
-  const alPct      = total > 0 ? Math.round(alDia / total * 100) : 100
-  const penPct     = total > 0 ? Math.round(pending / total * 100) : 0
+
+  const { coverage: cov, okPct: alPct, pendingPct: penPct } = computeVaccCoverage(vaccines)
 
   const VACC_BADGE = {
     ok:   { badge: t('pet.vacc.badgeOk'),   cls: 'badge-green'  },

@@ -11,6 +11,8 @@ import type { Species } from '../types'
 import BackButton from '../components/BackButton'
 import { PfBtn, PfFooter } from '../components/FooterButtons'
 import { usePituti } from '../context/PitutiContext'
+import { useVaccinesContext } from '../context/VaccinesContext'
+import { computeVaccCoverage } from '../utils/vaccUtils'
 
 function usePetPhotos() {
   const { pets } = usePets()
@@ -50,6 +52,7 @@ interface PetCardProps {
 
 function PetCard({ pet, onClick, photo }: PetCardProps) {
   const { t } = useTranslation()
+  const { vaccinesByPet } = useVaccinesContext()
 
   const bDate = pet.birthDate ? new Date(pet.birthDate) : null
   const months = bDate
@@ -113,7 +116,7 @@ function PetCard({ pet, onClick, photo }: PetCardProps) {
           ))}
         </div>
 
-        <MiniVaccRing coverage={pet.vaccCoverage ?? 100} size={52} strokeWidth={5} />
+        <MiniVaccRing coverage={computeVaccCoverage(vaccinesByPet[pet.id] ?? []).coverage} size={52} strokeWidth={5} />
       </div>
 
       <div className="pet-card-footer">
@@ -344,11 +347,12 @@ function AddPetModal({
 export default function PetListPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { vaccinesByPet } = useVaccinesContext()
+
   const { pets, loading, error, refetch } = usePets()
   const { addPet } = usePituti()
   const { photos } = usePetPhotos()
   const { SPECIES_FILTERS } = useSpeciesFilters()
-
   const [search, setSearch] = useState('')
   const [specFilter, setSpecFilter] = useState<Species | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
@@ -610,7 +614,7 @@ export default function PetListPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '.375rem', alignItems: 'center' }}>
-                <MiniVaccRing coverage={pet.vaccCoverage ?? 100} size={38} strokeWidth={4} />
+                <MiniVaccRing coverage={computeVaccCoverage(vaccinesByPet[pet.id] ?? []).coverage} size={38} strokeWidth={4} />
               </div>
             </div>
           ))}

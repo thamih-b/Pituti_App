@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { petsApi } from '../api'
 import type { CreatePetDto, UpdatePetDto } from '../api'
 import { useUser } from './UserContext'
+import { medicalProfilesApi } from '../api'
 
 export interface Pet {
   id: string
@@ -59,12 +60,20 @@ export function PetsProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, user.id, ready, refresh])
 
-  const addPet = async (data: Omit<Pet, 'id' | 'ownerId' | 'createdAt'>): Promise<Pet> => {
-    const res = await petsApi.create({ ...data, ownerId: user.id } as CreatePetDto)
-    const p = res.data as unknown as Pet
-    setPets(prev => [p, ...prev])
-    return p
+const addPet = async (data: Omit<Pet, 'id' | 'ownerId' | 'createdAt'> & { weightKg?: number }): Promise<Pet> => {
+  const { weightKg, ...petData } = data
+  const res = await petsApi.create({ ...petData, ownerId: user.id } as CreatePetDto)
+  const p = res.data as unknown as Pet
+  setPets(prev => [p, ...prev])
+
+  if (weightKg != null) {
+    medicalProfilesApi.upsert((p as any).id, { weightKg }).catch(err => {
+      console.warn('[PetsContext] falha ao gravar peso inicial:', err)
+    })
   }
+
+  return p
+}
 
   const updatePet = async (id: string, data: Partial<Pet>): Promise<Pet> => {
     const res = await petsApi.update(id, data as UpdatePetDto)
