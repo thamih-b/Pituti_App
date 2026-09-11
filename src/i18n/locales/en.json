@@ -1109,6 +1109,8 @@
     "appearance": "Appearance",
     "theme": "App theme",
     "themeHint": "Light or dark",
+    "topbar.darkMode": "Dark mode",
+    "topbar.lightMode": "Light mode",
     "changeTheme": "Change",
     "language": "Language",
     "languageHint": "Español · English · Português",

@@ -303,6 +303,15 @@
   .dash-col-right,
   .dash-col-eventos { grid-column: 1 !important; }
 
+    .dash-mockup-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "left" "center" "events" "right" !important;
+    gap: 1rem;
+  }
+  .dash-col-eventos {
+    margin-top: 0 !important;
+  }
+
   /* ── PAW — 240×230px
        Desktop baseline: W=320, H=300, scale ≈ 0.75
        Main: 120px  (164 × 0.75)
