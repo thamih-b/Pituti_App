@@ -6,6 +6,7 @@ import { useUser } from '../context/UserContext'
 import CalicoAnimation from './CalicoAnimation'
 import NotificationsPanel from './NotificationPanel'
 import { useTranslation } from 'react-i18next'
+import { useTheme } from '../context/PitutiContext'
 
 // ─── LOGO ─────────────────────────────────────────────────────────────────────
 function PitutiLogo() {
@@ -76,14 +77,13 @@ export function showToast(message: string, type: 'success' | 'err' = 'success') 
 // ─── PROFILE DROPDOWN ─────────────────────────────────────────────────────────
 function ProfileDropdown() {
   const { user, logout } = useUser()
-  const { state, toggleTheme } = usePituti()
-  const theme = state.theme
+  const { state } = usePituti()
+  const { theme, toggleTheme } = useTheme() // FIX: faltava esta linha
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // fecha ao clicar fora
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -92,14 +92,12 @@ function ProfileDropdown() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // últimos 3 alertas dos pets (pets com alerts)
   const recentAlerts = state.pets
     .flatMap(p => (p.alerts ?? []).map((a: any) => ({ ...a, petName: p.name })))
     .slice(0, 3)
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      {/* Avatar button */}
       <button
         className="topbar-avatar"
         title={user.name}
@@ -115,7 +113,6 @@ function ProfileDropdown() {
           : user.avatar}
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0,
@@ -123,7 +120,6 @@ function ProfileDropdown() {
           borderRadius: 'var(--r-lg)', boxShadow: '0 8px 32px rgba(0,0,0,.16)',
           zIndex: 1000, overflow: 'hidden',
         }}>
-          {/* User info */}
           <div style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '.75rem', borderBottom: '1px solid var(--divider)', background: 'var(--primary-hl)' }}>
             <div style={{
               width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
@@ -141,7 +137,6 @@ function ProfileDropdown() {
             </div>
           </div>
 
-          {/* Alertas recentes */}
           {recentAlerts.length > 0 && (
             <div style={{ borderBottom: '1px solid var(--divider)' }}>
               <div style={{ padding: '.5rem 1rem .25rem', fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.05em', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
@@ -156,8 +151,23 @@ function ProfileDropdown() {
             </div>
           )}
 
-          {/* Acções */}
+          {/* FIX: um único bloco de ações, sem duplicar "Definições" */}
           <div style={{ padding: '.375rem 0' }}>
+            <button
+              onClick={toggleTheme}
+              style={{
+                width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
+                display: 'flex', alignItems: 'center', gap: '.625rem',
+                fontSize: '.875rem', color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              {theme === 'light' ? icons.moon : icons.sun}
+              {theme === 'light' ? (t('topbar.darkMode') ?? 'Modo escuro') : (t('topbar.lightMode') ?? 'Modo claro')}
+            </button>
+
             <button
               onClick={() => { setOpen(false); navigate('settings') }}
               style={{
@@ -173,74 +183,26 @@ function ProfileDropdown() {
               {t('nav.settings') ?? 'Definições'}
             </button>
 
-
-<div style={{ padding: '.375rem 0' }}>
-  <button
-    onClick={toggleTheme}
-    style={{
-      width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
-      display: 'flex', alignItems: 'center', gap: '.625rem',
-      fontSize: '.875rem', color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
-      fontFamily: 'inherit',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
-    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-  >
-    {theme === 'light' ? icons.moon : icons.sun}
-    {theme === 'light' ? (t('topbar.darkMode') ?? 'Modo escuro') : (t('topbar.lightMode') ?? 'Modo claro')}
-  </button>
-  <button
-    onClick={() => { setOpen(false); navigate('settings') }}
-    style={{
-      width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
-      display: 'flex', alignItems: 'center', gap: '.625rem',
-      fontSize: '.875rem', color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
-      fontFamily: 'inherit',
-    }}
-    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-hl)')}
-    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-  >
-    {icons.settings}
-    {t('nav.settings') ?? 'Definições'}
-  </button>
-
             <button
-              onClick={() => {
-                setOpen(false)
-                logout()
-              }}
+              onClick={() => { setOpen(false); logout() }}
               style={{
-                width: '100%',
-                padding: '.625rem 1rem',
-                background: 'none',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '.625rem',
-                fontSize: '.875rem',
-                color: 'var(--err)',
-                cursor: 'pointer',
-                textAlign: 'left',
+                width: '100%', padding: '.625rem 1rem', background: 'none', border: 'none',
+                display: 'flex', alignItems: 'center', gap: '.625rem',
+                fontSize: '.875rem', color: 'var(--err)', cursor: 'pointer', textAlign: 'left',
                 fontFamily: 'inherit',
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = 'var(--err-hl, #fff0f0)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = 'none')
-              }
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--err-hl, #fff0f0)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >
               {icons.logout}
               {t('settings.logout') ?? 'Sair'}
             </button>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-)
+      )}
+    </div>
+  )
 }
-
 // ─── APP LAYOUT ───────────────────────────────────────────────────────────────
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
