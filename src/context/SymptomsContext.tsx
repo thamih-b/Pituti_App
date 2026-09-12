@@ -33,11 +33,9 @@ interface SymptomsContextValue {
 }
 
 const SEVERITY_MAP: Record<string, string> = { mild: 'leve', moderate: 'moderado', severe: 'grave' }
-// FIX (sync): inverso de SEVERITY_MAP — garante que enviamos sempre o valor
-// em inglês que a API espera (mild/moderate/severe), mesmo que o valor local
-// já esteja traduzido para português.
 const SEVERITY_TO_API: Record<string, string> = {
   leve: 'mild', moderado: 'moderate', grave: 'severe',
+  emergencia: 'severe',
   mild: 'mild', moderate: 'moderate', severe: 'severe',
 }
 
@@ -115,18 +113,35 @@ export function SymptomsProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true }
   }, [ready, isAuthenticated, user.id, tick])
 
-  const addSymptom = useCallback(async (s: Omit<SymptomEntry, 'id'>) => {
-    const local = { ...s, id: `s-${Date.now()}` }
-    setSymptoms(prev => { const next = [...prev, local]; if (user.id) saveSymptoms(user.id, next); return next })
-    // FIX: severidade sempre convertida para o valor em inglês esperado pela API
-    symptomsApi.create(s.petId, {
+const addSymptom = useCallback(async (s: Omit<SymptomEntry, 'id'>) => {
+  const tempId = `s-${Date.now()}`
+  const local = { ...s, id: tempId }
+  setSymptoms(prev => { const next = [...prev, local]; if (user.id) saveSymptoms(user.id, next); return next })
+
+  try {
+    const res = await symptomsApi.create(s.petId, {
       description: s.description,
       severity: (SEVERITY_TO_API[s.severity] ?? s.severity) as any,
       date: s.date,
       notes: s.notes || undefined,
       resolved: s.resolved as any,
-    }).catch(() => {})
-  }, [user.id])
+    })
+    const real = mapApiSymptom(res.data, s.petId)
+    setSymptoms(prev => {
+      const next = prev.map(x => (x.id === tempId ? real : x))
+      if (user.id) saveSymptoms(user.id, next)
+      return next
+    })
+  } catch (err) {
+    console.warn('[SymptomsContext] falha ao criar sintoma no servidor:', err)
+    setSymptoms(prev => {
+      const next = prev.filter(x => x.id !== tempId)
+      if (user.id) saveSymptoms(user.id, next)
+      return next
+    })
+    throw err // deixa o chamador (RegisterSymptomModal) mostrar um erro ao utilizador
+  }
+}, [user.id])
 
   // FIX (sync): saveSymptom nunca chamava a API — só alterava o estado local
   // (e nem sequer gravava em localStorage). Editar um sintoma nunca chegava

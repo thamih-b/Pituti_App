@@ -1109,8 +1109,6 @@
     "appearance": "Appearance",
     "theme": "App theme",
     "themeHint": "Light or dark",
-    "topbar.darkMode": "Dark mode",
-    "topbar.lightMode": "Light mode",
     "changeTheme": "Change",
     "language": "Language",
     "languageHint": "Español · English · Português",
@@ -1167,7 +1165,10 @@
     "noNotifications": "No new notifications",
     "changeTheme": "Change theme",
   "openMenu": "Open menu",
-  "closeMenu": "Close menu"
+  "closeMenu": "Close menu",
+  "darkMode": "Dark mode",
+  "lightMode": "Light mode"
+
   },
   "modal": {
     "close": "Close",

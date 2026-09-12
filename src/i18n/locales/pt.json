@@ -1115,8 +1115,6 @@
     "appearance": "Aparência",
     "theme": "Tema do app",
     "themeHint": "Claro ou escuro",
-        "topbar.darkMode": "Modo escuro",
-    "topbar.lightMode": "Modo claro",
     "changeTheme": "Alterar",
     "language": "Idioma",
     "languageHint": "Español · English · Português",
@@ -1173,7 +1171,9 @@
     "noNotifications": "Sem novas notificações",
     "changeTheme": "Alterar tema",
       "openMenu": "Abrir menu",
-  "closeMenu": "Fechar menu"
+  "closeMenu": "Fechar menu",
+          "darkMode": "Modo escuro",
+    "lightMode": "Modo claro"
   },
   "modal": {
     "close": "Fechar",

@@ -4,6 +4,7 @@
   grid-template-columns: var(--sidebar-w) 1fr;
   grid-template-rows: var(--topbar-h) 1fr;
   min-height: 100vh;
+  overflow-x: hidden; /* FIX: contém a animação do gato, evita scroll horizontal da página */
   transition: grid-template-columns var(--trans);
 }
 .app.sidebar-collapsed { --sidebar-w: 64px }
