@@ -119,7 +119,9 @@ export interface UpsertMedicalProfileDto {
 
 export interface CreateVaccineDto {
   name: string
-  date: string
+  // FIX (vacina futura sem aplicação anterior): date deixou de ser
+  // obrigatório — é preciso pelo menos date OU nextDueDate.
+  date?: string | null
   nextDueDate?: string | null
   veterinary?: string | null
   notes?: string | null
@@ -333,7 +335,7 @@ export interface ApiVaccine {
   id: string
   petId: string
   name: string
-  date: string
+  date?: string | null
   nextDueDate?: string | null
   veterinary?: string | null
   notes?: string | null

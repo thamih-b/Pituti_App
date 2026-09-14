@@ -14,7 +14,7 @@ const CONFIG = {
     table: 'vaccines',
     insert: (petId, d) => sql`
       INSERT INTO vaccines (pet_id, name, date, next_due_date, veterinary, notes)
-      VALUES (${petId}, ${d.name}, ${d.date}, ${d.nextDueDate ?? null},
+      VALUES (${petId}, ${d.name}, ${d.date ?? null}, ${d.nextDueDate ?? null},
               ${d.veterinary ?? null}, ${d.notes ?? null}) RETURNING *`,
     update: (id, d) => sql`
       UPDATE vaccines SET
@@ -25,8 +25,8 @@ const CONFIG = {
         notes         = COALESCE(${d.notes ?? null}, notes)
       WHERE id = ${id} RETURNING *`,
     fromRow: r => ({ id: r.id, petId: r.pet_id, name: r.name,
-      date: toDateStr(r.date),
-      nextDueDate: toDateStr(r.next_due_date),
+      date: r.date != null ? (typeof r.date === 'string' ? r.date.slice(0, 10) : r.date.toISOString().slice(0, 10)) : null,
+      nextDueDate: r.next_due_date != null ? (typeof r.next_due_date === 'string' ? r.next_due_date.slice(0, 10) : r.next_due_date.toISOString().slice(0, 10)) : null,
       veterinary: r.veterinary, notes: r.notes, createdAt: r.created_at }),
   },
   medications: {

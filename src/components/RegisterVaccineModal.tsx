@@ -30,8 +30,8 @@ const VACCINES_BY_SPECIES: Record<string, string[]> = {
 
 export interface RegisterVaccineData {
   name:     string
-  date:     string   // ISO YYYY-MM-DD
-  nextDate: string   // ISO YYYY-MM-DD ('' se não definida)
+  date:     string   // ISO YYYY-MM-DD, OU '' se ainda não foi aplicada
+  nextDate: string   // ISO YYYY-MM-DD — obrigatória se date estiver vazia
   vet:      string
   notes:    string
 }
@@ -67,32 +67,39 @@ export default function RegisterVaccineModal({
   const [errName,      setErrName]      = useState('')
   const [errDate,      setErrDate]      = useState('')
   const [success,      setSuccess]      = useState(false)
+  const [notYetApplied, setNotYetApplied] = useState(false)
 
   // Reset ao abrir
   useEffect(() => {
     if (!isOpen) return
     setSelectedName(''); setCustomName(''); setIsCustom(catalog.length === 0)
     setDate(today); setNextDate(''); setVet(''); setNotes('')
-    setErrName(''); setErrDate(''); setSuccess(false)
+    setErrName(''); setErrDate(''); setSuccess(false); setNotYetApplied(false)
   }, [isOpen, today, catalog.length])
 
   if (!isOpen) return null
 
   const finalName = isCustom ? customName.trim() : selectedName
+const handleSubmit = () => {
+  let valid = true
+  if (!finalName) { setErrName(t('pet.vacc.errSelect')); valid = false }
 
-  const handleSubmit = () => {
-    let valid = true
-    if (!finalName) { setErrName(t('pet.vacc.errSelect')); valid = false }
-    if (!date)      { setErrDate(t('pet.vacc.errDate'));   valid = false }
-    if (!valid) return
-
-    setSuccess(true)
-    setTimeout(() => {
-      onRegister({ name: finalName, date, nextDate, vet, notes })
-      setSuccess(false)
-      onClose()
-    }, 900)
+  // FIX: se ainda não foi aplicada, exige-se a data agendada (nextDate)
+  // em vez da data de aplicação.
+  if (notYetApplied) {
+    if (!nextDate) { setErrDate(t('pet.vacc.errNextDateRequired', { defaultValue: 'Indica a data agendada' })); valid = false }
+  } else {
+    if (!date) { setErrDate(t('pet.vacc.errDate')); valid = false }
   }
+  if (!valid) return
+
+  setSuccess(true)
+  setTimeout(() => {
+    onRegister({ name: finalName, date: notYetApplied ? '' : date, nextDate, vet, notes })
+    setSuccess(false)
+    onClose()
+  }, 900)
+}
 
   return (
     <div
@@ -217,35 +224,65 @@ export default function RegisterVaccineModal({
             )}
 
             {/* ── Datas ── */}
-            <div className="modal-section">{t('pet.vacc.sectionDates')}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{t('pet.vacc.dateApplied')} *</label>
-                <input
-                  type="date"
-                  className={`form-input${errDate ? ' input-error' : ''}`}
-                  value={date}
-                  max={today}
-                  onChange={e => { setDate(e.target.value); setErrDate('') }}
-                />
-                {errDate && <span className="form-hint-err">{errDate}</span>}
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">
-                  {t('pet.vacc.dateNext')}{' '}
-                  <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>
-                    ({t('btn.optional')})
-                  </span>
-                </label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={nextDate}
-                  min={date || today}
-                  onChange={e => setNextDate(e.target.value)}
-                />
-              </div>
-            </div>
+<div className="modal-section">{t('pet.vacc.sectionDates')}</div>
+
+{/* FIX: alternador para agendar uma vacina futura sem aplicação anterior */}
+<div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+  {[
+    { val: false, label: '✅ ' + t('pet.vacc.alreadyApplied', { defaultValue: 'Já foi aplicada' }) },
+    { val: true,  label: '📅 ' + t('pet.vacc.scheduleOnly',   { defaultValue: 'Só agendar (futura)' }) },
+  ].map(opt => (
+    <button
+      key={String(opt.val)}
+      type="button"
+      style={{
+        padding: '.3rem .875rem', borderRadius: 'var(--r-full)',
+        fontSize: '.8125rem', fontWeight: 700,
+        cursor: 'pointer', fontFamily: 'inherit',
+        border: `1.5px solid ${notYetApplied === opt.val ? 'var(--primary)' : 'var(--border)'}`,
+        background: notYetApplied === opt.val ? 'var(--primary-hl)' : 'var(--surface)',
+        color:      notYetApplied === opt.val ? 'var(--primary)' : 'var(--text-muted)',
+        transition: 'all var(--trans)',
+      }}
+      onClick={() => { setNotYetApplied(opt.val); setErrDate('') }}
+    >
+      {opt.label}
+    </button>
+  ))}
+</div>
+
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
+  <div className="form-group" style={{ marginBottom: 0, opacity: notYetApplied ? .5 : 1 }}>
+    <label className="form-label">
+      {t('pet.vacc.dateApplied')} {notYetApplied ? `(${t('btn.optional')})` : '*'}
+    </label>
+    <input
+      type="date"
+      className={`form-input${errDate && !notYetApplied ? ' input-error' : ''}`}
+      value={date}
+      max={today}
+      disabled={notYetApplied}
+      onChange={e => { setDate(e.target.value); setErrDate('') }}
+    />
+    {errDate && !notYetApplied && <span className="form-hint-err">{errDate}</span>}
+  </div>
+  <div className="form-group" style={{ marginBottom: 0 }}>
+    <label className="form-label">
+      {t('pet.vacc.dateNext')}{' '}
+      <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>
+        {notYetApplied ? '*' : `(${t('btn.optional')})`}
+      </span>
+    </label>
+    <input
+      type="date"
+      className={`form-input${errDate && notYetApplied ? ' input-error' : ''}`}
+      value={nextDate}
+      min={notYetApplied ? today : (date || today)}
+      onChange={e => { setNextDate(e.target.value); setErrDate('') }}
+    />
+    {errDate && notYetApplied && <span className="form-hint-err">{errDate}</span>}
+  </div>
+</div>
 
             {/* ── Extra ── */}
             <div className="modal-section">{t('pet.vacc.sectionExtra')}</div>

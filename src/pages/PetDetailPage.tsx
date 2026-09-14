@@ -440,7 +440,11 @@ function TabVaccines({ petId, petName, petSpecies }: {
                   }}>💉</div>
                   <div style={{ flex: 1 }}>
                     <div className="vaccine-name">{vacc.name}</div>
-                    <div className="vaccine-date">{t('pet.vacc.applied')} {vacc.applied}</div>
+                    <div className="vaccine-date">
+  {vacc.applied
+    ? `${t('pet.vacc.applied')} ${vacc.applied}`
+    : t('pet.vacc.scheduledLabel', { defaultValue: '📅 Vacina agendada, ainda não aplicada' })}
+</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className={`vaccine-next ${vacc.cls}`}>

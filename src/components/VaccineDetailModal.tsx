@@ -70,7 +70,9 @@ export default function VaccineDetailModal({ vaccine, onClose, onEdit, onMarkApp
           <div className="detail-info-grid">
             <div className="detail-info-chip">
               <div className="detail-info-label">{t('pet.vacc.detail.lastApplied')}</div>
-              <div className="detail-info-value">{vaccine.applied}</div>
+              <div className="detail-info-value">
+  {vaccine.applied || t('pet.vacc.scheduledLabel', { defaultValue: '📅 Ainda não aplicada' })}
+</div>
             </div>
 <div className="detail-info-chip">
   <div className="detail-info-label">{t('pet.vacc.detail.nextDose')}</div>

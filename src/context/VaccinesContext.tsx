@@ -5,7 +5,7 @@ import { usePetsContext } from './PetsContext'
 import { useUser } from './UserContext'
 import { getVaccStatus } from '../utils/vaccUtils'
 import type { VaccineRecord } from '../utils/vaccUtils'
-import { vaccinesApi } from '../api'
+import { api, vaccinesApi } from '../api'
 
 export type VaccStatus = ReturnType<typeof getVaccStatus>
 
@@ -211,8 +211,9 @@ export function VaccinesProvider({ children }: { children: ReactNode }) {
     try {
       const res = await vaccinesApi.create(petId, {
         name:        input.name,
-        date:        input.date,           // ISO → toApiCreateVaccineDto envia como 'date'
-        nextDueDate: input.nextDate || null, // ISO → envia como 'next_due_date'
+        // FIX: '' → null explícito, para passar na validação do servidor
+        date:        input.date || null,
+        nextDueDate: input.nextDate || null,
         veterinary:  input.vet   || null,
         notes:       input.notes || null,
       })
