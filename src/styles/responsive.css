@@ -302,6 +302,7 @@
   .dash-col-center,
   .dash-col-right,
   .dash-col-eventos { grid-column: 1 !important; }
+  
 
     .dash-mockup-grid {
     grid-template-columns: 1fr !important;
