@@ -387,7 +387,7 @@ function TabVaccines({ petId, petName, petSpecies }: {
   petId: string; petName: string; petSpecies: string
 }) {
   const { t } = useTranslation()
-  const { vaccinesByPet, addVaccine, updateVaccine } = useVaccinesContext()
+  const { vaccinesByPet, addVaccine, updateVaccine, deleteVaccine } = useVaccinesContext()
   const [registerOpen, setRegisterOpen] = useState(false)
   const [vaccDetail, setVaccDetail]     = useState<(VaccineRecord & { cls: 'ok' | 'soon' | 'late' }) | null>(null)
   const [editVacc, setEditVacc]         = useState<VaccineRecord | null>(null)
@@ -509,15 +509,20 @@ function TabVaccines({ petId, petName, petSpecies }: {
         }}
       />
 
-      <EditVaccineModal
-        isOpen={editVaccOpen}
-        onClose={() => setEditVaccOpen(false)}
-        vaccine={editVacc}
-        onSave={updated => {
-          updateVaccine(petId, updated)
-          setEditVaccOpen(false)
-          showToast(t('pet.vacc.toastUpdated'))
-        }}
+   <EditVaccineModal
+  isOpen={editVaccOpen}
+  onClose={() => setEditVaccOpen(false)}
+  vaccine={editVacc}
+  onSave={updated => {
+    updateVaccine(petId, updated)
+    setEditVaccOpen(false)
+    showToast(t('pet.vacc.toastUpdated'))
+  }}
+  onDelete={id => {
+    deleteVaccine(petId, id)
+    setEditVaccOpen(false)
+    showToast(t('pet.vacc.toastDeleted', { defaultValue: 'Vacina eliminada' }))
+  }}
       />
     </>
   )

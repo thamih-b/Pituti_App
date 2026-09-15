@@ -1,4 +1,6 @@
 // TRADUZIDO
+// FIX: adicionada a opção de eliminar a vacina a partir do ecrã de edição
+// (onDelete), tal como já existe no EditCareModal/EditMedModal.
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,9 +14,10 @@ interface Props {
   onClose: () => void
   vaccine: VaccineRecord | null
   onSave:  (updated: VaccineRecord) => void
+  onDelete?: (id: string) => void
 }
 
-export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: Props) {
+export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave, onDelete }: Props) {
   const { t } = useTranslation()
   const [name,     setName]     = useState('')
   const [applied,  setApplied]  = useState('')
@@ -22,13 +25,14 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
   const [nameErr,  setNameErr]  = useState('')
   const [nextErr,  setNextErr]  = useState('')
   const [success,  setSuccess]  = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (vaccine && isOpen) {
       setName(vaccine.name)
       setApplied(vaccine.applied)
       setNextDate(vaccine.nextDate)
-      setNameErr(''); setNextErr(''); setSuccess(false)
+      setNameErr(''); setNextErr(''); setSuccess(false); setConfirmDelete(false)
     }
   }, [vaccine, isOpen])
 
@@ -45,6 +49,12 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
     }, 900)
   }
 
+  const handleDelete = () => {
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    onDelete?.(vaccine.id)
+    onClose()
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -55,6 +65,13 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
       accentFg="var(--blue)"
       footer={!success
         ? <PfFooter>
+            {onDelete && (
+              <PfBtn variant="delete" onClick={handleDelete}>
+                {confirmDelete
+                  ? t('btn.confirmDelete', { defaultValue: 'Confirmar eliminar' })
+                  : t('btn.delete', { defaultValue: 'Eliminar' })}
+              </PfBtn>
+            )}
             <PfBtn variant="save" onClick={handleSave}>{t('vaccines.edit.saveBtn')}</PfBtn>
           </PfFooter>
         : <></>
@@ -119,6 +136,15 @@ export default function EditVaccineModal({ isOpen, onClose, vaccine, onSave }: P
               {nextErr && <span className="form-hint-err">{nextErr}</span>}
             </div>
           </div>
+
+          {confirmDelete && (
+            <div style={{
+              marginTop: '.875rem', padding: '.75rem 1rem', borderRadius: 'var(--r-lg)',
+              background: 'var(--err-hl)', color: 'var(--err)', fontSize: '.8125rem', fontWeight: 600,
+            }}>
+              {t('vaccines.edit.confirmDeleteHint', { defaultValue: 'Clica outra vez em "Confirmar eliminar" para apagar esta vacina em definitivo.' })}
+            </div>
+          )}
         </>
       )}
     </Modal>
